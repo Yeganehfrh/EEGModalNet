@@ -38,7 +38,9 @@ def change_annot_names(desc, enumerated=False):
     """ Change Annotations to Meaningful Names"""
     annot_name_changer = {'Stimulus/S  1': 'Switch',
                           'Stimulus/S200': 'EO',
-                          'Stimulus/S210': 'EC'}
+                          'Stimulus/S210': 'EC',
+                          'Stimulus/S208': 'EC',  # for sub-010126, this is the EC marker
+                          }
     for idx, val in enumerate(desc):
         if val in annot_name_changer.keys():
             if enumerated:

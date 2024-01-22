@@ -58,7 +58,7 @@ def find_switch_onset_pattern(annot_dict):
     return switch_onsets, switch_pattern
 
 
-def check_segmentation(raw):
+def check_segments(raw):
     """ Make sure the segmentation is correct """
     uniq = np.unique(raw.annotations.description)
     # check 'Stimulus/S210' and 'Stimulus/S200' are not in the uniqes at the same time

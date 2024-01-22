@@ -56,3 +56,10 @@ def find_switch_onset_pattern(annot_dict):
     # change back the pattern to EC/EO
     switch_pattern = ['EC' if i == 0 else 'EO' for i in switch_keys]
     return switch_onsets, switch_pattern
+
+
+def check_segmentation(raw):
+    """ Make sure the segmentation is correct """
+    uniq = np.unique(raw.annotations.description)
+    # check 'Stimulus/S210' and 'Stimulus/S200' are not in the uniqes at the same time
+    return not (('Stimulus/S210' in uniq) and ('Stimulus/S200' in uniq))

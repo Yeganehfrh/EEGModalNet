@@ -1,4 +1,5 @@
 data/
+notebooks/
 .DS_Store
 *.pyc
 __pycache__/

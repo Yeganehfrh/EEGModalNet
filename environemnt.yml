@@ -1,0 +1,27 @@
+name: eegnet
+
+channels:
+  - pytorch
+  - conda-forge
+  - default
+
+dependencies:
+  - python
+  - pip
+  - pytorch
+  - pytorch-lightning
+  - torchinfo
+  - seaborn
+  - pandas
+  - openpyxl
+  - flake8
+  - ipykernel
+  - jupyter
+  - notebook
+  - xarray
+  - h5netcdf
+  - tensorboard
+  - dvc>3
+  - dvc-gdrive
+  - scikit-learn
+  # - ray-tune

@@ -1,5 +1,5 @@
 from .models.STAutoencoder import AutoEncoder
-from .data.dataloader import TimeDimSplit
+from .dataloader.dataloader import TimeDimSplit
 
 __all__ = [
     'AutoEncoder',

@@ -4,3 +4,5 @@ notebooks/
 *.pyc
 __pycache__/
 lightning_logs/
+tmp/
+

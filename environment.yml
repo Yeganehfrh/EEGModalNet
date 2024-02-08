@@ -1,15 +1,15 @@
 name: eegnet
 
 channels:
-  - pytorch
   - conda-forge
   - default
 
 dependencies:
   - python
   - pip
-  - pytorch
+  - pytorch::pytorch
   - pytorch-lightning
+  - pytorch::torchaudio
   - torchinfo
   - seaborn
   - pandas

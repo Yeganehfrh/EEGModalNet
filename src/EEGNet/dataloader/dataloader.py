@@ -17,23 +17,20 @@ class TimeDimSplit(pl.LightningDataModule):
                  train_ratio: float = 0.7,
                  segment_size: int = 128,
                  batch_size: int = 32,
+                 preprocess: bool = False,
                  ):
         super().__init__()
         self.data_dir = data_dir
         self.train_ratio = train_ratio
         self.segment_size = segment_size
         self.batch_size = batch_size
+        self.preprocess = preprocess
 
     def prepare_data(self):
         # read data from file
 
-        if Path(f'tmp/train_{self.train_ratio}.pt').exists():
-            self.train_dataset = torch.load(f'tmp/train_{self.train_ratio}.pt')
-            self.val_dataset = torch.load(f'tmp/val_{self.train_ratio}.pt')
-            return
-
         da = xr.open_dataarray(self.data_dir)
-        # da = da.sel(subject=da.subject.values[:10])  # TODO: remove this line
+        da = da.sel(subject=da.subject.values[:20])  # TODO: remove this line
         X_input = torch.from_numpy(da.values).float().permute(0, 2, 1)
 
         # segment
@@ -47,36 +44,39 @@ class TimeDimSplit(pl.LightningDataModule):
         X_train = X_input[:, :cut_point, :, :].flatten(0, 1)
         X_test = X_input[:, cut_point:, :, :].flatten(0, 1)
 
-        # Pre_Process: robust scaling
-        print('Scaling data...')
-        print('X_train shape:', X_train.shape)
-        X_train = torch.tensor(np.array(
-            [RobustScaler().fit_transform(X_train[i, :, :]) for i in range(X_train.shape[0])]
-            )).float()  # TODO: This scales over each segment of data independently.
-        # later we should scale over all data, expecially when switching to spliting on subject level
-        X_test = torch.tensor(np.array(
-            [RobustScaler().fit_transform(X_test[i, :, :]) for i in range(X_test.shape[0])]
-            )).float()
+        if self.preprocess:
+            # first check if the preprocessed data with the same cutoff already exists
+            if Path(f'tmp/train_{self.train_ratio}.pt').exists():
+                self.train_dataset = torch.load(f'tmp/train_{self.train_ratio}.pt')
+                self.val_dataset = torch.load(f'tmp/val_{self.train_ratio}.pt')
+                return
+            # Pre_Process: robust scaling
+            print('Scaling data...')
+            print('X_train shape:', X_train.shape)
+            X_train = torch.tensor(np.array(
+                [RobustScaler().fit_transform(X_train[i, :, :]) for i in range(X_train.shape[0])]
+                )).float()
+            X_test = torch.tensor(np.array(
+                [RobustScaler().fit_transform(X_test[i, :, :]) for i in range(X_test.shape[0])]
+                )).float()
 
-        # Pre_Process: baseline correction
-        print('Clamping data...')
-        X_train = y_train = torch.clamp(X_train, min=-20, max=20)
-        X_test = y_test = torch.clamp(X_test, min=-20, max=20)
+            # Pre_Process: baseline correction
+            print('Clamping data...')
+            X_train = torch.clamp(X_train, min=-20, max=20)   # TODO The way we do clamping needs to be updated
+            X_test = torch.clamp(X_test, min=-20, max=20)
 
         self.train_dataset = torch.utils.data.TensorDataset(
             X_train,
-            y_train,
             subject_ids[:, :cut_point, :].flatten(0, 1),
         )
 
         self.val_dataset = torch.utils.data.TensorDataset(
             X_test,
-            y_test,
             subject_ids[:, cut_point:, :].flatten(0, 1),
         )
 
-        torch.save(self.train_dataset, f'tmp/train_{self.train_ratio}.pt')
-        torch.save(self.val_dataset, f'tmp/val_{self.train_ratio}.pt')
+        # torch.save(self.train_dataset, f'tmp/train_{self.train_ratio}.pt')
+        # torch.save(self.val_dataset, f'tmp/val_{self.train_ratio}.pt')
 
     def train_dataloader(self):
         rnd_g = torch.Generator()

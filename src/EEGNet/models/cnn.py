@@ -9,34 +9,26 @@ class CNN(pl.LightningModule):
         self.save_hyperparameters()
 
         self.encoder = nn.Sequential(
-                       nn.Conv1d(n_channels, n_channels, kernel_size=4, stride=1),
+                       nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=2),
                        nn.ReLU(),
-                       nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=1),
+                       nn.Conv1d(n_channels * 2, n_channels * 4, kernel_size=4, stride=2),
                        nn.ReLU(),
-                       nn.Conv1d(n_channels * 2, n_channels * 4, kernel_size=4, stride=1),
-                       nn.ReLU(),
-                       nn.Conv1d(n_channels * 4, n_channels * 8, kernel_size=4, stride=1),
-                       nn.ReLU(),
-                       nn.Conv1d(n_channels * 8, n_channels * 16, kernel_size=4, stride=1),
+                       nn.Conv1d(n_channels * 4, n_channels * 8, kernel_size=4, stride=2),
                        nn.ReLU(),
                        nn.Flatten(),
-                       nn.Linear(n_channels * 16, n_embeddings)
+                       nn.Linear(n_channels * 8 * 62, n_embeddings)
                 )
 
         self.decoder = nn.Sequential(
-                       nn.Linear(n_embeddings, n_channels * 16),
-                       nn.Unflatten(dim=1, unflattened_size=(n_channels * 16, 1)),
-                       nn.ConvTranspose1d(n_channels * 16, n_channels * 8, kernel_size=4, stride=1),
+                       nn.Linear(n_embeddings, n_channels * 8 * 62),
+                       nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 62)),
                        nn.ReLU(),
-                       nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=1),
+                       nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
                        nn.ReLU(),
-                       nn.ConvTranspose1d(n_channels * 4, n_channels * 2, kernel_size=4, stride=1),
+                       nn.ConvTranspose1d(n_channels * 4, n_channels * 2, kernel_size=4, stride=2, output_padding=1),
                        nn.ReLU(),
-                       nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=1),
-                       nn.ReLU(),
-                       nn.ConvTranspose1d(n_channels, n_channels, kernel_size=4, stride=1),
-                       nn.ReLU(),
-                       nn.Sigmoid()
+                       nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=2),
+                       nn.ReLU()
                 )
 
     def forward(self, x):
@@ -49,7 +41,8 @@ class CNN(pl.LightningModule):
         x, sub_id = batch
         x_hat = self(x)
         x = x.permute(0, 2, 1)
-        loss = nn.functional.cross_entropy(x_hat, x)
+        # use mse loss
+        loss = nn.functional.mse_loss(x_hat, x)
         self.log('train_loss', loss)
         return loss
 
@@ -57,7 +50,7 @@ class CNN(pl.LightningModule):
         x, sub_id = batch
         x_hat = self(x)
         x = x.permute(0, 2, 1)
-        loss = nn.functional.cross_entropy(x_hat, x)
+        loss = nn.functional.mse_loss(x_hat, x)
         self.log('val_loss', loss)
         return loss
 

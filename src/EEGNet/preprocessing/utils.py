@@ -1,4 +1,6 @@
 import numpy as np
+import scipy.io
+from pathlib import Path
 
 
 def change_annot_names(desc, enumerated=False):
@@ -63,3 +65,16 @@ def check_segments(raw):
     uniq = np.unique(raw.annotations.description)
     # check 'Stimulus/S210' and 'Stimulus/S200' are not in the uniqes at the same time
     return not (('Stimulus/S210' in uniq) and ('Stimulus/S200' in uniq))
+
+
+def get_channel_positions(data_dir):
+    ch_positions = {}
+    for path in Path(data_dir).glob('sub*'):
+        sub = path.stem
+        mat = scipy.io.loadmat(path / f'{sub}.mat')
+        n_channels = len(mat['Channel'][0])
+        ch_names = [mat['Channel'][0][i][0][0] for i in range(n_channels)]
+        ch_names = [ch.split('_')[2] for ch in ch_names if ch != 'Reference']
+        ch_pos = np.array([mat['Channel'][0][i][3].reshape(3, -1) for i in range(n_channels)]).squeeze()
+        ch_positions[sub] = {ch: pos for ch, pos in zip(ch_names, ch_pos)}
+    return ch_positions

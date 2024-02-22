@@ -78,3 +78,19 @@ def get_channel_positions(data_dir):
         ch_pos = np.array([mat['Channel'][0][i][3].reshape(3, -1) for i in range(n_channels)]).squeeze()
         ch_positions[sub] = {ch: pos for ch, pos in zip(ch_names, ch_pos)}
     return ch_positions
+
+
+def get_headpoints(data_dir):
+    headpoints = {}
+    for path in Path(data_dir).glob('sub*'):
+        sub = path.stem
+        mat = scipy.io.loadmat(path / f'{sub}.mat')
+        x = mat['HeadPoints'][0][0][0][0]
+        y = mat['HeadPoints'][0][0][0][1]
+        z = mat['HeadPoints'][0][0][0][2]
+        coord = np.vstack((x, y, z)).T
+        labels = mat['HeadPoints'][0][0][1][0]
+        first_set = {l[0]: i for l, i in zip(labels[:3], coord[:3])}
+        second_set = {l[0]: i for l, i in zip(labels[3:], coord[3:])}
+        headpoints[sub] = {'first': first_set, 'second': second_set}
+    return headpoints

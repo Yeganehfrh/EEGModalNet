@@ -13,7 +13,7 @@ class TimeDimSplit(pl.LightningDataModule):
     time dimension
     """
     def __init__(self,
-                 data_dir: Path = Path('data/eeg_eo_ec_test.nc5'),
+                 data_dir: Path = Path('data/processed/normalized_clamped/eeg_EC_BaseCorr_Norm_Clamp.nc5'),
                  train_ratio: float = 0.7,
                  segment_size: int = 128,
                  batch_size: int = 32,
@@ -30,7 +30,7 @@ class TimeDimSplit(pl.LightningDataModule):
         # read data from file
 
         da = xr.open_dataarray(self.data_dir)
-        da = da.sel(subject=da.subject.values[:20])  # TODO: remove this line
+        da = da.sel(subject=da.subject.values[:50])  # TODO: remove this line
         X_input = torch.from_numpy(da.values).float().permute(0, 2, 1)
 
         # segment
@@ -81,12 +81,14 @@ class TimeDimSplit(pl.LightningDataModule):
     def train_dataloader(self):
         rnd_g = torch.Generator()
         rnd_g.manual_seed(42)   # TODO: remove manual seed
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, generator=rnd_g)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, generator=rnd_g, num_workers=7,
+                          persistent_workers=True)
 
     def val_dataloader(self):
         rnd_g = torch.Generator()
         rnd_g.manual_seed(42)  # TODO: remove manual seed
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, generator=rnd_g)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, generator=rnd_g, num_workers=7,
+                          persistent_workers=True)
 
     def teardown(self, stage: str):
         # Used to clean-up when the run is finished

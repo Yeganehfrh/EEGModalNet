@@ -14,12 +14,12 @@ class TimeDimSplit(pl.LightningDataModule):
     time dimension
     """
     def __init__(self,
-                 data_dir: Path = Path('data/processed/normalized_clamped/eeg_EC_BaseCorr_Norm_Clamp.nc5'),
-                 info_dir: Path = Path('data/info/sub-info.fif'),
+                 data_dir: Path = Path('data/processed/normalized_clamped/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5'),
                  train_ratio: float = 0.7,
                  segment_size: int = 128,
                  batch_size: int = 32,
                  preprocess: bool = False,
+                 n_subjects: int = 10,
                  ):
         super().__init__()
         self.data_dir = data_dir
@@ -27,18 +27,22 @@ class TimeDimSplit(pl.LightningDataModule):
         self.segment_size = segment_size
         self.batch_size = batch_size
         self.preprocess = preprocess
+        self.n_subjects = n_subjects
 
     def prepare_data(self):
         # read data from file
-        da = xr.open_dataarray(self.data_dir)
-        da = da.sel(subject=da.subject.values[:50])  # TODO: remove this line
-        X_input = torch.from_numpy(da.values).float().permute(0, 2, 1)
-
-        # read subject info
-        mne_info = mne.read_info(self.info_dir)
+        ds = xr.open_dataset(self.data_dir)
+        if self.n_subjects is not None:
+            ds = ds.sel(subject=ds.subject.values[:self.n_subjects])
+        X_input = torch.from_numpy(ds['__xarray_dataarray_variable__'].values).float().permute(0, 2, 1)
 
         # segment
         X_input = X_input.unfold(1, self.segment_size, self.segment_size).permute(0, 1, 3, 2)
+
+        # create positions
+        positions = torch.from_numpy(ds.ch_positions).float()
+        # repeat positions for each subject
+        positions = positions.repeat(self.n_subjects, X_input.shape[1], 1, 1)
 
         # create subject ids
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
@@ -72,13 +76,13 @@ class TimeDimSplit(pl.LightningDataModule):
         self.train_dataset = torch.utils.data.TensorDataset(
             X_train,
             subject_ids[:, :cut_point, :].flatten(0, 1),
-            mne_info
+            positions[:, :cut_point, :, :].flatten(0, 1)
         )
 
         self.val_dataset = torch.utils.data.TensorDataset(
             X_test,
             subject_ids[:, cut_point:, :].flatten(0, 1),
-            mne_info
+            positions[:, cut_point:, :, :].flatten(0, 1)
         )
 
         # torch.save(self.train_dataset, f'tmp/train_{self.train_ratio}.pt')

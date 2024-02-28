@@ -31,13 +31,13 @@ class ConvVAE(pl.LightningModule):
             nn.ReLU(),
             nn.Flatten(),
         )
-        self.encoder_fc_mu = nn.Linear(n_channels * 8 * 14, n_embeddings)
-        self.encoder_fc_log_var = nn.Linear(n_channels * 8 * 14, n_embeddings)
+        self.encoder_fc_mu = nn.Linear(n_channels * 8 * 62, n_embeddings)
+        self.encoder_fc_log_var = nn.Linear(n_channels * 8 * 62, n_embeddings)
 
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(n_embeddings, n_channels * 8 * 14),
-            nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 14)),
+            nn.Linear(n_embeddings, n_channels * 8 * 62),
+            nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 62)),
             nn.ReLU(),
             nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
             nn.ReLU(),
@@ -73,9 +73,9 @@ class ConvVAE(pl.LightningModule):
         return x_hat, mu, log_var
 
     def training_step(self, batch, batch_idx):
-        x, sub, pos = batch
+        x, _, _ = batch
         x = x.permute(0, 2, 1)
-        x_hat, mu, log_var = self(x)
+        x_hat, mu, log_var = self(batch)
         recon_loss = F.mse_loss(x_hat, x, reduction='sum')
         kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
         loss = recon_loss + kl_loss
@@ -83,9 +83,9 @@ class ConvVAE(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        x, sub, pos = batch
+        x, _ , _ = batch
         x = x.permute(0, 2, 1)
-        x_hat, mu, log_var = self(x)
+        x_hat, mu, log_var = self(batch)
         recon_loss = F.mse_loss(x_hat, x, reduction='sum')
         kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
         loss = recon_loss + kl_loss

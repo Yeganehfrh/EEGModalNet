@@ -37,13 +37,14 @@ class ConvVAE(pl.LightningModule):
             nn.ReLU(),
             nn.Flatten(),
         )
-        self.encoder_fc_mu = nn.Linear(n_channels * 8 * 62, n_embeddings)
-        self.encoder_fc_log_var = nn.Linear(n_channels * 8 * 62, n_embeddings)
+        # TODO find a way to automatically calculate the size of last axis of the flatten layer
+        self.encoder_fc_mu = nn.Linear(n_channels * 8 * 14, n_embeddings)
+        self.encoder_fc_log_var = nn.Linear(n_channels * 8 * 14, n_embeddings)
 
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(n_embeddings, n_channels * 8 * 62),
-            nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 62)),
+            nn.Linear(n_embeddings, n_channels * 8 * 14),
+            nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 14)),
             nn.ReLU(),
             nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
             nn.ReLU(),
@@ -79,7 +80,7 @@ class ConvVAE(pl.LightningModule):
 
         if self.stft is not None:
             x = self.stft(x)
-            x = x.average(dim=-1)
+            x = x.mean(dim=-1)
             # TODO: try converting to decibels
 
         mu, log_var = self.encode(x)

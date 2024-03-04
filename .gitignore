@@ -5,3 +5,4 @@ notebooks/
 __pycache__/
 lightning_logs/
 tmp/
+src/archived/

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from src.EEGNet.models.commonBlocks import ChannelMerger, SubjectLayers
-import torchaudio as ta
+import torchaudio.transforms as T
 
 
 class ConvVAE(pl.LightningModule):
@@ -25,7 +25,8 @@ class ConvVAE(pl.LightningModule):
         # transform to frequency domain
         if n_fft is not None:
             self.n_fft = n_fft
-            self.stft = ta.transforms.Spectrogram(n_fft=n_fft, normalized=True, power=1)
+            self.stft = T.Spectrogram(n_fft=n_fft, hop_length=128,
+                                      power=None, normalized=False)
 
         # Encoder
         self.encoder_conv = nn.Sequential(
@@ -54,6 +55,10 @@ class ConvVAE(pl.LightningModule):
             nn.ReLU()
         )
 
+        # inverse spectogram
+        if n_fft is not None:
+            self.istft = T.InverseSpectrogram(n_fft=n_fft, hop_length=128)
+
     def encode(self, x):
         x = self.encoder_conv(x)
         mu = self.encoder_fc_mu(x)
@@ -80,6 +85,7 @@ class ConvVAE(pl.LightningModule):
 
         if self.stft is not None:
             x = self.stft(x)
+            x = x.abs()
             x = x.mean(dim=-1)
             # TODO: try converting to decibels
 

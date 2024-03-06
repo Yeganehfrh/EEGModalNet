@@ -11,11 +11,11 @@ class CNN(pl.LightningModule):
                  n_embeddings=32,
                  n_subjects=200,
                  n_classes=2,
-                 use_channel_merger=False,
-                 use_subject_layers=False,
-                 use_classifier=False,
-                 use_decoder=False,
-                 use_1x1_conv=False,
+                 use_channel_merger=True,
+                 use_subject_layers=True,
+                 use_classifier=True,
+                 use_decoder=True,
+                 use_1x1_conv=True,
                  n_fft=None):
 
         super().__init__()

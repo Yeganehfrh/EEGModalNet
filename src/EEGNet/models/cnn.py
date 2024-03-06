@@ -1,12 +1,45 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+import torchaudio.transforms as T
+from commonBlocks import ChannelMerger, SubjectLayers, Classifier
 
 
 class CNN(pl.LightningModule):
-    def __init__(self, n_channels=61, n_embeddings=32):
+    def __init__(self,
+                 n_channels=61,
+                 n_embeddings=32,
+                 n_subjects=200,
+                 n_classes=2,
+                 use_channel_merger=False,
+                 use_subject_layers=False,
+                 use_classifier=False,
+                 use_decoder=False,
+                 use_1x1_conv=False,
+                 n_fft=None):
+
         super().__init__()
         self.save_hyperparameters()
+
+        # Fourier positional embedding
+        if use_channel_merger:
+            self.pos_emb = ChannelMerger(
+                chout=n_channels, pos_dim=288, n_subjects=n_subjects
+            )  # TODO: check if this is the right dimension
+
+        # 1 X 1 convolution
+        if use_1x1_conv:
+            self.cov11 = nn.Conv1d(n_channels, n_channels, kernel_size=1)
+
+        # subject layers
+        if use_subject_layers:
+            self.subject_layers = SubjectLayers(in_channels=n_channels, out_channels=n_channels, n_subjects=n_subjects)
+
+        # transform to frequency domain
+        if n_fft is not None:
+            self.n_fft = n_fft
+            self.stft = T.Spectrogram(n_fft=n_fft, hop_length=128,
+                                      power=None, normalized=False)
 
         self.encoder = nn.Sequential(
                        nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=2),
@@ -18,39 +51,73 @@ class CNN(pl.LightningModule):
                        nn.Flatten(),
                        nn.Linear(n_channels * 8 * 62, n_embeddings)
                 )
+        if use_classifier:
+            self.classifier = Classifier(n_embeddings, n_classes)
 
-        self.decoder = nn.Sequential(
-                       nn.Linear(n_embeddings, n_channels * 8 * 62),
-                       nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 62)),
-                       nn.ReLU(),
-                       nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
-                       nn.ReLU(),
-                       nn.ConvTranspose1d(n_channels * 4, n_channels * 2, kernel_size=4, stride=2, output_padding=1),
-                       nn.ReLU(),
-                       nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=2),
-                       nn.ReLU()
-                )
+        if use_decoder:
+            self.decoder = nn.Sequential(
+                        nn.Linear(n_embeddings, n_channels * 8 * 62),
+                        nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 62)),
+                        nn.ReLU(),
+                        nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
+                        nn.ReLU(),
+                        nn.ConvTranspose1d(n_channels * 4, n_channels * 2, kernel_size=4, stride=2, output_padding=1),
+                        nn.ReLU(),
+                        nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=2),
+                        nn.ReLU()
+                    )
 
     def forward(self, x):
-        x = x.permute(0, 2, 1)
+        if hasattr(self, 'pos_emb'):
+            x = self.pos_emb(x)
+        if hasattr(self, 'cov11'):
+            x = self.cov11(x)
+        if hasattr(self, 'subject_layers'):
+            x = self.subject_layers(x)
+        if hasattr(self, 'stft'):
+            x = self.stft(x)
+
         h = self.encoder(x)
-        x_hat = self.decoder(h)
-        return x_hat
+
+        y_hat = None
+        if hasattr(self, 'classifier'):
+            y_hat = self.classifier(h)
+
+        x_hat = None
+        if hasattr(self, 'decoder'):
+            x_hat = self.decoder(h)
+
+        return x_hat, y_hat
 
     def training_step(self, batch):
         x, sub_id = batch
-        x_hat = self(x)
         x = x.permute(0, 2, 1)
-        # use mse loss
-        loss = nn.functional.mse_loss(x_hat, x)
+        x_hat, y_hat = self(x)
+        loss = 0
+        if hasattr(self, 'classifier'):
+            loss_class = nn.functional.cross_entropy(y_hat, sub_id)
+            self.log('train_class', loss_class)
+            loss += loss_class
+        if hasattr(self, 'decoder'):
+            loss_rec = nn.functional.mse_loss(x_hat, x)
+            self.log('train_recon', loss_rec)
+            loss += loss_rec
         self.log('train_loss', loss)
         return loss
 
     def validation_step(self, batch):
         x, sub_id = batch
-        x_hat = self(x)
         x = x.permute(0, 2, 1)
-        loss = nn.functional.mse_loss(x_hat, x)
+        x_hat, y_hat = self(x)
+        loss = 0
+        if hasattr(self, 'classifier'):
+            loss_class = nn.functional.cross_entropy(y_hat, sub_id)
+            self.log('val_class', loss_class)
+            loss += loss_class
+        if hasattr(self, 'decoder'):
+            loss_rec = nn.functional.mse_loss(x_hat, x)
+            self.log('val_recon', loss_rec)
+            loss += loss_rec
         self.log('val_loss', loss)
         return loss
 

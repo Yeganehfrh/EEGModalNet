@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 import torchaudio.transforms as T
-from commonBlocks import ChannelMerger, SubjectLayers, Classifier
+from src.EEGNet.models.commonBlocks import ChannelMerger, SubjectLayers, Classifier
 
 
 class CNN(pl.LightningModule):
@@ -39,7 +39,7 @@ class CNN(pl.LightningModule):
         if n_fft is not None:
             self.n_fft = n_fft
             self.stft = T.Spectrogram(n_fft=n_fft, hop_length=128,
-                                      power=None, normalized=False)
+                                      power=1, normalized=False)
 
         self.encoder = nn.Sequential(
                        nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=2),
@@ -67,15 +67,18 @@ class CNN(pl.LightningModule):
                         nn.ReLU()
                     )
 
-    def forward(self, x):
+    def forward(self, batch):
+        x, sub, pos, _ = batch
+        x = x.permute(0, 2, 1)
         if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x)
+            x = self.pos_emb(x, pos)
         if hasattr(self, 'cov11'):
             x = self.cov11(x)
         if hasattr(self, 'subject_layers'):
-            x = self.subject_layers(x)
+            x = self.subject_layers(x, sub)
         if hasattr(self, 'stft'):
             x = self.stft(x)
+            x = x.mean(dim=-1)
 
         h = self.encoder(x)
 
@@ -90,12 +93,12 @@ class CNN(pl.LightningModule):
         return x_hat, y_hat
 
     def training_step(self, batch):
-        x, sub_id = batch
+        x, _, _, y = batch
+        x_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
-        x_hat, y_hat = self(x)
         loss = 0
         if hasattr(self, 'classifier'):
-            loss_class = nn.functional.cross_entropy(y_hat, sub_id)
+            loss_class = nn.functional.cross_entropy(y_hat, y)
             self.log('train_class', loss_class)
             loss += loss_class
         if hasattr(self, 'decoder'):
@@ -106,12 +109,14 @@ class CNN(pl.LightningModule):
         return loss
 
     def validation_step(self, batch):
-        x, sub_id = batch
+        x, _, _, y = batch
+        x_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
-        x_hat, y_hat = self(x)
         loss = 0
         if hasattr(self, 'classifier'):
-            loss_class = nn.functional.cross_entropy(y_hat, sub_id)
+            print(y_hat)
+            print(y)
+            loss_class = nn.functional.cross_entropy(y_hat, y)
             self.log('val_class', loss_class)
             loss += loss_class
         if hasattr(self, 'decoder'):

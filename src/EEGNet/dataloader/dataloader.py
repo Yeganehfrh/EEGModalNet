@@ -6,7 +6,7 @@ import torch
 import xarray as xr
 from sklearn.preprocessing import RobustScaler
 from torch.utils.data import DataLoader
-import mne
+import torch.nn.functional as F
 
 
 class TimeDimSplit(pl.LightningDataModule):
@@ -44,6 +44,14 @@ class TimeDimSplit(pl.LightningDataModule):
         # repeat positions for each subject
         positions = positions.repeat(self.n_subjects, X_input.shape[1], 1, 1)
 
+        # y labels
+        gender = torch.from_numpy(ds.gender)
+        if self.n_subjects is not None:
+            gender = gender[:self.n_subjects]
+        gender -= 1   # 0 for female and 2 for male
+        gender = gender.reshape(-1, 1).repeat(1, X_input.shape[1])
+        gender = F.one_hot(gender, num_classes=2).float()
+
         # create subject ids
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
 
@@ -76,13 +84,15 @@ class TimeDimSplit(pl.LightningDataModule):
         self.train_dataset = torch.utils.data.TensorDataset(
             X_train,
             subject_ids[:, :cut_point, :].flatten(0, 1),
-            positions[:, :cut_point, :, :].flatten(0, 1)
+            positions[:, :cut_point, :, :].flatten(0, 1),
+            gender[:, :cut_point].flatten(0, 1)
         )
 
         self.val_dataset = torch.utils.data.TensorDataset(
             X_test,
             subject_ids[:, cut_point:, :].flatten(0, 1),
-            positions[:, cut_point:, :, :].flatten(0, 1)
+            positions[:, cut_point:, :, :].flatten(0, 1),
+            gender[:, cut_point:].flatten(0, 1)
         )
 
         # torch.save(self.train_dataset, f'tmp/train_{self.train_ratio}.pt')

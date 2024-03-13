@@ -58,24 +58,25 @@ class TimeDimSplit(pl.LightningDataModule):
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
 
         # shuffle and then train/test split
-        if self.shuffling == 'type1':
-            sh = torch.randperm(X_input.shape[0])
+        if self.shuffling == 'type1':  # TODO: define shuffling in a separate function
             cut_point = int(X_input.shape[1] * self.train_ratio)  # cutoff
             X_train = X_input[:, :cut_point, :, :].flatten(0, 1)
             X_test = X_input[:, cut_point:, :, :].flatten(0, 1)
-            X_train = X_train[sh]
-            X_test = X_test[sh]
-            subject_ids_train = subject_ids[:, :cut_point, :].flatten(0, 1)[sh]
-            subject_ids_test = subject_ids[:, cut_point:, :].flatten(0, 1)[sh]
-            positions_train = positions[:, :cut_point, :, :].flatten(0, 1)[sh]
-            positions_test = positions[:, cut_point:, :, :].flatten(0, 1)[sh]
-            gender_train = gender[:, :cut_point].flatten(0, 1)[sh]
-            gender_test = gender[:, cut_point:].flatten(0, 1)[sh]
+            sh_train, sh_test = torch.randperm(X_train.shape[0]), torch.randperm(X_test.shape[0])
+            X_train = X_train[sh_train]
+            X_test = X_test[sh_test]
+            subject_ids_train = subject_ids[:, :cut_point, :].flatten(0, 1)[sh_train]
+            subject_ids_test = subject_ids[:, cut_point:, :].flatten(0, 1)[sh_test]
+            positions_train = positions[:, :cut_point, :, :].flatten(0, 1)[sh_train]
+            positions_test = positions[:, cut_point:, :, :].flatten(0, 1)[sh_test]
+            gender_train = gender[:, :cut_point].flatten(0, 1)[sh_train]
+            gender_test = gender[:, cut_point:].flatten(0, 1)[sh_test]
 
-        if self.shuffling == 'type2':
+        elif self.shuffling == 'type2':
             X_input = X_input.flatten(0, 1)
-            sh = torch.randperm(X_train.shape[0])
+            sh = torch.randperm(X_input.shape[0])
             cut_point = int(X_input.shape[0] * self.train_ratio)
+            X_input = X_input[sh]
             X_train, X_test = X_input[:cut_point], X_input[cut_point:]
 
             subject_ids = subject_ids.flatten(0, 1)[sh]
@@ -86,6 +87,17 @@ class TimeDimSplit(pl.LightningDataModule):
 
             gender = gender.flatten(0, 1)[sh]
             gender_train, gender_test = gender[:cut_point], gender[cut_point:]
+
+        elif self.shuffling is None:
+            cut_point = int(X_input.shape[1] * self.train_ratio)
+            X_train = X_input[:, :cut_point, :, :].flatten(0, 1)
+            X_test = X_input[:, cut_point:, :, :].flatten(0, 1)
+            subject_ids_train = subject_ids[:, :cut_point, :].flatten(0, 1)
+            subject_ids_test = subject_ids[:, cut_point:, :].flatten(0, 1)
+            positions_train = positions[:, :cut_point, :, :].flatten(0, 1)
+            positions_test = positions[:, cut_point:, :, :].flatten(0, 1)
+            gender_train = gender[:, :cut_point].flatten(0, 1)
+            gender_test = gender[:, cut_point:].flatten(0, 1)
 
         if self.preprocess:
             # first check if the preprocessed data with the same cutoff already exists

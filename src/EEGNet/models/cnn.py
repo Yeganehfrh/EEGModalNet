@@ -10,6 +10,7 @@ class CNN(pl.LightningModule):
     def __init__(self,
                  n_channels=61,
                  n_embeddings=32,
+                 n_timepoints=62,
                  n_subjects=200,
                  n_classes=2,
                  use_channel_merger=True,
@@ -50,15 +51,15 @@ class CNN(pl.LightningModule):
                        nn.Conv1d(n_channels * 4, n_channels * 8, kernel_size=4, stride=2),
                        nn.ReLU(),
                        nn.Flatten(),
-                       nn.Linear(n_channels * 8 * 62, n_embeddings)
+                       nn.Linear(n_channels * 8 * n_timepoints, n_embeddings)
                 )
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
 
         if use_decoder:
             self.decoder = nn.Sequential(
-                        nn.Linear(n_embeddings, n_channels * 8 * 62),
-                        nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, 62)),
+                        nn.Linear(n_embeddings, n_channels * 8 * n_timepoints),
+                        nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, n_timepoints)),
                         nn.ReLU(),
                         nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
                         nn.ReLU(),

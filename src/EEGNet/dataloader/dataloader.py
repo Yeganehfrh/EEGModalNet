@@ -7,6 +7,7 @@ import xarray as xr
 from sklearn.preprocessing import RobustScaler
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
+import torch.utils.data
 
 
 class TimeDimSplit(pl.LightningDataModule):
@@ -98,27 +99,6 @@ class TimeDimSplit(pl.LightningDataModule):
             positions_test = positions[:, cut_point:, :, :].flatten(0, 1)
             gender_train = gender[:, :cut_point].flatten(0, 1)
             gender_test = gender[:, cut_point:].flatten(0, 1)
-
-        if self.preprocess:
-            # first check if the preprocessed data with the same cutoff already exists
-            if Path(f'tmp/train_{self.train_ratio}.pt').exists():
-                self.train_dataset = torch.load(f'tmp/train_{self.train_ratio}.pt')
-                self.val_dataset = torch.load(f'tmp/val_{self.train_ratio}.pt')
-                return
-            # Pre_Process: robust scaling
-            print('Scaling data...')
-            print('X_train shape:', X_train.shape)
-            X_train = torch.tensor(np.array(
-                [RobustScaler().fit_transform(X_train[i, :, :]) for i in range(X_train.shape[0])]
-                )).float()
-            X_test = torch.tensor(np.array(
-                [RobustScaler().fit_transform(X_test[i, :, :]) for i in range(X_test.shape[0])]
-                )).float()
-
-            # Pre_Process: baseline correction
-            print('Clamping data...')
-            X_train = torch.clamp(X_train, min=-20, max=20)   # TODO The way we do clamping needs to be updated
-            X_test = torch.clamp(X_test, min=-20, max=20)
 
         self.train_dataset = torch.utils.data.TensorDataset(
             X_train,

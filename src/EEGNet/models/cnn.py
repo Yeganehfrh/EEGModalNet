@@ -3,6 +3,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 import torchaudio.transforms as T
 from src.EEGNet.models.commonBlocks import ChannelMerger, SubjectLayers, Classifier
+import torchmetrics.functional as tmf
 
 
 class CNN(pl.LightningModule):
@@ -96,16 +97,21 @@ class CNN(pl.LightningModule):
         x, _, _, y = batch
         x_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
+        # save y, and y_hat
+        # torch.save({'y': y, 'y_hat': y_hat}, 'y_y_hat.pt')
         loss = 0
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
-            self.log('train_class', loss_class)
+            self.log('train/loss_cls', loss_class)
             loss += loss_class
+            # log accuracy
+            accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
+            self.log('train/acc_tmf', accuracy)
         if hasattr(self, 'decoder'):
             loss_rec = nn.functional.mse_loss(x_hat, x)
-            self.log('train_recon', loss_rec)
+            self.log('train/loss_recon', loss_rec)
             loss += loss_rec
-        self.log('train_loss', loss)
+        self.log('train/loss', loss)
         return loss
 
     def validation_step(self, batch):
@@ -114,16 +120,16 @@ class CNN(pl.LightningModule):
         x = x.permute(0, 2, 1)
         loss = 0
         if hasattr(self, 'classifier'):
-            print(y_hat)
-            print(y)
             loss_class = nn.functional.cross_entropy(y_hat, y)
-            self.log('val_class', loss_class)
+            self.log('val/loss_cls', loss_class)
             loss += loss_class
+            accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
+            self.log('val/acc', accuracy)
         if hasattr(self, 'decoder'):
             loss_rec = nn.functional.mse_loss(x_hat, x)
-            self.log('val_recon', loss_rec)
+            self.log('val/loss_recon', loss_rec)
             loss += loss_rec
-        self.log('val_loss', loss)
+        self.log('val/loss', loss)
         return loss
 
     def configure_optimizers(self):

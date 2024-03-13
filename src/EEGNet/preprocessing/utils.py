@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.io
 from pathlib import Path
+from sklearn.model_selection import train_test_split
+import torch
 
 
 def change_annot_names(desc, enumerated=False):
@@ -94,3 +96,83 @@ def get_headpoints(data_dir):
         second_set = {l[0]: i for l, i in zip(labels[3:], coord[3:])}
         headpoints[sub] = {'first': first_set, 'second': second_set}
     return headpoints
+
+
+def __split_data(data, type, cut_point, shu_idx_train=None, shu_idx_test=None):
+    if type == 'split_shuffle':
+        assert shu_idx_train is not None and shu_idx_test is not None, 'shu_idx_train and shu_idx_test must be provided'
+        train = data[:, :cut_point].flatten(0, 1)[shu_idx_train]
+        test = data[:, cut_point:].flatten(0, 1)[shu_idx_test]
+        return train, test
+    elif type == 'shuffle_split':
+        assert shu_idx_train is not None, 'shu_idx_train must be provided'
+        data = data.flatten(0, 1)[shu_idx_train]
+        train, test = data[:cut_point], data[cut_point:]
+        return train, test
+    elif type == 'no_shuffle':
+        train = data[:, :cut_point].flatten(0, 1)
+        test = data[:, cut_point:].flatten(0, 1)
+        return train, test
+
+
+def _split_sub(data, subject_ids, positions, y_cls, train_ratio=0.7):
+    n_subjects = data.shape[0]
+    train_ids, val_ids = train_test_split(torch.arange(0, n_subjects),
+                                          train_size=train_ratio,
+                                          stratify=y_cls)  # TODO: it always statifies, should later make it optional
+
+    train_idx = torch.where(torch.isin(subject_ids, train_ids))[0]
+    val_idx = torch.where(torch.isin(subject_ids, val_ids))[0]
+    X_train = data.flatten(0, 1)[train_idx]
+    X_test = data.flatten(0, 1)[val_idx]
+    subject_ids_train = subject_ids.flatten(0, 1)[train_idx]
+    subject_ids_test = subject_ids.flatten(0, 1)[val_idx]
+    positions_train = positions.flatten(0, 1)[train_idx]
+    positions_test = positions.flatten(0, 1)[val_idx]
+    y_cls_train = y_cls.flatten(0, 1)[train_idx]
+    y_cls_test = y_cls.flatten(0, 1)[val_idx]
+
+    return X_train, X_test, subject_ids_train, subject_ids_test, positions_train, positions_test, y_cls_train, y_cls_test
+
+
+def _split_time(data,
+                subject_ids,
+                positions,
+                y_cls,
+                shuffling, train_ratio=0.7):
+    if shuffling == 'split_shuffle':
+        cut_point = int(data.shape[1] * train_ratio)  # cutoff
+        X_train = data[:, :cut_point, :, :].flatten(0, 1)
+        X_test = data[:, cut_point:, :, :].flatten(0, 1)
+        sh_tr, sh_te = torch.randperm(X_train.shape[0]), torch.randperm(X_test.shape[0])
+        X_train = X_train[sh_tr]
+        X_test = X_test[sh_te]
+        subject_ids_train, subject_ids_test = __split_data(subject_ids, 'split_shuffle', cut_point, sh_tr, sh_te)
+        positions_train, positions_test = __split_data(positions, 'split_shuffle', cut_point, sh_tr, sh_te)
+        y_cls_train, y_cls_test = __split_data(y_cls, 'split_shuffle', cut_point, sh_tr, sh_te)
+
+    elif shuffling == 'shuffle_split':
+        X_input = data.flatten(0, 1)
+        sh = torch.randperm(X_input.shape[0])
+        cut_point = int(X_input.shape[0] * train_ratio)
+        X_input = X_input[sh]
+        X_train, X_test = X_input[:cut_point], X_input[cut_point:]
+        subject_ids_train, subject_ids_test = __split_data(subject_ids, 'shuffle_split', cut_point, sh)
+        positions_train, positions_test = __split_data(positions, 'shuffle_split', cut_point, sh)
+        y_cls_train, y_cls_test = __split_data(y_cls, 'shuffle_split', cut_point, sh)
+
+    elif shuffling == 'no_shuffle':
+        cut_point = int(data.shape[1] * train_ratio)
+        X_train, X_test = __split_data(data, 'no_shuffle', cut_point)
+        subject_ids_train, subject_ids_test = __split_data(subject_ids, 'no_shuffle', cut_point)
+        positions_train, positions_test = __split_data(positions, 'no_shuffle', cut_point)
+        y_cls_train, y_cls_test = __split_data(y_cls, 'no_shuffle', cut_point)
+
+    return X_train, X_test, subject_ids_train, subject_ids_test, positions_train, positions_test, y_cls_train, y_cls_test
+
+
+def split_data(data, subject_ids, positions, y_cls, shuffling, split_type, train_ratio=0.7):
+    if split_type == 'time':
+        return _split_time(data, subject_ids, positions, y_cls, shuffling, train_ratio)
+    else:
+        return _split_sub(data, subject_ids, positions, y_cls, train_ratio)

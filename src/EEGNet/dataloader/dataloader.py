@@ -8,6 +8,7 @@ from sklearn.preprocessing import RobustScaler
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import torch.utils.data
+from src.EEGNet.preprocessing.utils import split_data
 
 
 class TimeDimSplit(pl.LightningDataModule):
@@ -21,7 +22,8 @@ class TimeDimSplit(pl.LightningDataModule):
                  batch_size: int = 32,
                  preprocess: bool = False,
                  n_subjects: int = 10,
-                 shuffling: str = 'type1'
+                 split_type: str = 'time',
+                 shuffling: str = 'no_shuffle'
                  ):
         super().__init__()
         self.data_dir = data_dir
@@ -31,6 +33,7 @@ class TimeDimSplit(pl.LightningDataModule):
         self.preprocess = preprocess
         self.n_subjects = n_subjects
         self.shuffling = shuffling
+        self.split_type = split_type
 
     def prepare_data(self):
         # read data from file
@@ -58,47 +61,13 @@ class TimeDimSplit(pl.LightningDataModule):
         # create subject ids
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
 
-        # shuffle and then train/test split
-        if self.shuffling == 'type1':  # TODO: define shuffling in a separate function
-            cut_point = int(X_input.shape[1] * self.train_ratio)  # cutoff
-            X_train = X_input[:, :cut_point, :, :].flatten(0, 1)
-            X_test = X_input[:, cut_point:, :, :].flatten(0, 1)
-            sh_train, sh_test = torch.randperm(X_train.shape[0]), torch.randperm(X_test.shape[0])
-            X_train = X_train[sh_train]
-            X_test = X_test[sh_test]
-            subject_ids_train = subject_ids[:, :cut_point, :].flatten(0, 1)[sh_train]
-            subject_ids_test = subject_ids[:, cut_point:, :].flatten(0, 1)[sh_test]
-            positions_train = positions[:, :cut_point, :, :].flatten(0, 1)[sh_train]
-            positions_test = positions[:, cut_point:, :, :].flatten(0, 1)[sh_test]
-            gender_train = gender[:, :cut_point].flatten(0, 1)[sh_train]
-            gender_test = gender[:, cut_point:].flatten(0, 1)[sh_test]
-
-        elif self.shuffling == 'type2':
-            X_input = X_input.flatten(0, 1)
-            sh = torch.randperm(X_input.shape[0])
-            cut_point = int(X_input.shape[0] * self.train_ratio)
-            X_input = X_input[sh]
-            X_train, X_test = X_input[:cut_point], X_input[cut_point:]
-
-            subject_ids = subject_ids.flatten(0, 1)[sh]
-            subject_ids_train, subject_ids_test = subject_ids[:cut_point], subject_ids[cut_point:]
-
-            positions = positions.flatten(0, 1)[sh]
-            positions_train, positions_test = positions[:cut_point], positions[cut_point:]
-
-            gender = gender.flatten(0, 1)[sh]
-            gender_train, gender_test = gender[:cut_point], gender[cut_point:]
-
-        elif self.shuffling is None:
-            cut_point = int(X_input.shape[1] * self.train_ratio)
-            X_train = X_input[:, :cut_point, :, :].flatten(0, 1)
-            X_test = X_input[:, cut_point:, :, :].flatten(0, 1)
-            subject_ids_train = subject_ids[:, :cut_point, :].flatten(0, 1)
-            subject_ids_test = subject_ids[:, cut_point:, :].flatten(0, 1)
-            positions_train = positions[:, :cut_point, :, :].flatten(0, 1)
-            positions_test = positions[:, cut_point:, :, :].flatten(0, 1)
-            gender_train = gender[:, :cut_point].flatten(0, 1)
-            gender_test = gender[:, cut_point:].flatten(0, 1)
+        # train/test split
+        all_data = split_data(X_input, subject_ids, positions, gender,
+                              self.shuffling, self.split_type, self.train_ratio)
+        X_train, X_test = all_data[0], all_data[1]
+        subject_ids_train, subject_ids_test = all_data[2], all_data[3]
+        positions_train, positions_test = all_data[4], all_data[5]
+        gender_train, gender_test = all_data[6], all_data[7]
 
         self.train_dataset = torch.utils.data.TensorDataset(
             X_train,
@@ -113,9 +82,6 @@ class TimeDimSplit(pl.LightningDataModule):
             positions_test,
             gender_test
         )
-
-        # torch.save(self.train_dataset, f'tmp/train_{self.train_ratio}.pt')
-        # torch.save(self.val_dataset, f'tmp/val_{self.train_ratio}.pt')
 
     def train_dataloader(self):
         rnd_g = torch.Generator()

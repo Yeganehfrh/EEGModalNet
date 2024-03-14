@@ -23,7 +23,8 @@ class TimeDimSplit(pl.LightningDataModule):
                  preprocess: bool = False,
                  n_subjects: int = 10,
                  split_type: str = 'time',
-                 shuffling: str = 'no_shuffle'
+                 shuffling: str = 'no_shuffle',
+                 stratified: bool = True
                  ):
         super().__init__()
         self.data_dir = data_dir
@@ -34,6 +35,7 @@ class TimeDimSplit(pl.LightningDataModule):
         self.n_subjects = n_subjects
         self.shuffling = shuffling
         self.split_type = split_type
+        self.stratified = stratified
 
     def prepare_data(self):
         # read data from file
@@ -63,7 +65,8 @@ class TimeDimSplit(pl.LightningDataModule):
 
         # train/test split
         all_data = split_data(X_input, subject_ids, positions, gender,
-                              self.shuffling, self.split_type, self.train_ratio)
+                              self.shuffling, self.split_type, self.train_ratio,
+                              self.stratified)
         X_train, X_test = all_data[0], all_data[1]
         subject_ids_train, subject_ids_test = all_data[2], all_data[3]
         positions_train, positions_test = all_data[4], all_data[5]

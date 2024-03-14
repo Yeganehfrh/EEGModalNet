@@ -115,12 +115,16 @@ def __split_data(data, type, cut_point, shu_idx_train=None, shu_idx_test=None):
         return train, test
 
 
-def _split_sub(data, subject_ids, positions, y_cls, train_ratio=0.7):
+def _split_sub(data, subject_ids, positions, y_cls, stratified=True, train_ratio=0.7):
     n_subjects = data.shape[0]
-    train_ids, val_ids = train_test_split(torch.arange(0, n_subjects),
+    if stratified:
+        stratify_cls = y_cls[:, :, 1]
+    else:
+        stratify_cls = None
+    train_ids, val_ids = train_test_split(torch.arange(n_subjects),
                                           train_size=train_ratio,
-                                          stratify=y_cls)  # TODO: it always statifies, should later make it optional
-
+                                          stratify=stratify_cls,
+                                          )
     train_idx = torch.where(torch.isin(subject_ids, train_ids))[0]
     val_idx = torch.where(torch.isin(subject_ids, val_ids))[0]
     X_train = data.flatten(0, 1)[train_idx]
@@ -171,8 +175,10 @@ def _split_time(data,
     return X_train, X_test, subject_ids_train, subject_ids_test, positions_train, positions_test, y_cls_train, y_cls_test
 
 
-def split_data(data, subject_ids, positions, y_cls, shuffling, split_type, train_ratio=0.7):
+def split_data(data, subject_ids, positions, y_cls, shuffling, split_type, train_ratio=0.7, stratified=True):
+    assert shuffling in ['split_shuffle', 'shuffle_split', 'no_shuffle'], 'shuffling must be either split_shuffle, shuffle_split or no_shuffle'
+    assert split_type in ['time', 'subject'], 'split_type must be either time or subject'
     if split_type == 'time':
         return _split_time(data, subject_ids, positions, y_cls, shuffling, train_ratio)
-    else:
-        return _split_sub(data, subject_ids, positions, y_cls, train_ratio)
+    elif split_type == 'subject':
+        return _split_sub(data, subject_ids, positions, y_cls, stratified, train_ratio)

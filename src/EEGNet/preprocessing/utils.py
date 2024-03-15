@@ -127,14 +127,14 @@ def _split_sub(data, subject_ids, positions, y_cls, stratified=True, train_ratio
                                           )
     train_idx = torch.where(torch.isin(subject_ids, train_ids))[0]
     val_idx = torch.where(torch.isin(subject_ids, val_ids))[0]
-    X_train = data.flatten(0, 1)[train_idx]
-    X_test = data.flatten(0, 1)[val_idx]
-    subject_ids_train = subject_ids.flatten(0, 1)[train_idx]
-    subject_ids_test = subject_ids.flatten(0, 1)[val_idx]
-    positions_train = positions.flatten(0, 1)[train_idx]
-    positions_test = positions.flatten(0, 1)[val_idx]
-    y_cls_train = y_cls.flatten(0, 1)[train_idx]
-    y_cls_test = y_cls.flatten(0, 1)[val_idx]
+    X_train = data[train_idx].flatten(0, 1)
+    X_test = data[val_idx].flatten(0, 1)
+    subject_ids_train = subject_ids[train_idx].flatten(0, 1)
+    subject_ids_test = subject_ids[val_idx].flatten(0, 1)
+    positions_train = positions[train_idx].flatten(0, 1)
+    positions_test = positions[val_idx].flatten(0, 1)
+    y_cls_train = y_cls[train_idx].flatten(0, 1)
+    y_cls_test = y_cls[val_idx].flatten(0, 1)
 
     return X_train, X_test, subject_ids_train, subject_ids_test, positions_train, positions_test, y_cls_train, y_cls_test
 

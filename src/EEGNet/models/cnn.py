@@ -94,12 +94,12 @@ class CNN(pl.LightningModule):
 
         return x_hat, y_hat
 
-    def training_step(self, batch):
+    def training_step(self, batch, batch_idx):
+        if isinstance(batch, list):
+            return self.training_step_kfold(batch, batch_idx)
         x, _, _, y = batch
         x_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
-        # save y, and y_hat
-        # torch.save({'y': y, 'y_hat': y_hat}, 'y_y_hat.pt')
         loss = 0
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
@@ -115,7 +115,7 @@ class CNN(pl.LightningModule):
         self.log('train/loss', loss)
         return loss
 
-    def validation_step(self, batch):
+    def validation_step(self, batch, batch_idx, dataloader_idx=0):
         x, _, _, y = batch
         x_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
@@ -131,6 +131,26 @@ class CNN(pl.LightningModule):
             self.log('val/loss_recon', loss_rec)
             loss += loss_rec
         self.log('val/loss', loss)
+        return loss
+    
+    def training_step_kfold(self, batch, batch_idx):
+        loss = 0
+        for fold_batch in batch:
+            x, _, _, y = fold_batch
+            x_hat, y_hat = self(fold_batch)
+            x = x.permute(0, 2, 1)
+            if hasattr(self, 'classifier'):
+                loss_class = nn.functional.cross_entropy(y_hat, y)
+                self.log('train/loss_cls', loss_class)
+                loss += loss_class
+                # log accuracy
+                accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
+                self.log('train/acc_tmf', accuracy)
+            if hasattr(self, 'decoder'):
+                loss_rec = nn.functional.mse_loss(x_hat, x)
+                self.log('train/loss_recon', loss_rec)
+                loss += loss_rec
+        self.log('train/loss', loss)
         return loss
 
     def configure_optimizers(self):

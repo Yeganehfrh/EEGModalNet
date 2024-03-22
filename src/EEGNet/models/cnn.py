@@ -19,10 +19,12 @@ class CNN(pl.LightningModule):
                  use_decoder=True,
                  use_1x1_conv=True,
                  dropout=0.5,
-                 n_fft=None):
+                 n_fft=None,
+                 cross_val=False):
 
         super().__init__()
         self.save_hyperparameters()
+        self.cross_val = cross_val
 
         # Fourier positional embedding
         if use_channel_merger:
@@ -102,7 +104,7 @@ class CNN(pl.LightningModule):
         return x_hat, y_hat
 
     def training_step(self, batch, batch_idx):
-        if isinstance(batch, list):
+        if self.cross_val:
             return self.training_step_kfold(batch, batch_idx)
         x, _, _, y = batch
         x_hat, y_hat = self(batch)

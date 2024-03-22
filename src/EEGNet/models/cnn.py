@@ -18,6 +18,7 @@ class CNN(pl.LightningModule):
                  use_classifier=True,
                  use_decoder=True,
                  use_1x1_conv=True,
+                 dropout=0.5,
                  n_fft=None):
 
         super().__init__()
@@ -42,6 +43,10 @@ class CNN(pl.LightningModule):
             self.n_fft = n_fft
             self.stft = T.Spectrogram(n_fft=n_fft, hop_length=128,
                                       power=1, normalized=False)
+
+        # dropout
+        if dropout > 0:
+            self.dropout = nn.Dropout(dropout)
 
         self.encoder = nn.Sequential(
                        nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=2),
@@ -81,6 +86,8 @@ class CNN(pl.LightningModule):
         if hasattr(self, 'stft'):
             x = self.stft(x)
             x = x.mean(dim=-1)
+        if hasattr(self, 'dropout'):
+            x = self.dropout(x)
 
         h = self.encoder(x)
 
@@ -132,7 +139,7 @@ class CNN(pl.LightningModule):
             loss += loss_rec
         self.log('val/loss', loss)
         return loss
-    
+
     def training_step_kfold(self, batch, batch_idx):
         loss = 0
         for fold_batch in batch:

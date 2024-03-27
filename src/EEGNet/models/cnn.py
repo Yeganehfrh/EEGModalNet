@@ -164,3 +164,49 @@ class CNN(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=0.001)
+
+
+class SeperateClassifier(pl.LightningModule):
+    def __init__(self,
+                 pretrained_encoder_checkpoint_path,
+                 n_labels):
+        super().__init__()
+
+        self.save_hyperparameters()
+
+        self.encoder = CNN.load_from_checkpoint(pretrained_encoder_checkpoint_path)
+        self.embeddings_dim = self.encoder.encoder.time_embedding_dim
+        self.model = nn.Sequential(
+            nn.Linear(self.embeddings_dim, self.embeddings_dim // 2),
+            nn.ReLU(),
+            nn.Linear(self.embeddings_dim // 2, n_labels),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        h = self.encoder.encoder(x)
+        y_cls = self.model(h)
+        return y_cls
+
+    def training_step(self, batch, batch_idx):
+        x, _, _, y = batch
+        x = x.permute(0, 2, 1)
+        y_hat = self(x)
+        accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
+        loss_cls = nn.functional.cross_entropy(y_hat, y)
+        self.log('train/accuracy', accuracy)
+        self.log('train/loss_cls', loss_cls)
+        return loss_cls
+
+    def validation_step(self, batch, batch_idx):
+        x, _, _, y = batch
+        x = x.permute(0, 2, 1)
+        y_hat = self(x)
+        accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
+        loss_cls = nn.functional.cross_entropy(y_hat, y)
+        self.log('val/accuracy', accuracy)
+        self.log('val/loss_cls', loss_cls)
+        return loss_cls
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=1e-3)

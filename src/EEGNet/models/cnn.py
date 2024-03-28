@@ -113,6 +113,9 @@ class CNN(pl.LightningModule):
         x_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
         if self.joint_embedding:
+            if hasattr(self, 'stft'):
+                x = self.stft(x)
+                x = x.mean(dim=-1)
             x = self.encoder(x)
         loss = 0
         if hasattr(self, 'classifier'):

@@ -20,11 +20,14 @@ class CNN(pl.LightningModule):
                  use_1x1_conv=True,
                  dropout=0.5,
                  n_fft=None,
-                 cross_val=False):
+                 cross_val=False,
+                 joint_embedding=False):
 
         super().__init__()
         self.save_hyperparameters()
         self.cross_val = cross_val
+        self.joint_embedding = joint_embedding
+        assert not (use_decoder and joint_embedding), "Cross validation and joint embedding cannot be used together"
 
         # Fourier positional embedding
         if use_channel_merger:
@@ -109,6 +112,8 @@ class CNN(pl.LightningModule):
         x, _, _, y = batch
         x_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
+        if self.joint_embedding:
+            x = self.encoder(x)
         loss = 0
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)

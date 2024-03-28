@@ -104,20 +104,23 @@ class CNN(pl.LightningModule):
         if hasattr(self, 'decoder'):
             x_hat = self.decoder(h)
 
-        return x_hat, y_hat
+        return x_hat, h, y_hat
 
     def training_step(self, batch, batch_idx):
+        loss = 0
         if self.cross_val:
             return self.training_step_kfold(batch, batch_idx)
         x, _, _, y = batch
-        x_hat, y_hat = self(batch)
+        x_hat, h_hat, y_hat = self(batch)
         x = x.permute(0, 2, 1)
         if self.joint_embedding:
             if hasattr(self, 'stft'):
                 x = self.stft(x)
                 x = x.mean(dim=-1)
-            x = self.encoder(x)
-        loss = 0
+            h = self.encoder(x)
+            loss_rec = nn.functional.mse_loss(h_hat, h)
+            self.log('val/loss_recon', loss_rec)
+            loss += loss_rec
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
             self.log('train/loss_cls', loss_class)
@@ -133,10 +136,18 @@ class CNN(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        x, _, _, y = batch
-        x_hat, y_hat = self(batch)
-        x = x.permute(0, 2, 1)
         loss = 0
+        x, _, _, y = batch
+        x_hat, h_hat, y_hat = self(batch)
+        x = x.permute(0, 2, 1)
+        if self.joint_embedding:
+            if hasattr(self, 'stft'):
+                x = self.stft(x)
+                x = x.mean(dim=-1)
+            h = self.encoder(x)
+            loss_rec = nn.functional.mse_loss(h_hat, h)
+            self.log('val/loss_recon', loss_rec)
+            loss += loss_rec
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
             self.log('val/loss_cls', loss_class)
@@ -154,8 +165,16 @@ class CNN(pl.LightningModule):
         loss = 0
         for fold_batch in batch:
             x, _, _, y = fold_batch
-            x_hat, y_hat = self(fold_batch)
+            x_hat, h_hat, y_hat = self(fold_batch)
             x = x.permute(0, 2, 1)
+            if self.joint_embedding:
+                if hasattr(self, 'stft'):
+                    x = self.stft(x)
+                    x = x.mean(dim=-1)
+                h = self.encoder(x)
+                loss_rec = nn.functional.mse_loss(h_hat, h)
+                self.log('val/loss_recon', loss_rec)
+                loss += loss_rec
             if hasattr(self, 'classifier'):
                 loss_class = nn.functional.cross_entropy(y_hat, y)
                 self.log('train/loss_cls', loss_class)

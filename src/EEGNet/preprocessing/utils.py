@@ -115,18 +115,18 @@ def __split_data(data, type, cut_point, shu_idx_train=None, shu_idx_test=None):
         return train, test
 
 
-def _split_sub(data, subject_ids, positions, y_cls, stratified=True, train_ratio=0.7):
+def _split_sub(data, subject_ids, positions, y_cls, shuffling='no_shuffle',
+               stratified=True, train_ratio=0.7):
     n_subjects = data.shape[0]
     if stratified:
         stratify_cls = y_cls[:, :, 1]
     else:
         stratify_cls = None
-    train_ids, val_ids = train_test_split(torch.arange(n_subjects),
+    train_idx, val_idx = train_test_split(torch.arange(n_subjects),
                                           train_size=train_ratio,
                                           stratify=stratify_cls,
+                                          random_state=42  # TODO: remove manual seed
                                           )
-    train_idx = torch.where(torch.isin(subject_ids, train_ids))[0]
-    val_idx = torch.where(torch.isin(subject_ids, val_ids))[0]
     X_train = data[train_idx].flatten(0, 1)
     X_test = data[val_idx].flatten(0, 1)
     subject_ids_train = subject_ids[train_idx].flatten(0, 1)
@@ -135,6 +135,18 @@ def _split_sub(data, subject_ids, positions, y_cls, stratified=True, train_ratio
     positions_test = positions[val_idx].flatten(0, 1)
     y_cls_train = y_cls[train_idx].flatten(0, 1)
     y_cls_test = y_cls[val_idx].flatten(0, 1)
+
+    if shuffling != 'no_shuffle':
+        print('>>> Shuffling data after splitting')
+        sh_tr, sh_te = torch.randperm(X_train.shape[0]), torch.randperm(X_test.shape[0])
+        X_train = X_train[sh_tr]
+        X_test = X_test[sh_te]
+        subject_ids_train = subject_ids_train[sh_tr]
+        subject_ids_test = subject_ids_test[sh_te]
+        positions_train = positions_train[sh_tr]
+        positions_test = positions_test[sh_te]
+        y_cls_train = y_cls_train[sh_tr]
+        y_cls_test = y_cls_test[sh_te]
 
     return X_train, X_test, subject_ids_train, subject_ids_test, positions_train, positions_test, y_cls_train, y_cls_test
 
@@ -181,4 +193,4 @@ def split_data(data, subject_ids, positions, y_cls, shuffling, split_type, train
     if split_type == 'time':
         return _split_time(data, subject_ids, positions, y_cls, shuffling, train_ratio)
     elif split_type == 'subject':
-        return _split_sub(data, subject_ids, positions, y_cls, stratified, train_ratio)
+        return _split_sub(data, subject_ids, positions, y_cls, shuffling, stratified, train_ratio)

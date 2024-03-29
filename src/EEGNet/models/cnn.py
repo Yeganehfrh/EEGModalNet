@@ -119,7 +119,7 @@ class CNN(pl.LightningModule):
                 x = x.mean(dim=-1)
             h = self.encoder(x)
             loss_rec = nn.functional.mse_loss(h_hat, h)
-            self.log('val/loss_recon', loss_rec)
+            self.log('train/loss_recon', loss_rec)
             loss += loss_rec
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
@@ -173,7 +173,7 @@ class CNN(pl.LightningModule):
                     x = x.mean(dim=-1)
                 h = self.encoder(x)
                 loss_rec = nn.functional.mse_loss(h_hat, h)
-                self.log('val/loss_recon', loss_rec)
+                self.log('train/loss_recon', loss_rec)
                 loss += loss_rec
             if hasattr(self, 'classifier'):
                 loss_class = nn.functional.cross_entropy(y_hat, y)

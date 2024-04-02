@@ -8,17 +8,23 @@ import torchmetrics.functional as tmf
 
 class CNN(pl.LightningModule):
     def __init__(self,
+                 # parameters
                  n_channels=61,
                  n_embeddings=32,
                  n_timepoints=62,
                  n_subjects=200,
                  n_classes=2,
+                 # encoder-decoder
+                 encoder='CNN',
+                 decoder='CNN',
+                 # layers
                  use_channel_merger=True,
                  use_subject_layers=True,
                  use_classifier=True,
                  use_decoder=True,
                  use_1x1_conv=True,
                  dropout=0.5,
+                 # other
                  n_fft=None,
                  cross_val=False,
                  joint_embedding=False):
@@ -53,31 +59,15 @@ class CNN(pl.LightningModule):
         if dropout > 0:
             self.dropout = nn.Dropout(dropout)
 
-        self.encoder = nn.Sequential(
-                       nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=2),
-                       nn.ReLU(),
-                       nn.Conv1d(n_channels * 2, n_channels * 4, kernel_size=4, stride=2),
-                       nn.ReLU(),
-                       nn.Conv1d(n_channels * 4, n_channels * 8, kernel_size=4, stride=2),
-                       nn.ReLU(),
-                       nn.Flatten(),
-                       nn.Linear(n_channels * 8 * n_timepoints, n_embeddings)
-                )
+        if encoder == 'CNN':
+            self.encoder = CNNEncoder(n_channels, n_embeddings, n_timepoints)
+
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
 
         if use_decoder:
-            self.decoder = nn.Sequential(
-                        nn.Linear(n_embeddings, n_channels * 8 * n_timepoints),
-                        nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, n_timepoints)),
-                        nn.ReLU(),
-                        nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
-                        nn.ReLU(),
-                        nn.ConvTranspose1d(n_channels * 4, n_channels * 2, kernel_size=4, stride=2, output_padding=1),
-                        nn.ReLU(),
-                        nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=2),
-                        nn.ReLU()
-                    )
+            if decoder == 'CNN':
+                self.decoder = CNNDecoder(n_channels, n_timepoints, n_embeddings)
 
     def forward(self, batch):
         x, sub, pos, _ = batch
@@ -237,3 +227,30 @@ class SeperateClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
+
+
+def CNNEncoder(n_channels, n_embeddings, n_timepoints):
+    return nn.Sequential(
+                 nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=2),
+                 nn.ReLU(),
+                 nn.Conv1d(n_channels * 2, n_channels * 4, kernel_size=4, stride=2),
+                 nn.ReLU(),
+                 nn.Conv1d(n_channels * 4, n_channels * 8, kernel_size=4, stride=2),
+                 nn.ReLU(),
+                 nn.Flatten(),
+                 nn.Linear(n_channels * 8 * n_timepoints, n_embeddings)
+                )
+
+
+def CNNDecoder(n_channels, n_timepoints, n_embeddings):
+    return nn.Sequential(
+                nn.Linear(n_embeddings, n_channels * 8 * n_timepoints),
+                nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, n_timepoints)),
+                nn.ReLU(),
+                nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
+                nn.ReLU(),
+                nn.ConvTranspose1d(n_channels * 4, n_channels * 2, kernel_size=4, stride=2, output_padding=1),
+                nn.ReLU(),
+                nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=2),
+                nn.ReLU()
+        )

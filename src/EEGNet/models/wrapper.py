@@ -6,7 +6,7 @@ from src.EEGNet.models.commonBlocks import ChannelMerger, SubjectLayers, Classif
 import torchmetrics.functional as tmf
 
 
-class CNN(pl.LightningModule):
+class Wrapper(pl.LightningModule):
     def __init__(self,
                  # parameters
                  n_channels=61,

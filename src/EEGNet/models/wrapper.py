@@ -10,13 +10,16 @@ class Wrapper(pl.LightningModule):
     def __init__(self,
                  # parameters
                  n_channels=61,
-                 n_embeddings=32,
-                 embedded_time_dim=62,
                  n_subjects=200,
                  n_classes=2,
                  # encoder-decoder
                  encoder='CNN',
                  decoder='CNN',
+                 embedded_time_dim=62,
+                 n_embeddings=32,
+                 # MLP
+                 n_timepoints=512,
+                 n_layers=3,
                  # layers
                  use_channel_merger=True,
                  use_subject_layers=True,
@@ -34,6 +37,8 @@ class Wrapper(pl.LightningModule):
         self.cross_val = cross_val
         self.joint_embedding = joint_embedding
         assert not (use_decoder and joint_embedding), "Cross validation and joint embedding cannot be used together"
+        assert encoder in ['CNN', 'MLPTime', 'MLPChannels'], "Encoder must be either CNN, MLPTime or MLPChannels"
+        assert decoder in ['CNN', 'MLPTime', 'MLPChannels'], "Decoder must be either CNN, MLPTime, or MLPChannels"
 
         # Fourier positional embedding
         if use_channel_merger:
@@ -61,6 +66,10 @@ class Wrapper(pl.LightningModule):
 
         if encoder == 'CNN':
             self.encoder = CNNEncoder(n_channels, n_embeddings, embedded_time_dim)
+        elif encoder == 'MLPTime':
+            self.encoder = mlpEncoder(n_timepoints, n_embeddings, n_layers)
+        elif encoder == 'MLPChannels':
+            self.encoder = mlpEncoder(n_channels, n_embeddings, n_layers)
 
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
@@ -68,6 +77,10 @@ class Wrapper(pl.LightningModule):
         if use_decoder:
             if decoder == 'CNN':
                 self.decoder = CNNDecoder(n_channels, embedded_time_dim, n_embeddings)
+            elif decoder == 'MLPTime':
+                self.decoder = mlpDecoder(n_timepoints, n_embeddings, n_layers)
+            elif decoder == 'MLPChannels':
+                self.decoder = mlpDecoder(n_channels, n_embeddings, n_layers)
 
     def forward(self, batch):
         x, sub, pos, _ = batch
@@ -257,6 +270,8 @@ def CNNDecoder(n_channels, embedded_time_dim, n_embeddings):
 
 
 def mlpEncoder(n_features, n_embeddings, n_layers):
+    assert n_layers > 0 and n_features > n_embeddings, "Invalid number of layers or embeddings"
+    assert n_features // (2 ** n_layers) >= n_embeddings, "n_features must be greater than or equal to n_embeddings after passing through the layers"
     layers = []
     for i in range(n_layers):
         layers.append(nn.Linear(n_features, n_features // 2))
@@ -268,6 +283,8 @@ def mlpEncoder(n_features, n_embeddings, n_layers):
 
 
 def mlpDecoder(n_features, n_embeddings, n_layers):
+    assert n_layers > 0 and n_features > n_embeddings, "Invalid number of layers or embeddings"
+    assert n_embeddings * 2 ** n_layers <= n_features, "n_embeddings * 2 ** n_layers must be less than or equal to n_features"
     layers = []
     for i in range(n_layers):
         layers.append(nn.Linear(n_embeddings, n_embeddings * 2))

@@ -254,3 +254,25 @@ def CNNDecoder(n_channels, n_timepoints, n_embeddings):
                 nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=2),
                 nn.ReLU()
         )
+
+
+def mlpEncoder(n_features, n_embeddings, n_layers):
+    layers = []
+    for i in range(n_layers):
+        layers.append(nn.Linear(n_features, n_features // 2))
+        layers.append(nn.ReLU())
+        n_features = n_features // 2
+    layers.append(nn.Linear(n_features, n_embeddings))
+    layers.append(nn.ReLU())
+    return nn.Sequential(*layers)
+
+
+def mlpDecoder(n_features, n_embeddings, n_layers):
+    layers = []
+    for i in range(n_layers):
+        layers.append(nn.Linear(n_embeddings, n_embeddings * 2))
+        layers.append(nn.ReLU())
+        n_embeddings = n_embeddings * 2
+    layers.append(nn.Linear(n_embeddings, n_features))
+    layers.append(nn.ReLU())
+    return nn.Sequential(*layers)

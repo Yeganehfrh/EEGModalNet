@@ -8,15 +8,19 @@ import torchmetrics.functional as tmf
 
 class Wrapper(pl.LightningModule):
     def __init__(self,
-                 # parameters
+                 # general structure
                  n_channels=61,
                  n_subjects=200,
                  n_classes=2,
+                 flatten=False,
                  # encoder-decoder
                  encoder='CNN',
                  decoder='CNN',
-                 embedded_time_dim=62,
+                 embedded_time_dim=32,
                  n_embeddings=32,
+                 out_channel=512,
+                 depth=4,
+                 hidden=128,
                  # MLP
                  n_timepoints=512,
                  n_layers=3,
@@ -65,11 +69,20 @@ class Wrapper(pl.LightningModule):
             self.dropout = nn.Dropout(dropout)
 
         if encoder == 'CNN':
-            self.encoder = CNNEncoder(n_channels, n_embeddings, embedded_time_dim)
+            self.encoder = CNNEncoder(in_channels=n_channels, out_channels=out_channel,
+                                      depth=depth, hidden=hidden)
         elif encoder == 'MLPTime':
             self.encoder = mlpEncoder(n_timepoints, n_embeddings, n_layers)
         elif encoder == 'MLPChannels':
             self.encoder = mlpEncoder(n_channels, n_embeddings, n_layers)
+        
+        if flatten:
+            self.latent_space = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(out_channel * embedded_time_dim, n_embeddings),  # TODO: using time_dim is a temporary solution
+            )
+        else:
+            self.latent_space = nn.Linear(embedded_time_dim, n_embeddings)
 
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
@@ -242,20 +255,21 @@ class SeperateClassifier(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
 
-def CNNEncoder(n_channels, n_embeddings, embedded_time_dim):
-    return nn.Sequential(
-                 nn.Conv1d(n_channels, n_channels * 2, kernel_size=4, stride=2),
-                 nn.ReLU(),
-                 nn.Conv1d(n_channels * 2, n_channels * 4, kernel_size=4, stride=2),
-                 nn.ReLU(),
-                 nn.Conv1d(n_channels * 4, n_channels * 8, kernel_size=4, stride=2),
-                 nn.ReLU(),
-                 nn.Flatten(),
-                 nn.Linear(n_channels * 8 * embedded_time_dim, n_embeddings)
-                )
+def CNNEncoder(in_channels, out_channels, hidden=128, depth=4, growth=2, batch_norm=False):
+    dims = [in_channels]
+    dims += ([int(round(hidden * growth ** k)) for k in range(depth)])
+    dims[-1] = out_channels
+    layers = []
+    for chin, chout in zip(dims[:-1], dims[1:]):
+        layers.append(nn.Conv1d(chin, chout, kernel_size=4, stride=2))
+        if batch_norm:
+            layers.append(nn.BatchNorm1d(chout))
+        layers.append(nn.ReLU())
+
+    return nn.Sequential(*layers)
 
 
-def CNNDecoder(n_channels, embedded_time_dim, n_embeddings):
+def CNNDecoder(n_channels, embedded_time_dim, n_embeddings):  # TODO: refactor this
     return nn.Sequential(
                 nn.Linear(n_embeddings, n_channels * 8 * embedded_time_dim),
                 nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, embedded_time_dim)),
@@ -273,7 +287,7 @@ def mlpEncoder(n_features, n_embeddings, n_layers):
     assert n_layers > 0 and n_features > n_embeddings, "Invalid number of layers or embeddings"
     assert n_features // (2 ** n_layers) >= n_embeddings, "n_features must be greater than or equal to n_embeddings after passing through the layers"
     layers = []
-    for i in range(n_layers):
+    for _ in range(n_layers):
         layers.append(nn.Linear(n_features, n_features // 2))
         layers.append(nn.ReLU())
         n_features = n_features // 2
@@ -286,10 +300,47 @@ def mlpDecoder(n_features, n_embeddings, n_layers):
     assert n_layers > 0 and n_features > n_embeddings, "Invalid number of layers or embeddings"
     assert n_embeddings * 2 ** n_layers <= n_features, "n_embeddings * 2 ** n_layers must be less than or equal to n_features"
     layers = []
-    for i in range(n_layers):
+    for _ in range(n_layers):
         layers.append(nn.Linear(n_embeddings, n_embeddings * 2))
         layers.append(nn.ReLU())
         n_embeddings = n_embeddings * 2
     layers.append(nn.Linear(n_embeddings, n_features))
     layers.append(nn.ReLU())
     return nn.Sequential(*layers)
+
+
+def SpaceTimeEncoder(n_channels, space_embedding_dim, time_embedding_dim, kernel_size=1,
+                     first_encode='Time'):
+
+    assert first_encode in ['Time', 'Space'], "First encoding must be either Time or Space"
+
+    space_encoder = nn.Sequential(
+            nn.Conv1d(n_channels, space_embedding_dim * 2, kernel_size),
+            nn.ReLU(),
+            nn.Conv1d(space_embedding_dim * 2, space_embedding_dim, kernel_size),
+            nn.ReLU())
+
+    time_encoder = nn.LSTM(
+            space_embedding_dim,
+            time_embedding_dim,
+            batch_first=True)
+
+    if first_encode == 'Time':
+        return nn.Sequential(time_encoder, space_encoder)
+    elif first_encode == 'Space':
+        return nn.Sequential(space_encoder, time_encoder)
+
+
+def SpaceTimeDecoder(n_channels, space_embedding_dim, time_embedding_dim, kernel_size=1):
+    time_decoder = nn.LSTM(
+        time_embedding_dim,
+        space_embedding_dim,
+        batch_first=True)
+
+    # spatial decoder
+    space_decoder = nn.Sequential(
+        nn.ConvTranspose1d(space_embedding_dim, space_embedding_dim * 2, 1, stride=1),
+        nn.ReLU(),
+        nn.ConvTranspose1d(space_embedding_dim * 2, n_channels, 1, stride=1),
+        nn.ReLU())
+    return nn.Sequential(time_decoder, space_decoder)

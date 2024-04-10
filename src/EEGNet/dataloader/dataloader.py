@@ -22,6 +22,7 @@ class EEGNetDataModule(pl.LightningDataModule):
                  batch_size: int = 32,
                  preprocess: bool = False,
                  n_subjects: int = 10,
+                 target: str = 'gender',
                  split_type: str = 'time',
                  shuffling: str = 'no_shuffle',
                  stratified: bool = True
@@ -36,11 +37,14 @@ class EEGNetDataModule(pl.LightningDataModule):
         self.shuffling = shuffling
         self.split_type = split_type
         self.stratified = stratified
+        self.target = target
+        assert target in ['gender', 'calmness', 'alertness', 'wellbeing'], "The target variable is unknown"
+        assert split_type in ['time', 'subject'], "The split type is unknown"
 
     def prepare_data(self):
         # read data from file
         ds = xr.open_dataset(self.data_dir)
-        if self.n_subjects is not None:
+        if self.n_subjects != 'all':
             ds = ds.sel(subject=ds.subject.values[:self.n_subjects])
         X_input = torch.from_numpy(ds['__xarray_dataarray_variable__'].values).float().permute(0, 2, 1)
 
@@ -53,37 +57,44 @@ class EEGNetDataModule(pl.LightningDataModule):
         positions = positions.repeat(self.n_subjects, X_input.shape[1], 1, 1)
 
         # y labels
-        gender = torch.from_numpy(ds.gender)
+        target = torch.from_numpy(ds.attrs[self.target])
         if self.n_subjects is not None:
-            gender = gender[:self.n_subjects]
-        gender -= 1   # 0 for female and 2 for male
-        gender = gender.reshape(-1, 1).repeat(1, X_input.shape[1])
-        gender = F.one_hot(gender, num_classes=2).float()
+            target = target[:self.n_subjects]
+
+        if self.target == 'gender':
+            target -= 1   # 0 for female and 1 for male
+            target = target.reshape(-1, 1).repeat(1, X_input.shape[1])
+            target = F.one_hot(target, num_classes=2).float()
+        else:
+            # min-max scaling
+            target = (target - target.min()) / (target.max() - target.min())
+            # TODO: mdeian split
+            target = (target > target.median()).float().reshape(-1, 1).repeat(1, X_input.shape[1])
 
         # create subject ids
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
 
         # train/test split
-        all_data = split_data(X_input, subject_ids, positions, gender,
+        all_data = split_data(X_input, subject_ids, positions, target,
                               self.shuffling, self.split_type, self.train_ratio,
                               self.stratified)
         X_train, X_test = all_data[0], all_data[1]
         subject_ids_train, subject_ids_test = all_data[2], all_data[3]
         positions_train, positions_test = all_data[4], all_data[5]
-        gender_train, gender_test = all_data[6], all_data[7]
+        target_train, target_test = all_data[6], all_data[7]
 
         self.train_dataset = torch.utils.data.TensorDataset(
             X_train,
             subject_ids_train,
             positions_train,
-            gender_train
+            target_train
         )
 
         self.val_dataset = torch.utils.data.TensorDataset(
             X_test,
             subject_ids_test,
             positions_test,
-            gender_test
+            target_test
         )
 
     def train_dataloader(self):
@@ -103,7 +114,7 @@ class EEGNetDataModule(pl.LightningDataModule):
         ...
 
 
-class EEGNetDataModuleKFold(pl.LightningDataModule):
+class EEGNetDataModuleKFold(pl.LightningDataModule):  # TODO: REFACTOR: implement kfold cross validation in utils and merge with EEGNetDataModule
     """Data module to upload input data and split it into train and validation sets on
     time dimension
     """
@@ -142,12 +153,12 @@ class EEGNetDataModuleKFold(pl.LightningDataModule):
         positions = positions.repeat(self.n_subjects, X_input.shape[1], 1, 1)
 
         # y labels
-        gender = torch.from_numpy(ds.gender)
+        target = torch.from_numpy(ds.target)
         if self.n_subjects is not None:
-            gender = gender[:self.n_subjects]
-        gender -= 1   # 0 for female and 2 for male
-        gender = gender.reshape(-1, 1).repeat(1, X_input.shape[1])
-        gender = F.one_hot(gender, num_classes=2).float()
+            target = target[:self.n_subjects]
+        target -= 1   # 0 for female and 1 for male
+        target = target.reshape(-1, 1).repeat(1, X_input.shape[1])
+        target = F.one_hot(target, num_classes=2).float()
 
         # create subject ids
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
@@ -165,25 +176,25 @@ class EEGNetDataModuleKFold(pl.LightningDataModule):
             X_val = X_input[start:end]
             subject_ids_val = subject_ids[start:end]
             positions_val = positions[start:end]
-            gender_val = gender[start:end]
+            target_val = target[start:end]
 
             X_train_fold = torch.cat([X_input[:start], X_input[end:]], dim=0)
             subject_ids_train_fold = torch.cat([subject_ids[:start], subject_ids[end:]], dim=0)
             positions_train_fold = torch.cat([positions[:start], positions[end:]], dim=0)
-            gender_train_fold = torch.cat([gender[:start], gender[end:]], dim=0)
+            target_train_fold = torch.cat([target[:start], target[end:]], dim=0)
 
             train_datasets.append(torch.utils.data.TensorDataset(
                 X_train_fold.flatten(0, 1),
                 subject_ids_train_fold.flatten(0, 1),
                 positions_train_fold.flatten(0, 1),
-                gender_train_fold.flatten(0, 1),
+                target_train_fold.flatten(0, 1),
             ))
 
             val_datasets.append(torch.utils.data.TensorDataset(
                 X_val.flatten(0, 1),
                 subject_ids_val.flatten(0, 1),
                 positions_val.flatten(0, 1),
-                gender_val.flatten(0, 1),
+                target_val.flatten(0, 1),
             ))
 
         self.train_datasets = train_datasets

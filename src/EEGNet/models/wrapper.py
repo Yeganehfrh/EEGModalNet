@@ -344,3 +344,19 @@ def SpaceTimeDecoder(n_channels, space_embedding_dim, time_embedding_dim, kernel
         nn.ConvTranspose1d(space_embedding_dim * 2, n_channels, 1, stride=1),
         nn.ReLU())
     return nn.Sequential(time_decoder, space_decoder)
+
+
+class RNNAutoencoder(n_channels, hidden_size, num_layers, latent_size):
+    def __init__(self, n_channels, hidden_size, num_layers, n_classes):
+        super().__init__()
+        self.encoder = nn.LSTM(n_channels, hidden_size, num_layers, batch_first=True)
+        self.fc_encoder = nn.Linear(hidden_size, latent_size)
+        self.fc_decoder = nn.Linear(latent_size, hidden_size)
+        self.decoder = nn.LSTM(hidden_size, n_channels, num_layers, batch_first=True)
+    
+    def forward(self, x):
+        _, (h_enc, _) = self.encoder(x)
+        latent = self.fc_encoder(h_enc.squeeze(0))
+        h_dec = self.fc_decoder(latent)
+        x_hat, _ = self.decoder(h_dec.unsqueeze(0))
+        return x_hat, latent

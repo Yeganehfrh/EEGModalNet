@@ -4,33 +4,38 @@ import pytorch_lightning as pl
 import torchaudio.transforms as T
 from src.EEGNet.models.commonBlocks import ChannelMerger, SubjectLayers, Classifier
 import torchmetrics.functional as tmf
+from src.EEGNet.models.rnnautoencoder import RNNAutoencoder
 
 
 class Wrapper(pl.LightningModule):
     def __init__(self,
-                 # general structure
-                 n_channels=61,
-                 n_subjects=200,
-                 n_classes=2,
-                 flatten=False,
-                 # encoder-decoder
-                 encoder='CNN',
-                 decoder='CNN',
+                 # cnn
                  embedded_time_dim=32,
                  n_embeddings=32,
                  out_channel=512,
-                 depth=4,
-                 hidden=128,
+                 # rnn
+                 rnn_latent=32,
+                 rnn_dropout=0,
+                 rnn_bidirectional=True,
+                 rnn_classifier=True,
                  # MLP
                  n_timepoints=512,
                  n_layers=3,
-                 # layers
+                 # general structure
+                 flatten=False,
+                 n_channels=61,
+                 n_subjects=200,
+                 n_classes=2,
+                 hidden=128,
+                 depth=1,
+                 dropout=0,
+                 encoder='CNN',
+                 decoder='CNN',
                  use_channel_merger=True,
                  use_subject_layers=True,
                  use_classifier=True,
                  use_decoder=True,
                  use_1x1_conv=True,
-                 dropout=0.5,
                  # other
                  n_fft=None,
                  cross_val=False,
@@ -41,8 +46,10 @@ class Wrapper(pl.LightningModule):
         self.cross_val = cross_val
         self.joint_embedding = joint_embedding
         assert not (use_decoder and joint_embedding), "Cross validation and joint embedding cannot be used together"
-        assert encoder in ['CNN', 'MLPTime', 'MLPChannels'], "Encoder must be either CNN, MLPTime or MLPChannels"
-        assert decoder in ['CNN', 'MLPTime', 'MLPChannels'], "Decoder must be either CNN, MLPTime, or MLPChannels"
+        assert encoder in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Encoder must be either CNN, RNN, MLPTime or MLPChannels"
+        assert decoder in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Decoder must be either CNN, RNN, MLPTime, or MLPChannels"
+        assert encoder == decoder, "Currently only the same encoder and decoder are supported"
+        assert not (rnn_classifier and use_classifier), "RNN classifier and CNN classifier cannot be used together"  #TODO: temporary solution
 
         # Fourier positional embedding
         if use_channel_merger:
@@ -75,7 +82,9 @@ class Wrapper(pl.LightningModule):
             self.encoder = mlpEncoder(n_timepoints, n_embeddings, n_layers)
         elif encoder == 'MLPChannels':
             self.encoder = mlpEncoder(n_channels, n_embeddings, n_layers)
-        
+        elif encoder == 'RNNAutoencoder':
+            self.encoder = RNNAutoencoder(use_decoder, rnn_classifier, n_classes,
+                                          n_channels, hidden, depth, rnn_latent, rnn_dropout, rnn_bidirectional)
         if flatten:
             self.latent_space = nn.Sequential(
                 nn.Flatten(),
@@ -344,19 +353,3 @@ def SpaceTimeDecoder(n_channels, space_embedding_dim, time_embedding_dim, kernel
         nn.ConvTranspose1d(space_embedding_dim * 2, n_channels, 1, stride=1),
         nn.ReLU())
     return nn.Sequential(time_decoder, space_decoder)
-
-
-class RNNAutoencoder(n_channels, hidden_size, num_layers, latent_size):
-    def __init__(self, n_channels, hidden_size, num_layers, n_classes):
-        super().__init__()
-        self.encoder = nn.LSTM(n_channels, hidden_size, num_layers, batch_first=True)
-        self.fc_encoder = nn.Linear(hidden_size, latent_size)
-        self.fc_decoder = nn.Linear(latent_size, hidden_size)
-        self.decoder = nn.LSTM(hidden_size, n_channels, num_layers, batch_first=True)
-    
-    def forward(self, x):
-        _, (h_enc, _) = self.encoder(x)
-        latent = self.fc_encoder(h_enc.squeeze(0))
-        h_dec = self.fc_decoder(latent)
-        x_hat, _ = self.decoder(h_dec.unsqueeze(0))
-        return x_hat, latent

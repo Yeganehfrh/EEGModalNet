@@ -14,10 +14,9 @@ class Wrapper(pl.LightningModule):
                  n_embeddings=32,
                  out_channel=512,
                  # rnn
-                 rnn_latent=32,
-                 rnn_dropout=0,
-                 rnn_bidirectional=True,
-                 rnn_classifier=True,
+                 rnn_decoder=True,
+                 rnn_dropout=0.0,
+                 rnn_bidirectional=False,
                  # MLP
                  n_timepoints=512,
                  n_layers=3,
@@ -28,9 +27,9 @@ class Wrapper(pl.LightningModule):
                  n_classes=2,
                  hidden=128,
                  depth=1,
-                 dropout=0,
-                 encoder='CNN',
-                 decoder='CNN',
+                 dropout=0.2,
+                 encoderArc='CNN',
+                 decoderArc='CNN',
                  use_channel_merger=True,
                  use_subject_layers=True,
                  use_classifier=True,
@@ -44,12 +43,13 @@ class Wrapper(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.cross_val = cross_val
+        self.encoderArc = encoderArc
+        self.rnn_decoder = rnn_decoder
         self.joint_embedding = joint_embedding
         assert not (use_decoder and joint_embedding), "Cross validation and joint embedding cannot be used together"
-        assert encoder in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Encoder must be either CNN, RNN, MLPTime or MLPChannels"
-        assert decoder in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Decoder must be either CNN, RNN, MLPTime, or MLPChannels"
-        assert encoder == decoder, "Currently only the same encoder and decoder are supported"
-        assert not (rnn_classifier and use_classifier), "RNN classifier and CNN classifier cannot be used together"  #TODO: temporary solution
+        assert encoderArc in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Encoder must be either CNN, RNN, MLPTime or MLPChannels"
+        assert decoderArc in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Decoder must be either CNN, RNN, MLPTime, or MLPChannels"
+        assert encoderArc == decoderArc, "Currently only the same encoder and decoder are supported"
 
         # Fourier positional embedding
         if use_channel_merger:
@@ -75,34 +75,36 @@ class Wrapper(pl.LightningModule):
         if dropout > 0:
             self.dropout = nn.Dropout(dropout)
 
-        if encoder == 'CNN':
+        if encoderArc == 'CNN':
             self.encoder = CNNEncoder(in_channels=n_channels, out_channels=out_channel,
                                       depth=depth, hidden=hidden)
-        elif encoder == 'MLPTime':
+        elif encoderArc == 'MLPTime':
             self.encoder = mlpEncoder(n_timepoints, n_embeddings, n_layers)
-        elif encoder == 'MLPChannels':
+        elif encoderArc == 'MLPChannels':
             self.encoder = mlpEncoder(n_channels, n_embeddings, n_layers)
-        elif encoder == 'RNNAutoencoder':
-            self.encoder = RNNAutoencoder(use_decoder, rnn_classifier, n_classes,
-                                          n_channels, hidden, depth, rnn_latent, rnn_dropout, rnn_bidirectional)
-        if flatten:
-            self.latent_space = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(out_channel * embedded_time_dim, n_embeddings),  # TODO: using time_dim is a temporary solution
-            )
-        else:
-            self.latent_space = nn.Linear(embedded_time_dim, n_embeddings)
+        elif encoderArc == 'RNN':
+            self.encoder = RNNAutoencoder(rnn_decoder,
+                                          n_channels, hidden, depth,
+                                          n_embeddings, rnn_dropout,
+                                          rnn_bidirectional)
+        # if flatten:
+        #     self.latent_space = nn.Sequential(
+        #         nn.Flatten(),
+        #         nn.Linear(out_channel * embedded_time_dim, n_embeddings),  # TODO: using time_dim is a temporary solution
+        #     )
+        # else:
+        #     self.latent_space = nn.Linear(embedded_time_dim, n_embeddings)
 
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
 
-        if use_decoder:
-            if decoder == 'CNN':
-                self.decoder = CNNDecoder(n_channels, embedded_time_dim, n_embeddings)
-            elif decoder == 'MLPTime':
-                self.decoder = mlpDecoder(n_timepoints, n_embeddings, n_layers)
-            elif decoder == 'MLPChannels':
-                self.decoder = mlpDecoder(n_channels, n_embeddings, n_layers)
+        # if use_decoder:
+        #     if decoder == 'CNN':
+        #         self.decoder = CNNDecoder(n_channels, embedded_time_dim, n_embeddings)
+        #     elif decoder == 'MLPTime':
+        #         self.decoder = mlpDecoder(n_timepoints, n_embeddings, n_layers)
+        #     elif decoder == 'MLPChannels':
+        #         self.decoder = mlpDecoder(n_channels, n_embeddings, n_layers)
 
     def forward(self, batch):
         x, sub, pos, _ = batch
@@ -119,13 +121,17 @@ class Wrapper(pl.LightningModule):
         if hasattr(self, 'dropout'):
             x = self.dropout(x)
 
-        h = self.encoder(x)
+        if self.encoderArc == 'RNN':
+            x = x.permute(0, 2, 1)
+            x_hat, h = self.encoder(x)
+        else:
+            h = self.encoder(x)
 
         y_hat = None
         if hasattr(self, 'classifier'):
             y_hat = self.classifier(h)
 
-        x_hat = None
+        # x_hat = None
         if hasattr(self, 'decoder'):
             x_hat = self.decoder(h)
 
@@ -137,7 +143,8 @@ class Wrapper(pl.LightningModule):
             return self.training_step_kfold(batch, batch_idx)
         x, _, _, y = batch
         x_hat, h_hat, y_hat = self(batch)
-        x = x.permute(0, 2, 1)
+        if self.encoderArc != 'RNN':
+            x = x.permute(0, 2, 1)
         if self.joint_embedding:
             if hasattr(self, 'stft'):
                 x = self.stft(x)
@@ -153,7 +160,7 @@ class Wrapper(pl.LightningModule):
             # log accuracy
             accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
             self.log('train/acc_tmf', accuracy)
-        if hasattr(self, 'decoder'):
+        if hasattr(self, 'decoder') or hasattr(self, 'rnn_decoder'):
             loss_rec = nn.functional.mse_loss(x_hat, x)
             self.log('train/loss_recon', loss_rec)
             loss += loss_rec

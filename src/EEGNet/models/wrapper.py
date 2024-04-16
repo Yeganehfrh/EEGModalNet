@@ -4,37 +4,36 @@ import pytorch_lightning as pl
 import torchaudio.transforms as T
 from src.EEGNet.models.commonBlocks import ChannelMerger, SubjectLayers, Classifier
 import torchmetrics.functional as tmf
-from src.EEGNet.models.rnnautoencoder import RNNAutoencoder
+from src.EEGNet.models.autoencoders import RNNAutoencoder, ConvAutoencoder
 
 
 class Wrapper(pl.LightningModule):
     def __init__(self,
-                 # cnn
-                 embedded_time_dim=32,
-                 n_embeddings=32,
-                 out_channel=512,
-                 # rnn
-                 rnn_decoder=True,
-                 rnn_dropout=0.0,
-                 rnn_bidirectional=False,
-                 # MLP
-                 n_timepoints=512,
-                 n_layers=3,
                  # general structure
-                 flatten=False,
+                 encoderArc='CNN',
+                 segment_size=512,
                  n_channels=61,
                  n_subjects=200,
                  n_classes=2,
                  hidden=128,
                  depth=1,
                  dropout=0.2,
-                 encoderArc='CNN',
-                 decoderArc='CNN',
                  use_channel_merger=True,
                  use_subject_layers=True,
                  use_classifier=True,
                  use_decoder=True,
                  use_1x1_conv=True,
+                 # cnn
+                 n_embeddings=32,
+                 out_channel=512,
+                 kernel_size=4,
+                 stride=2,
+                 # rnn
+                 rnn_dropout=0.0,
+                 rnn_bidirectional=False,
+                 # MLP
+                 n_timepoints=512,
+                 n_layers=3,
                  # other
                  n_fft=None,
                  cross_val=False,
@@ -44,12 +43,10 @@ class Wrapper(pl.LightningModule):
         self.save_hyperparameters()
         self.cross_val = cross_val
         self.encoderArc = encoderArc
-        self.rnn_decoder = rnn_decoder
         self.joint_embedding = joint_embedding
+        self.use_decoder = use_decoder
         assert not (use_decoder and joint_embedding), "Cross validation and joint embedding cannot be used together"
         assert encoderArc in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Encoder must be either CNN, RNN, MLPTime or MLPChannels"
-        assert decoderArc in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Decoder must be either CNN, RNN, MLPTime, or MLPChannels"
-        assert encoderArc == decoderArc, "Currently only the same encoder and decoder are supported"
 
         # Fourier positional embedding
         if use_channel_merger:
@@ -63,7 +60,9 @@ class Wrapper(pl.LightningModule):
 
         # subject layers
         if use_subject_layers:
-            self.subject_layers = SubjectLayers(in_channels=n_channels, out_channels=n_channels, n_subjects=n_subjects)
+            self.subject_layers = SubjectLayers(in_channels=n_channels,
+                                                out_channels=n_channels,
+                                                n_subjects=n_subjects)
 
         # transform to frequency domain
         if n_fft is not None:
@@ -76,35 +75,28 @@ class Wrapper(pl.LightningModule):
             self.dropout = nn.Dropout(dropout)
 
         if encoderArc == 'CNN':
-            self.encoder = CNNEncoder(in_channels=n_channels, out_channels=out_channel,
-                                      depth=depth, hidden=hidden)
+            kwargs = {
+                'hidden': hidden,
+                'depth': depth,
+                'growth': 2,
+                'kernel_size': kernel_size,
+                'stride': stride,
+            }
+            self.encoder = ConvAutoencoder(n_channels, out_channel, n_embeddings,
+                                           segment_size, use_decoder, **kwargs)
+
+        elif encoderArc == 'RNN':
+            self.encoder = RNNAutoencoder(n_channels, hidden, depth,
+                                          n_embeddings, rnn_dropout,
+                                          rnn_bidirectional,
+                                          use_decoder)
         elif encoderArc == 'MLPTime':
             self.encoder = mlpEncoder(n_timepoints, n_embeddings, n_layers)
         elif encoderArc == 'MLPChannels':
             self.encoder = mlpEncoder(n_channels, n_embeddings, n_layers)
-        elif encoderArc == 'RNN':
-            self.encoder = RNNAutoencoder(rnn_decoder,
-                                          n_channels, hidden, depth,
-                                          n_embeddings, rnn_dropout,
-                                          rnn_bidirectional)
-        # if flatten:
-        #     self.latent_space = nn.Sequential(
-        #         nn.Flatten(),
-        #         nn.Linear(out_channel * embedded_time_dim, n_embeddings),  # TODO: using time_dim is a temporary solution
-        #     )
-        # else:
-        #     self.latent_space = nn.Linear(embedded_time_dim, n_embeddings)
 
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
-
-        # if use_decoder:
-        #     if decoder == 'CNN':
-        #         self.decoder = CNNDecoder(n_channels, embedded_time_dim, n_embeddings)
-        #     elif decoder == 'MLPTime':
-        #         self.decoder = mlpDecoder(n_timepoints, n_embeddings, n_layers)
-        #     elif decoder == 'MLPChannels':
-        #         self.decoder = mlpDecoder(n_channels, n_embeddings, n_layers)
 
     def forward(self, batch):
         x, sub, pos, _ = batch
@@ -123,9 +115,8 @@ class Wrapper(pl.LightningModule):
 
         if self.encoderArc == 'RNN':
             x = x.permute(0, 2, 1)
-            x_hat, h = self.encoder(x)
-        else:
-            h = self.encoder(x)
+
+        x_hat, h = self.encoder(x)
 
         y_hat = None
         if hasattr(self, 'classifier'):
@@ -160,7 +151,7 @@ class Wrapper(pl.LightningModule):
             # log accuracy
             accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
             self.log('train/acc_tmf', accuracy)
-        if hasattr(self, 'decoder') or hasattr(self, 'rnn_decoder'):
+        if self.use_decoder:
             loss_rec = nn.functional.mse_loss(x_hat, x)
             self.log('train/loss_recon', loss_rec)
             loss += loss_rec
@@ -186,7 +177,7 @@ class Wrapper(pl.LightningModule):
             loss += loss_class
             accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
             self.log('val/acc', accuracy)
-        if hasattr(self, 'decoder'):
+        if self.use_decoder:
             loss_rec = nn.functional.mse_loss(x_hat, x)
             self.log('val/loss_recon', loss_rec)
             loss += loss_rec
@@ -214,7 +205,7 @@ class Wrapper(pl.LightningModule):
                 # log accuracy
                 accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
                 self.log('train/acc_tmf', accuracy)
-            if hasattr(self, 'decoder'):
+            if self.use_decoder:
                 loss_rec = nn.functional.mse_loss(x_hat, x)
                 self.log('train/loss_recon', loss_rec)
                 loss += loss_rec
@@ -269,34 +260,6 @@ class SeperateClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-
-def CNNEncoder(in_channels, out_channels, hidden=128, depth=4, growth=2, batch_norm=False):
-    dims = [in_channels]
-    dims += ([int(round(hidden * growth ** k)) for k in range(depth)])
-    dims[-1] = out_channels
-    layers = []
-    for chin, chout in zip(dims[:-1], dims[1:]):
-        layers.append(nn.Conv1d(chin, chout, kernel_size=4, stride=2))
-        if batch_norm:
-            layers.append(nn.BatchNorm1d(chout))
-        layers.append(nn.ReLU())
-
-    return nn.Sequential(*layers)
-
-
-def CNNDecoder(n_channels, embedded_time_dim, n_embeddings):  # TODO: refactor this
-    return nn.Sequential(
-                nn.Linear(n_embeddings, n_channels * 8 * embedded_time_dim),
-                nn.Unflatten(dim=1, unflattened_size=(n_channels * 8, embedded_time_dim)),
-                nn.ReLU(),
-                nn.ConvTranspose1d(n_channels * 8, n_channels * 4, kernel_size=4, stride=2),
-                nn.ReLU(),
-                nn.ConvTranspose1d(n_channels * 4, n_channels * 2, kernel_size=4, stride=2, output_padding=1),
-                nn.ReLU(),
-                nn.ConvTranspose1d(n_channels * 2, n_channels, kernel_size=4, stride=2),
-                nn.ReLU()
-        )
 
 
 def mlpEncoder(n_features, n_embeddings, n_layers):

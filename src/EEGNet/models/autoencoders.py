@@ -90,10 +90,12 @@ class MLPAutoencoder(nn.Module):
             self.decoder = mlp('decoder', out_channel, in_channel, **kwargs)
 
     def forward(self, x):
+        x = x.view(x.size(0), -1)
         latent = self.encoder(x)
         x_hat = None
         if hasattr(self, 'decoder'):
             x_hat = self.decoder(latent)
+            x_hat = x_hat.view(x.size())
         return x_hat, latent
 
 
@@ -101,10 +103,10 @@ def mlp(mode, in_features, out_feature, hidden, growth=2, depth=2):
     assert mode in ['encoder', 'decoder'], "Invalid mode"
     dims = [in_features]
     if mode == 'encoder':
-        dims += [int(round(hidden // growth ** k)) for k in range(1, depth)]
+        dims += [int(round(hidden // growth ** k)) for k in range(depth-1)]
     elif mode == 'decoder':
-        hidden = hidden // growth ** (depth)
-        dims += [int(round(hidden * growth ** k)) for k in range(1, depth)]
+        hidden = hidden // growth ** (depth-2)
+        dims += [int(round(hidden * growth ** k)) for k in range(depth-1)]
     dims += [out_feature]
     layers = []
     for in_ch, out_ch in zip(dims[:-1], dims[1:]):

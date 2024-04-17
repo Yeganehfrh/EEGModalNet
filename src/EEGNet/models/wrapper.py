@@ -4,14 +4,14 @@ import pytorch_lightning as pl
 import torchaudio.transforms as T
 from src.EEGNet.models.commonBlocks import ChannelMerger, SubjectLayers, Classifier
 import torchmetrics.functional as tmf
-from src.EEGNet.models.autoencoders import RNNAutoencoder, ConvAutoencoder
+from src.EEGNet.models.autoencoders import RNNAutoencoder, ConvAutoencoder, MLPAutoencoder
 
 
 class Wrapper(pl.LightningModule):
     def __init__(self,
                  # general structure
                  encoderArc='CNN',
-                 segment_size=512,
+                 n_timepoints=512,
                  n_channels=61,
                  n_subjects=200,
                  n_classes=2,
@@ -32,8 +32,6 @@ class Wrapper(pl.LightningModule):
                  rnn_dropout=0.0,
                  rnn_bidirectional=False,
                  # MLP
-                 n_timepoints=512,
-                 n_layers=3,
                  # other
                  n_fft=None,
                  cross_val=False,
@@ -46,7 +44,7 @@ class Wrapper(pl.LightningModule):
         self.joint_embedding = joint_embedding
         self.use_decoder = use_decoder
         assert not (use_decoder and joint_embedding), "Cross validation and joint embedding cannot be used together"
-        assert encoderArc in ['CNN', 'MLPTime', 'MLPChannels', 'RNN'], "Encoder must be either CNN, RNN, MLPTime or MLPChannels"
+        assert encoderArc in ['CNN', 'MLP', 'RNN'], "Encoder must be either CNN, RNN, MLP"
 
         # Fourier positional embedding
         if use_channel_merger:
@@ -83,17 +81,20 @@ class Wrapper(pl.LightningModule):
                 'stride': stride,
             }
             self.encoder = ConvAutoencoder(n_channels, out_channel, n_embeddings,
-                                           segment_size, use_decoder, **kwargs)
+                                           n_timepoints, use_decoder, **kwargs)
 
         elif encoderArc == 'RNN':
             self.encoder = RNNAutoencoder(n_channels, hidden, depth,
                                           n_embeddings, rnn_dropout,
                                           rnn_bidirectional,
                                           use_decoder)
-        elif encoderArc == 'MLPTime':
-            self.encoder = mlpEncoder(n_timepoints, n_embeddings, n_layers)
-        elif encoderArc == 'MLPChannels':
-            self.encoder = mlpEncoder(n_channels, n_embeddings, n_layers)
+        elif encoderArc == 'MLP':
+            kwargs = {
+                'hidden': hidden,
+                'depth': depth,
+                'growth': 2,
+            }
+            self.encoder = MLPAutoencoder(n_timepoints*n_channels, n_embeddings, use_decoder, **kwargs)
 
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
@@ -121,10 +122,6 @@ class Wrapper(pl.LightningModule):
         y_hat = None
         if hasattr(self, 'classifier'):
             y_hat = self.classifier(h)
-
-        # x_hat = None
-        if hasattr(self, 'decoder'):
-            x_hat = self.decoder(h)
 
         return x_hat, h, y_hat
 
@@ -260,32 +257,6 @@ class SeperateClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
-
-
-def mlpEncoder(n_features, n_embeddings, n_layers):
-    assert n_layers > 0 and n_features > n_embeddings, "Invalid number of layers or embeddings"
-    assert n_features // (2 ** n_layers) >= n_embeddings, "n_features must be greater than or equal to n_embeddings after passing through the layers"
-    layers = []
-    for _ in range(n_layers):
-        layers.append(nn.Linear(n_features, n_features // 2))
-        layers.append(nn.ReLU())
-        n_features = n_features // 2
-    layers.append(nn.Linear(n_features, n_embeddings))
-    layers.append(nn.ReLU())
-    return nn.Sequential(*layers)
-
-
-def mlpDecoder(n_features, n_embeddings, n_layers):
-    assert n_layers > 0 and n_features > n_embeddings, "Invalid number of layers or embeddings"
-    assert n_embeddings * 2 ** n_layers <= n_features, "n_embeddings * 2 ** n_layers must be less than or equal to n_features"
-    layers = []
-    for _ in range(n_layers):
-        layers.append(nn.Linear(n_embeddings, n_embeddings * 2))
-        layers.append(nn.ReLU())
-        n_embeddings = n_embeddings * 2
-    layers.append(nn.Linear(n_embeddings, n_features))
-    layers.append(nn.ReLU())
-    return nn.Sequential(*layers)
 
 
 def SpaceTimeEncoder(n_channels, space_embedding_dim, time_embedding_dim, kernel_size=1,

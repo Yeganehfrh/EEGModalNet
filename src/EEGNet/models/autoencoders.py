@@ -62,6 +62,7 @@ class ConvAutoencoder(nn.Module):
 def convNet(in_channels, out_channels, hidden=128, depth=4, growth=2,
             kernel_size=4, stride=2,
             batch_norm=False, mode='encoder'):
+    assert mode in ['encoder', 'decoder'], "Invalid mode"
     model = nn.Conv1d if mode == 'encoder' else nn.ConvTranspose1d
     dims = [in_channels]
     if mode == 'encoder':
@@ -78,4 +79,35 @@ def convNet(in_channels, out_channels, hidden=128, depth=4, growth=2,
             layers.append(nn.BatchNorm1d(chout))
         layers.append(nn.ReLU())
 
+    return nn.Sequential(*layers)
+
+
+class MLPAutoencoder(nn.Module):
+    def __init__(self, in_channel, out_channel, use_decoder=True, **kwargs):
+        super().__init__()
+        self.encoder = mlp('encoder', in_channel, out_channel, **kwargs)
+        if use_decoder:
+            self.decoder = mlp('decoder', out_channel, in_channel, **kwargs)
+
+    def forward(self, x):
+        latent = self.encoder(x)
+        x_hat = None
+        if hasattr(self, 'decoder'):
+            x_hat = self.decoder(latent)
+        return x_hat, latent
+
+
+def mlp(mode, in_features, out_feature, hidden, growth=2, depth=2):
+    assert mode in ['encoder', 'decoder'], "Invalid mode"
+    dims = [in_features]
+    if mode == 'encoder':
+        dims += [int(round(hidden // growth ** k)) for k in range(1, depth)]
+    elif mode == 'decoder':
+        hidden = hidden // growth ** (depth)
+        dims += [int(round(hidden * growth ** k)) for k in range(1, depth)]
+    dims += [out_feature]
+    layers = []
+    for in_ch, out_ch in zip(dims[:-1], dims[1:]):
+        layers.append(nn.Linear(in_ch, out_ch))
+        layers.append(nn.ReLU())
     return nn.Sequential(*layers)

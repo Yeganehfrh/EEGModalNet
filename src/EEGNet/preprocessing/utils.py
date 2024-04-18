@@ -226,4 +226,4 @@ def get_averaged_data(data):
                                     'subject': data.subject.values},
                             attrs=data.attrs)
     data_ba.attrs['ch_positions'] = positions_numpy
-    return data_ba
+    return data_ba.transpose('subject', 'brain_area', 'time')

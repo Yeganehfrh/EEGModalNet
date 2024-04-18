@@ -46,12 +46,15 @@ class EEGNetDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # read data from file
         ds = xr.open_dataset(self.data_dir)
+
         if self.n_subjects != 'all':
             ds = ds.sel(subject=ds.subject.values[:self.n_subjects])
-        X_input = torch.from_numpy(ds['__xarray_dataarray_variable__'].values).float().permute(0, 2, 1)
 
         if self.patching:
-            X_input = get_averaged_data(X_input)
+            ds = get_averaged_data(ds)
+            X_input = torch.from_numpy(ds.values).float().permute(0, 2, 1)
+        else:
+            X_input = torch.from_numpy(ds['__xarray_dataarray_variable__'].values).float().permute(0, 2, 1)
 
         # segment
         X_input = X_input.unfold(1, self.segment_size, self.segment_size).permute(0, 1, 3, 2)
@@ -80,6 +83,7 @@ class EEGNetDataModule(pl.LightningDataModule):
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
 
         # train/test split
+        print(X_input.shape, subject_ids.shape, positions.shape, target.shape)
         all_data = split_data(X_input, subject_ids, positions, target,
                               self.shuffling, self.split_type, self.train_ratio,
                               self.stratified)

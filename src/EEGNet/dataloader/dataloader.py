@@ -83,7 +83,6 @@ class EEGNetDataModule(pl.LightningDataModule):
         subject_ids = torch.arange(0, X_input.shape[0]).reshape(-1, 1, 1).repeat(1, X_input.shape[1], 1)
 
         # train/test split
-        print(X_input.shape, subject_ids.shape, positions.shape, target.shape)
         all_data = split_data(X_input, subject_ids, positions, target,
                               self.shuffling, self.split_type, self.train_ratio,
                               self.stratified)

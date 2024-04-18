@@ -8,7 +8,7 @@ from sklearn.preprocessing import RobustScaler
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import torch.utils.data
-from src.EEGNet.preprocessing.utils import split_data
+from src.EEGNet.preprocessing.utils import split_data, get_averaged_data
 
 
 class EEGNetDataModule(pl.LightningDataModule):
@@ -25,7 +25,8 @@ class EEGNetDataModule(pl.LightningDataModule):
                  target: str = 'gender',
                  split_type: str = 'time',
                  shuffling: str = 'no_shuffle',
-                 stratified: bool = True
+                 stratified: bool = True,
+                 patching: bool = False,
                  ):
         super().__init__()
         self.data_dir = data_dir
@@ -38,6 +39,7 @@ class EEGNetDataModule(pl.LightningDataModule):
         self.split_type = split_type
         self.stratified = stratified
         self.target = target
+        self.patching = patching
         assert target in ['gender', 'calmness', 'alertness', 'wellbeing'], "The target variable is unknown"
         assert split_type in ['time', 'subject'], "The split type is unknown"
 
@@ -47,6 +49,9 @@ class EEGNetDataModule(pl.LightningDataModule):
         if self.n_subjects != 'all':
             ds = ds.sel(subject=ds.subject.values[:self.n_subjects])
         X_input = torch.from_numpy(ds['__xarray_dataarray_variable__'].values).float().permute(0, 2, 1)
+
+        if self.patching:
+            X_input = get_averaged_data(X_input)
 
         # segment
         X_input = X_input.unfold(1, self.segment_size, self.segment_size).permute(0, 1, 3, 2)

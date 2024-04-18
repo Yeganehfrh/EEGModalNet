@@ -90,12 +90,13 @@ class MLPAutoencoder(nn.Module):
             self.decoder = mlp('decoder', out_channel, in_channel, **kwargs)
 
     def forward(self, x):
-        x = x.view(x.size(0), -1)
+        original_shape = x.size()
+        x = x.reshape(x.size(0), -1)
         latent = self.encoder(x)
         x_hat = None
         if hasattr(self, 'decoder'):
             x_hat = self.decoder(latent)
-            x_hat = x_hat.view(x.size())
+            x_hat = x_hat.reshape(original_shape)
         return x_hat, latent
 
 

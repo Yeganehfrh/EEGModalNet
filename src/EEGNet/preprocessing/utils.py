@@ -73,7 +73,7 @@ def get_channel_positions(data_dir):
     ch_positions = {}
     for path in Path(data_dir).glob('sub*'):
         sub = path.stem
-        mat = scipy.io.loadmat(path / f'{sub}.mat')
+        mat = scipy.io.loadmat(path)
         n_channels = len(mat['Channel'][0])
         ch_names = [mat['Channel'][0][i][0][0] for i in range(n_channels)]
         ch_names = [ch.split('_')[2] for ch in ch_names if ch != 'Reference']

@@ -35,7 +35,8 @@ class Wrapper(pl.LightningModule):
                  # other
                  n_fft=None,
                  cross_val=False,
-                 joint_embedding=False):
+                 joint_embedding=False,
+                 variational=False,):
 
         super().__init__()
         self.save_hyperparameters()
@@ -87,7 +88,7 @@ class Wrapper(pl.LightningModule):
             self.encoder = RNNAutoencoder(n_channels, hidden, depth,
                                           n_embeddings, rnn_dropout,
                                           rnn_bidirectional,
-                                          use_decoder)
+                                          use_decoder, variational)
         elif encoderArc == 'MLP':
             kwargs = {
                 'hidden': hidden,
@@ -117,20 +118,20 @@ class Wrapper(pl.LightningModule):
         if self.encoderArc == 'RNN':
             x = x.permute(0, 2, 1)
 
-        x_hat, h = self.encoder(x)
+        x_hat, h, mu, log_var = self.encoder(x)
 
         y_hat = None
         if hasattr(self, 'classifier'):
             y_hat = self.classifier(h)
 
-        return x_hat, h, y_hat
+        return x_hat, h, y_hat, mu, log_var
 
     def training_step(self, batch, batch_idx):
         loss = 0
         if self.cross_val:
             return self.training_step_kfold(batch, batch_idx)
         x, _, _, y = batch
-        x_hat, h_hat, y_hat = self(batch)
+        x_hat, h_hat, y_hat, mu, log_var = self(batch)
         if self.encoderArc != 'RNN':
             x = x.permute(0, 2, 1)
         if self.joint_embedding:
@@ -141,6 +142,10 @@ class Wrapper(pl.LightningModule):
             loss_rec = nn.functional.mse_loss(h_hat, h)
             self.log('train/loss_recon', loss_rec)
             loss += loss_rec
+        if self.encoder.variational:
+            kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+            self.log('train/kl_loss', kl_loss)
+            loss += kl_loss
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
             self.log('train/loss_cls', loss_class)
@@ -158,8 +163,9 @@ class Wrapper(pl.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         loss = 0
         x, _, _, y = batch
-        x_hat, h_hat, y_hat = self(batch)
-        x = x.permute(0, 2, 1)
+        x_hat, h_hat, y_hat, mu, log_var = self(batch)
+        if self.encoderArc != 'RNN':
+            x = x.permute(0, 2, 1)
         if self.joint_embedding:
             if hasattr(self, 'stft'):
                 x = self.stft(x)
@@ -168,6 +174,10 @@ class Wrapper(pl.LightningModule):
             loss_rec = nn.functional.mse_loss(h_hat, h)
             self.log('val/loss_recon', loss_rec)
             loss += loss_rec
+        if self.encoder.variational:
+            kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+            self.log('val/kl_loss', kl_loss)
+            loss += kl_loss
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
             self.log('val/loss_cls', loss_class)
@@ -186,7 +196,8 @@ class Wrapper(pl.LightningModule):
         for fold_batch in batch:
             x, _, _, y = fold_batch
             x_hat, h_hat, y_hat = self(fold_batch)
-            x = x.permute(0, 2, 1)
+            if self.encoderArc != 'RNN':
+                x = x.permute(0, 2, 1)
             if self.joint_embedding:
                 if hasattr(self, 'stft'):
                     x = self.stft(x)

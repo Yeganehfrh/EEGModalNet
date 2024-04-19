@@ -10,24 +10,42 @@ class RNNAutoencoder(nn.Module):
                  latent_size=32,
                  dropout=0.0,
                  bidirectional=False,
-                 use_decoder=True):
+                 use_decoder=True,
+                 variational=False):
         super().__init__()
+        self.variational = variational
         self.encoder = nn.LSTM(n_channels, hidden_size, num_layers, batch_first=True,
                                dropout=dropout, bidirectional=bidirectional)
-        self.fc_encoder = nn.Linear(hidden_size, latent_size)
+        if variational:
+            self.fc_mu = nn.Linear(hidden_size, latent_size)
+            self.fc_logvar = nn.Linear(hidden_size, latent_size)
+        else:
+            self.fc_encoder = nn.Linear(hidden_size, latent_size)
         if use_decoder:
             self.fc_decoder = nn.Linear(latent_size, hidden_size)
             self.decoder = nn.LSTM(hidden_size, n_channels, num_layers, batch_first=True,
                                    dropout=dropout, bidirectional=bidirectional)
 
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        z = mu + eps * std
+        return z
+
     def forward(self, x):
         _, (h_enc, _) = self.encoder(x)
-        latent = self.fc_encoder(h_enc.squeeze(0))
+        mu, logvar = None, None
+        if self.variational:
+            mu = self.fc_mu(h_enc.squeeze(0))
+            logvar = self.fc_logvar(h_enc.squeeze(0))
+            latent = self.reparameterize(mu, logvar)
+        else:
+            latent = self.fc_encoder(h_enc.squeeze(0))
         x_hat = None
         if hasattr(self, 'decoder'):
             h_dec = self.fc_decoder(latent)
-            x_hat, _ = self.decoder(h_dec.unsqueeze(1).expand(-1, x.shape[1], -1))  # TODO: there is another way to do this: expand h_enc.
-        return x_hat, latent
+            x_hat, _ = self.decoder(h_dec.unsqueeze(1).expand(-1, x.shape[1], -1))
+        return x_hat, latent, mu, logvar
 
 
 class ConvAutoencoder(nn.Module):

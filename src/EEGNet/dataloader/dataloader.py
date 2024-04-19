@@ -45,27 +45,27 @@ class EEGNetDataModule(pl.LightningDataModule):
 
     def prepare_data(self):
         # read data from file
-        ds = xr.open_dataset(self.data_dir)
+        da = xr.open_dataarray(self.data_dir)
 
         if self.n_subjects != 'all':
-            ds = ds.sel(subject=ds.subject.values[:self.n_subjects])
+            da = da.sel(subject=da.subject.values[:self.n_subjects])
 
         if self.patching:
-            ds = get_averaged_data(ds)
-            X_input = torch.from_numpy(ds.values).float().permute(0, 2, 1)
+            da = get_averaged_data(da)
+            X_input = torch.from_numpy(da.values).float().permute(0, 2, 1)
         else:
-            X_input = torch.from_numpy(ds['__xarray_dataarray_variable__'].values).float().permute(0, 2, 1)
+            X_input = torch.from_numpy(da.values).float().permute(0, 2, 1)
 
         # segment
         X_input = X_input.unfold(1, self.segment_size, self.segment_size).permute(0, 1, 3, 2)
 
         # create positions
-        positions = torch.from_numpy(ds.ch_positions).float()
+        positions = torch.from_numpy(da.ch_positions).float()
         # repeat positions for each subject
         positions = positions.repeat(self.n_subjects, X_input.shape[1], 1, 1)
 
         # y labels
-        target = torch.from_numpy(ds.attrs[self.target])
+        target = torch.from_numpy(da.attrs[self.target])
         if self.n_subjects is not None:
             target = target[:self.n_subjects]
 
@@ -147,10 +147,10 @@ class EEGNetDataModuleKFold(pl.LightningDataModule):  # TODO: REFACTOR: implemen
 
     def prepare_data(self):
         # read data from file
-        ds = xr.open_dataset(self.data_dir)
+        ds = xr.open_dataarray(self.data_dir)
         if self.n_subjects is not None:
             ds = ds.sel(subject=ds.subject.values[:self.n_subjects])
-        X_input = torch.from_numpy(ds['__xarray_dataarray_variable__'].values).float().permute(0, 2, 1)
+        X_input = torch.from_numpy(ds.values).float().permute(0, 2, 1)
 
         # segment
         X_input = X_input.unfold(1, self.segment_size, self.segment_size).permute(0, 1, 3, 2)

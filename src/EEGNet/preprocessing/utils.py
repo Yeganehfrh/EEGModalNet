@@ -216,14 +216,15 @@ def get_averaged_data(data):
     data_numpy = np.zeros([C, S, T])
     positions_numpy = np.zeros([C, 2])
     for i, (v) in enumerate(ba_patches.values()):
-        data_numpy[i, :, :] = data.sel(channel=v).mean(dim='channel').to_array()
+        data_numpy[i, :, :] = data.sel(channel=v).mean(dim='channel').values
         idx = [data.channel.values.tolist().index(i) for i in v]
         positions_numpy[i, :] = data.ch_positions[idx].mean(axis=0)
 
     # create a new dataset
-    data_ba = xr.DataArray(data_numpy, dims=['brain_area', 'subject', 'time'],
-                            coords={'brain_area': list(ba_patches.keys()),
-                                    'subject': data.subject.values},
-                            attrs=data.attrs)
+    data_ba = xr.DataArray(data_numpy,
+                           dims=['brain_area', 'subject', 'time'],
+                           coords={'brain_area': list(ba_patches.keys()),
+                                   'subject': data.subject.values},
+                           attrs=data.attrs)
     data_ba.attrs['ch_positions'] = positions_numpy
     return data_ba.transpose('subject', 'brain_area', 'time')

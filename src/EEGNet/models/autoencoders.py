@@ -50,26 +50,45 @@ class RNNAutoencoder(nn.Module):
 
 class ConvAutoencoder(nn.Module):
     def __init__(self, in_channels, out_channel, n_embeddings, segment_size, use_decoder=True,
-                **kwargs):
+                 variational=False, **kwargs):
         super().__init__()
+        self.variational = variational
         self.n_embeddings = n_embeddings
         self.encoder = convNet(in_channels, out_channel, mode='encoder', **kwargs)
         self.out_chan_size, self.length_size = self._calculate_latent_size(in_channels, segment_size)
-        self.fc_encoder = nn.Sequential(nn.Flatten(),
-                                        nn.Linear(self.out_chan_size*self.length_size, n_embeddings))
+        if variational:
+            self.fc_mu = nn.Sequential(nn.Flatten(),
+                                       nn.Linear(self.out_chan_size*self.length_size, n_embeddings))
+            self.fc_logvar = nn.Sequential(nn.Flatten(),
+                                           nn.Linear(self.out_chan_size*self.length_size, n_embeddings))
+        else:
+            self.fc_encoder = nn.Sequential(nn.Flatten(),
+                                            nn.Linear(self.out_chan_size*self.length_size, n_embeddings))
         if use_decoder:
             self.fc_decoder = nn.Sequential(nn.Linear(n_embeddings, self.out_chan_size*self.length_size),
                                             nn.Unflatten(1, (self.out_chan_size, self.length_size)))
             self.decoder = convNet(out_channel, in_channels, mode='decoder', **kwargs)
 
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        z = mu + eps * std
+        return z
+
     def forward(self, x):
         x_enc = self.encoder(x)
-        latent = self.fc_encoder(x_enc)
+        mu, logvar = None, None
+        if self.variational:
+            mu = self.fc_mu(x_enc)
+            logvar = self.fc_logvar(x_enc)
+            latent = self.reparameterize(mu, logvar)
+        else:
+            latent = self.fc_encoder(x_enc)
         x_hat = None
         if hasattr(self, 'decoder'):
             x_hat = self.fc_decoder(latent)
             x_hat = self.decoder(x_hat)
-        return x_hat, latent
+        return x_hat, latent, mu, logvar
 
     def _calculate_latent_size(self, in_channels, segment_size):
         dummy_input = torch.zeros(1, in_channels, segment_size)

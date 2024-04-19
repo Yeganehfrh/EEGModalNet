@@ -82,7 +82,7 @@ class Wrapper(pl.LightningModule):
                 'stride': stride,
             }
             self.encoder = ConvAutoencoder(n_channels, out_channel, n_embeddings,
-                                           n_timepoints, use_decoder, **kwargs)
+                                           n_timepoints, use_decoder, variational, **kwargs)
 
         elif encoderArc == 'RNN':
             self.encoder = RNNAutoencoder(n_channels, hidden, depth,

@@ -95,7 +95,7 @@ class Wrapper(pl.LightningModule):
                 'depth': depth,
                 'growth': 2,
             }
-            self.encoder = MLPAutoencoder(n_timepoints*n_channels, n_embeddings, use_decoder, **kwargs)
+            self.encoder = MLPAutoencoder(n_timepoints * n_channels, n_embeddings, use_decoder, **kwargs)
 
         if use_classifier:
             self.classifier = Classifier(n_embeddings, n_classes)
@@ -152,7 +152,7 @@ class Wrapper(pl.LightningModule):
             loss += loss_class
             # log accuracy
             accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
-            self.log('train/acc_tmf', accuracy)
+            self.log('train/acc_tmf', accuracy, prog_bar=True)
         if self.use_decoder:
             loss_rec = nn.functional.mse_loss(x_hat, x)
             self.log('train/loss_recon', loss_rec)
@@ -180,10 +180,10 @@ class Wrapper(pl.LightningModule):
             loss += kl_loss
         if hasattr(self, 'classifier'):
             loss_class = nn.functional.cross_entropy(y_hat, y)
-            self.log('val/loss_cls', loss_class)
+            self.log('val/loss_cls', loss_class, prog_bar=True)
             loss += loss_class
             accuracy = tmf.accuracy(y_hat, y, task='binary', num_classes=2)
-            self.log('val/acc', accuracy)
+            self.log('val/acc', accuracy, prog_bar=True)
         if self.use_decoder:
             loss_rec = nn.functional.mse_loss(x_hat, x)
             self.log('val/loss_recon', loss_rec)

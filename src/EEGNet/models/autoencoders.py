@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+from typing import Literal
 
 
 class RNNAutoencoder(nn.Module):
@@ -58,14 +59,14 @@ class ConvAutoencoder(nn.Module):
         self.out_chan_size, self.length_size = self._calculate_latent_size(in_channels, segment_size)
         if variational:
             self.fc_mu = nn.Sequential(nn.Flatten(),
-                                       nn.Linear(self.out_chan_size*self.length_size, n_embeddings))
+                                       nn.Linear(self.out_chan_size * self.length_size, n_embeddings))
             self.fc_logvar = nn.Sequential(nn.Flatten(),
-                                           nn.Linear(self.out_chan_size*self.length_size, n_embeddings))
+                                           nn.Linear(self.out_chan_size * self.length_size, n_embeddings))
         else:
             self.fc_encoder = nn.Sequential(nn.Flatten(),
-                                            nn.Linear(self.out_chan_size*self.length_size, n_embeddings))
+                                            nn.Linear(self.out_chan_size * self.length_size, n_embeddings))
         if use_decoder:
-            self.fc_decoder = nn.Sequential(nn.Linear(n_embeddings, self.out_chan_size*self.length_size),
+            self.fc_decoder = nn.Sequential(nn.Linear(n_embeddings, self.out_chan_size * self.length_size),
                                             nn.Unflatten(1, (self.out_chan_size, self.length_size)))
             self.decoder = convNet(out_channel, in_channels, mode='decoder', **kwargs)
 
@@ -120,31 +121,50 @@ def convNet(in_channels, out_channels, hidden=128, depth=4, growth=2,
 
 
 class MLPAutoencoder(nn.Module):
-    def __init__(self, in_channel, out_channel, use_decoder=True, **kwargs):
+    def __init__(self, in_channel, out_channel, use_decoder=True, variational=True, **kwargs):
         super().__init__()
+        self.variational = variational
         self.encoder = mlp('encoder', in_channel, out_channel, **kwargs)
+        if variational:
+            self.fc_mu = nn.Linear(out_channel, out_channel)
+            self.fc_logvar = nn.Linear(out_channel, out_channel)
         if use_decoder:
             self.decoder = mlp('decoder', out_channel, in_channel, **kwargs)
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        z = mu + eps * std
+        return z
 
     def forward(self, x):
         original_shape = x.size()
         x = x.reshape(x.size(0), -1)
         latent = self.encoder(x)
+        mu, logvar = None, None
+        if self.variational:
+            mu = self.fc_mu(latent)
+            logvar = self.fc_logvar(latent)
+            latent = self.reparameterize(mu, logvar)
         x_hat = None
         if hasattr(self, 'decoder'):
             x_hat = self.decoder(latent)
             x_hat = x_hat.reshape(original_shape)
-        return x_hat, latent
+        return x_hat, latent, mu, logvar
 
 
-def mlp(mode, in_features, out_feature, hidden, growth=2, depth=2):
-    assert mode in ['encoder', 'decoder'], "Invalid mode"
+def mlp(mode: Literal['encoder', 'decoder'], in_features, out_feature, hidden, growth=2, depth=2):
     dims = [in_features]
-    if mode == 'encoder':
-        dims += [int(round(hidden // growth ** k)) for k in range(depth-1)]
-    elif mode == 'decoder':
-        hidden = hidden // growth ** (depth-2)
-        dims += [int(round(hidden * growth ** k)) for k in range(depth-1)]
+
+    match mode:
+        case 'encoder':
+            dims += [int(round(hidden // growth ** k)) for k in range(depth - 1)]
+        case 'decoder':
+            hidden = hidden // growth ** (depth - 2)
+            dims += [int(round(hidden * growth ** k)) for k in range(depth - 1)]
+        case _:
+            raise ValueError("Invalid mode")
+
     dims += [out_feature]
     layers = []
     for in_ch, out_ch in zip(dims[:-1], dims[1:]):

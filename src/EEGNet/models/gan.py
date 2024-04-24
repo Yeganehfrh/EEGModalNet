@@ -9,20 +9,16 @@ class Generator(nn.Module):
     def __init__(self, latent_dim):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Linear(in_features=latent_dim, out_features=12 * 256),
-                                    nn.LeakyReLU(),
-                                    nn.Unflatten(1, (256, 12)))
+                                    nn.LeakyReLU())
+        self.layer2 = nn.Unflatten(1, (256, 12))
 
     def forward(self, x):
         x = self.layer1(x)
+        x = self.layer2(x)
         return x
 
 
 class Discriminator(nn.Module):
-    '''
-    Discriminator class. Accepts a tensor of size 784 as input and outputs
-    a tensor of size 1, with the predicted class probabilities
-    (generated or real data)
-    '''
     def __init__(self):
         super().__init__()
         self.layer1 = nn.Sequential(nn.Flatten(),
@@ -53,13 +49,13 @@ class GAN(pl.LightningModule):
         # Sample noise
         noise = torch.randn(batch_size, self.latent_dim)
 
-        # Generate images
+        # Generate data
         x_fake = self.generator(noise)
 
         x = torch.cat((x_real, x_fake))
         # TODO get only batch of x
 
-        # Classify generated images
+        # Classify generated data
         # using the discriminator
         y_pred = self.discriminator(x)
 
@@ -79,7 +75,7 @@ class GAN(pl.LightningModule):
         # Fake images
         noise = torch.randn(batch_size, self.latent_dim)
         x_fake = self.generator(noise)
-        y_fake = torch.squeeze(self.discriminator(x_fake))
+        y_fake = self.discriminator(x_fake).squeeze()
         loss_fake = nn.BCELoss()(y_fake, torch.ones(x_fake.shape[0]))
         acc = tmf.accuracy(torch.cat((y_real, y_fake)),
                            torch.cat((torch.zeros(batch_size), torch.ones(batch_size))),
@@ -94,15 +90,18 @@ class GAN(pl.LightningModule):
         opt1, opt2 = self.optimizers()
 
         # train generator
+        opt1.zero_grad()
         g_loss = self.generator_step(X)
-        self.log('g_loss', g_loss, prog_bar=True)
+        self.manual_backward(g_loss)
         opt1.step()
-        # opt1.zero_grad()
+        self.log('g_loss', g_loss, prog_bar=True)
 
         # train discriminator
+        opt2.zero_grad()
         d_loss = self.discriminator_step(X)
-        self.log('d_loss', d_loss, prog_bar=True)
+        self.manual_backward(d_loss)
         opt2.step()
+        self.log('d_loss', d_loss, prog_bar=True)
 
         return {'g_loss': g_loss, 'd_loss': d_loss}
 

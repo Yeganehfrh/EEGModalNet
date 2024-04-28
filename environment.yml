@@ -1,0 +1,26 @@
+name: eegnet-keras3
+
+channels:
+  - conda-forge
+  - default
+
+dependencies:
+  - python
+  - pip
+  - pytorch::pytorch
+  - seaborn
+  - pandas
+  - flake8
+  - ipykernel
+  - jupyter
+  - notebook
+  - xarray
+  - h5netcdf
+  - tensorboard
+  - dvc>3
+  - dvc-gdrive
+  - dvc-ssh
+  - scikit-learn
+
+  - pip:
+    - keras>3

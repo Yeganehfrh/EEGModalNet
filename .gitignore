@@ -1,0 +1,7 @@
+data/
+.DS_Store
+*.pyc
+__pycache__/
+lightning_logs/
+tmp/
+src/archived/

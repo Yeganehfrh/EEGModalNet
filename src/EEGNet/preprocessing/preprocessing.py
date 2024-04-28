@@ -102,8 +102,9 @@ def robust_scaling(x):
     return x
 
 
-def clamp(x, clamp=20):
-    """Clamp input tensor.
+def clamp_EEG(x, dev=20):
+    """Clamp input tensor proportional to the standard deviation in each
+    channel and for each participant.
 
     Parameters
     ----------

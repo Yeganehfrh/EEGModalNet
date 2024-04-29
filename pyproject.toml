@@ -1,4 +1,9 @@
-# .flake8 file content:
 [flake8]
-ignore=E501
+ignore=["E501"]
 max-line-length=160
+
+[pytest]
+addopts = "-ra -q"
+testpaths = ["src"]
+python_files = ["*_test.py"]
+

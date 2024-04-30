@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 import torch
 import xarray as xr
@@ -8,7 +9,7 @@ import torch.utils.data
 from src.EEGNet.preprocessing.utils import split_data, get_averaged_data
 
 
-class EEGNetDataModule(torch.nn.Module):
+class EEGNetDataModule():
     """Data module to upload input data and split it into train and validation sets on
     time dimension
     """
@@ -20,8 +21,8 @@ class EEGNetDataModule(torch.nn.Module):
                  preprocess: bool = False,
                  n_subjects: int = 10,
                  target: str = 'gender',
-                 split_type: str = 'time',
-                 shuffling: str = 'no_shuffle',
+                 split_type: Literal['time', 'subject'] = 'time',
+                 shuffling: Literal['split_shuffle', 'shuffle_split', 'no_shuffle'] = 'no_shuffle',
                  stratified: bool = True,
                  patching: bool = False,
                  ):
@@ -38,7 +39,6 @@ class EEGNetDataModule(torch.nn.Module):
         self.target = target
         self.patching = patching
         assert target in ['gender', 'calmness', 'alertness', 'wellbeing'], "The target variable is unknown"
-        assert split_type in ['time', 'subject'], "The split type is unknown"
 
     def prepare_data(self):
         # read data from file
@@ -88,32 +88,17 @@ class EEGNetDataModule(torch.nn.Module):
         positions_train, positions_test = all_data[4], all_data[5]
         target_train, target_test = all_data[6], all_data[7]
 
-        self.train_dataset = torch.utils.data.TensorDataset(
-            X_train,
-            subject_ids_train,
-            positions_train,
-            target_train
-        )
+        self.train_dataset = {
+            'x': X_train.numpy(),
+            'sub_id': subject_ids_train.numpy(),
+            'pos': positions_train.numpy(),
+            'y': target_train.numpy()
+        }
 
-        self.val_dataset = torch.utils.data.TensorDataset(
-            X_test,
-            subject_ids_test,
-            positions_test,
-            target_test
-        )
-
-    def train_dataloader(self):
-        rnd_g = torch.Generator()
-        rnd_g.manual_seed(42)   # TODO: remove manual seed
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, generator=rnd_g, num_workers=7,
-                          persistent_workers=True)
-
-    def val_dataloader(self):
-        rnd_g = torch.Generator()
-        rnd_g.manual_seed(42)  # TODO: remove manual seed
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, generator=rnd_g, num_workers=7,
-                          persistent_workers=True)
-
-    def teardown(self, stage: str):
-        # Used to clean-up when the run is finished
-        ...
+        self.val_dataset = {
+            'x': X_test,
+            'sub_id': subject_ids_test,
+            'pos': positions_test,
+            'y': target_test
+        }
+        return self

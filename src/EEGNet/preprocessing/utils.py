@@ -1,3 +1,5 @@
+
+from typing import Literal
 import numpy as np
 import scipy.io
 from pathlib import Path
@@ -114,6 +116,8 @@ def __split_data(data, type, cut_point, shu_idx_train=None, shu_idx_test=None):
         train = data[:, :cut_point].flatten(0, 1)
         test = data[:, cut_point:].flatten(0, 1)
         return train, test
+    else:
+        raise ValueError(f'Invalid type: {type}')
 
 
 def _split_sub(data, subject_ids, positions, y_cls, shuffling='no_shuffle',
@@ -188,13 +192,19 @@ def _split_time(data,
     return X_train, X_test, subject_ids_train, subject_ids_test, positions_train, positions_test, y_cls_train, y_cls_test
 
 
-def split_data(data, subject_ids, positions, y_cls, shuffling, split_type, train_ratio=0.7, stratified=True):
-    assert shuffling in ['split_shuffle', 'shuffle_split', 'no_shuffle'], 'shuffling must be either split_shuffle, shuffle_split or no_shuffle'
-    assert split_type in ['time', 'subject'], 'split_type must be either time or subject'
+def split_data(data,
+               subject_ids,
+               positions,
+               y_cls,
+               shuffling: Literal['split_shuffle', 'shuffle_split', 'no_shuffle'],
+               split_type: Literal['time', 'subject'],
+               train_ratio=0.7, stratified=True):
     if split_type == 'time':
         return _split_time(data, subject_ids, positions, y_cls, shuffling, train_ratio)
     elif split_type == 'subject':
         return _split_sub(data, subject_ids, positions, y_cls, shuffling, stratified, train_ratio)
+    else:
+        raise ValueError(f'Invalid split_type: {split_type}')
 
 
 def get_averaged_data(data):

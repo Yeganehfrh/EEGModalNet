@@ -1,22 +1,20 @@
 import keras
-from keras import layers, ops  # Input, Dense, Reshape, Flatten, Dropout
+from keras import layers
 from keras import Sequential, Model
 from keras import optimizers  # Adam
 from tqdm import tqdm
-
-import matplotlib.pyplot as plt
 
 import numpy as np
 
 
 class GAN():
-    def __init__(self):
-        self.time = 128
-        self.channels = 61
-        self.data_shape = (self.time, self.channels)
+    def __init__(self, time, features):
+        self.time = time
+        self.features = features
+        self.data_shape = (self.time, self.features)
         self.latent_dim = 100
 
-        optimizer = optimizers.Adam(0.0002, 0.5)
+        optimizer = optimizers.Adam(0.001)
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -40,26 +38,28 @@ class GAN():
         # The combined model  (stacked generator and discriminator)
         # Trains the generator to fool the discriminator
         self.combined = Model(z, fake_y)
-        self.combined.compile(loss='binary_crossentropy', optimizer=optimizers.Adam(0.0002, 0.5))  # TODO
+        self.combined.compile(loss='binary_crossentropy', optimizer=optimizers.Adam(0.001))  # TODO
 
     def build_generator(self):
 
         model = Sequential()
-        model.add(keras.Input(shape=(self.latent_dim,), name='gen_input'))
-        model.add(layers.Dense(128 * 61, input_dim=self.latent_dim,
-                               activation='relu',
-                               name='gen_dense'))
-        model.add(layers.Reshape(self.data_shape, name='gen_reshape'))
+        model.add(keras.Input(shape=(self.latent_dim,)))
+        model.add(layers.Dense(self.time * self.features, input_dim=self.latent_dim,
+                               activation=keras.layers.LeakyReLU(negative_slope=0.2)))
+        model.add(layers.Dense(self.time * self.features))
+        model.add(layers.Reshape(self.data_shape))
 
         return model
 
     def build_discriminator(self):
 
         model = Sequential()
-        model.add(keras.Input(shape=self.data_shape, name='dis_input'))
-        model.add(layers.Flatten(input_shape=self.data_shape, name='dis_flatten'))
-        model.add(layers.Dense(128 * 61, name='dis_dense', activation='relu'))
-        model.add(layers.Dense(1, activation='sigmoid', name='dis_dense2'))
+        model.add(keras.Input(shape=self.data_shape))
+        model.add(layers.Flatten(input_shape=self.data_shape))
+        model.add(layers.Dense(self.time * self.features,
+                               activation=keras.layers.LeakyReLU(negative_slope=0.2)))
+        model.add(layers.Dense(8))
+        model.add(layers.Dense(1, activation='sigmoid'))
 
         return model
 
@@ -100,36 +100,3 @@ class GAN():
 
             # Train the generator (to have the discriminator label samples as valid)
             g_loss = self.combined.train_on_batch(noise, valid)
-
-
-            # Plot the progress
-            # if epoch % sample_interval == 0:
-            #     print(f'{epoch} [D loss: {d_loss[0]}, acc.: {100 * d_loss[1]}]')
-            #     print(f'{epoch} [G loss: {g_loss}]')
-
-            # If at save interval => save generated image samples
-            # if epoch % sample_interval == 0:
-            #     self.sample_images(epoch)
-
-    # def sample_images(self, epoch):
-    #     r, c = 5, 5
-    #     noise = np.random.normal(0, 1, (r * c, self.latent_dim))
-    #     gen_imgs = self.generator.predict(noise)
-
-    #     # Rescale images 0 - 1
-    #     gen_imgs = 0.5 * gen_imgs + 0.5
-
-    #     fig, axs = plt.subplots(r, c)
-    #     cnt = 0
-    #     for i in range(r):
-    #         for j in range(c):
-    #             axs[i, j].imshow(gen_imgs[cnt, :, :, 0], cmap='gray')
-    #             axs[i, j].axis('off')
-    #             cnt += 1
-    #     fig.savefig("images/%d.png" % epoch)
-    #     plt.close()
-
-
-# if __name__ == '__main__':
-#     gan = GAN()
-#     gan.train(data, epochs=30000, batch_size=32, sample_interval=200)

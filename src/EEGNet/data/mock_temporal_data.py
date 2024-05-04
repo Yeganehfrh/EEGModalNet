@@ -16,7 +16,8 @@ class MockTemporalData():
         return np.random.randint(10, 20, self.n_features)
 
     def __call__(self):
-        x = np.array([self.generate_sample(self.generate_freq()) for _ in range(self.n_samples)])
+        freqs = self.generate_freq()
+        x = np.array([self.generate_sample(freqs) for _ in range(self.n_samples)])
         ids = np.arange(self.n_samples)
         return x, ids
 

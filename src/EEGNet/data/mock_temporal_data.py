@@ -7,6 +7,7 @@ class MockTimeSeries():
         self.n_samples = n_samples
         self.n_timepoints = n_timepoints
         self.n_features = n_features
+        self.split_point = n_samples - int(n_samples * test_size)
 
     def generate_sample(self, freq):
         return np.sin(np.linspace(0, freq, self.n_timepoints))
@@ -14,8 +15,23 @@ class MockTimeSeries():
     def generate_freq(self):
         return np.random.randint(10, 20, self.n_features)
 
-    def train_test_split(self):
-        dataset = np.array([self.generate_sample(self.generate_freq()) for _ in range(self.n_samples)])
-        n_test = int(self.n_samples * self.test_size)
-        n_train = self.n_samples - n_test
-        return dataset[:n_train], dataset[n_train:]
+    def __call__(self):
+        x = np.zeros((self.n_samples, self.n_timepoints, self.n_features))
+        freq = np.zeros((self.n_samples, self.n_features))
+        for i in range(self.n_samples):
+            freq[i] = self.generate_freq()
+            x[i] = self.generate_sample(freq[i])
+        ids = np.arange(self.n_samples)
+        return x, freq, ids
+
+    def train_loader(self):
+        X, freq, ids = self()
+        return {'x': X[:self.split_point],
+                'y': freq[:self.split_point],
+                'id': ids[:self.split_point]}
+
+    def test_loader(self):
+        X, freq, ids = self()
+        return {'x': X[self.split_point:],
+                'y': freq[self.split_point:],
+                'id': ids[self.split_point:]}

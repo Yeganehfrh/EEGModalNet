@@ -1,8 +1,6 @@
 {
     "python.analysis.typeCheckingMode": "basic",
     "jupyter.notebookFileRoot": "${workspaceFolder}",
-    "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true,
     "python.testing.pytestArgs": [
         "src"
     ],

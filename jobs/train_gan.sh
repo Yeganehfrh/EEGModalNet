@@ -5,8 +5,7 @@
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=128
-#SBATCH --mem=64GB
+#SBATCH --mem=8GB
 #SBATCH --time=02:00:00
 #SBATCH --output=/home/users/mansarinia/Yeganeh/EEGNet/tmp/train_gan_pipeline_%j.log
 #SBATCH --error=/home/users/mansarinia/Yeganeh/EEGNet/tmp/train_gan_pipeline_%j.log

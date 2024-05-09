@@ -9,7 +9,7 @@ from src.EEGModalNet.utils import ProgressBarCallback
 from tqdm.auto import tqdm
 
 
-def run(max_epochs=10, n_features=1, latent_dim=64):
+def run(max_epochs=100_000, n_features=1, latent_dim=64):
 
     reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
 
@@ -30,7 +30,7 @@ def run(max_epochs=10, n_features=1, latent_dim=64):
         callbacks=[
             keras.callbacks.ModelCheckpoint('tmp/keras_models/simple_gan_v1.model.keras',
                                             monitor='d_loss', mode='min'),
-            keras.callbacks.EarlyStopping(monitor='d_loss', mode='min', patience=max_epochs // 10),
+            keras.callbacks.EarlyStopping(monitor='d_loss', mode='min', patience=max_epochs // 5),
             keras.callbacks.CSVLogger('tmp/keras_logs/simple_gan_v1.csv'),
             ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
         ]

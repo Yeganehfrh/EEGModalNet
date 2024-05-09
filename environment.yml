@@ -1,4 +1,4 @@
-name: eegnet-keras3
+name: EEGModalNet
 
 channels:
   - conda-forge

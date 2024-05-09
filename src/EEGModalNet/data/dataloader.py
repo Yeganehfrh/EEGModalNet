@@ -6,10 +6,10 @@ import xarray as xr
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import torch.utils.data
-from src.EEGNet.preprocessing.utils import split_data, get_averaged_data
+from src.EEGModalNet.preprocessing.utils import split_data, get_averaged_data
 
 
-class EEGNetDataModule():
+class LEMONEEGDataModule():
     """Data module to upload input data and split it into train and validation sets on
     time dimension
     """

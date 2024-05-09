@@ -19,8 +19,8 @@ git pull
 #      "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
 
 alias micromamba=~/.local/bin/micromamba
-micromamba self-update -c conda-forge -y
-micromamba create -f environment.yml -y
+# micromamba self-update -c conda-forge -y
+# micromamba create -f environment.yml -y
 
 # SECTION Run pipeline
 micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan

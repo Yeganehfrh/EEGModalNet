@@ -1,14 +1,14 @@
 #!/bin/sh
 
-#SBATCH --job-name=train_gan_pipeline
-#SBATCH --chdir=/home/users/mansarinia/Yeganeh/EEGNet/
+#SBATCH --job-name=train_gan
+#SBATCH --chdir=/home/users/mansarinia/Yeganeh/EEGModalNet/
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem=8GB
+#SBATCH --mem=16GB
 #SBATCH --time=02:00:00
-#SBATCH --output=/home/users/mansarinia/Yeganeh/EEGNet/tmp/train_gan_pipeline_%j.log
-#SBATCH --error=/home/users/mansarinia/Yeganeh/EEGNet/tmp/train_gan_pipeline_%j.log
+#SBATCH --output=/home/users/mansarinia/Yeganeh/EEGModalNet/tmp/train_gan_pipeline_%j.log
+#SBATCH --error=/home/users/mansarinia/Yeganeh/EEGModalNet/tmp/train_gan_pipeline_%j.log
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=y.farahzadi@gmail.com
 
@@ -23,4 +23,4 @@ micromamba self-update -c conda-forge -y
 micromamba create -f environment.yml -y
 
 # SECTION Run pipeline
-micromamba run -n eegnet-keras3 python -m src.EEGNet.pipeline.train_gan
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan

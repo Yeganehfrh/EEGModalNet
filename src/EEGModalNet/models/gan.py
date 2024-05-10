@@ -87,7 +87,7 @@ class SimpleGAN(keras.Model):
         self.zero_grad()
         y_pred = self.discriminator(self.generator(noise))
         g_loss = self.loss_fn(y_misleading, y_pred)
-        g_loss.backward()
+        grads = g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():
             self.g_optimizer.apply(grads, self.generator.trainable_weights)

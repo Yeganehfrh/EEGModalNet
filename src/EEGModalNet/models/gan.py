@@ -1,5 +1,6 @@
 import keras
 from keras import ops, layers
+from keras.layers import SpectralNormalization
 import torch
 
 
@@ -25,7 +26,7 @@ class SimpleGAN(keras.Model):
 
         self.discriminator = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            layers.Conv1D(64, 3, activation='relu', padding='same'),
+            SpectralNormalization(layers.Conv1D(64, 3, activation='relu', padding='same')),
             layers.Flatten(),
             layers.Dense(self.time * 64, activation='relu'),
             layers.Dense(256, activation='relu'),

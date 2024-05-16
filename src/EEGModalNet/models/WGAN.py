@@ -1,12 +1,11 @@
-import keras
-from keras import ops, layers
-from keras.layers import SpectralNormalization
 import torch
+from keras import layers, ops
+import keras
 
 
-class SimpleGAN(keras.Model):
-    def __init__(self, time_dim=100, feature_dim=2, latent_dim=64, **kwargs):
-        super().__init__(**kwargs)
+class WGAN_GP(keras.Model):
+    def __init__(self, time_dim=100, feature_dim=2, latent_dim=64):
+        super().__init__()
         self.time = time_dim
         self.feature = feature_dim
         self.input_shape = (time_dim, feature_dim)
@@ -29,7 +28,7 @@ class SimpleGAN(keras.Model):
         self.discriminator = keras.Sequential([
             keras.Input(shape=self.input_shape),
             layers.Flatten(),
-            SpectralNormalization(layers.Dense(self.time * self.feature, activation='relu')),
+            layers.Dense(self.time * self.feature, activation='relu'),
             layers.Dense(64, activation='relu'),
             layers.Dense(1, activation='sigmoid')
         ], name='discriminator')
@@ -41,41 +40,47 @@ class SimpleGAN(keras.Model):
         return [self.d_loss_tracker, self.g_loss_tracker,
                 self.accuracy_tracker]
 
-    def compile(self, loss, d_optimizer, g_optimizer):
+    def compile(self, loss, d_optimizer, g_optimizer, gradient_penalty_weight):
         super().compile(loss=loss)
         self.loss_fn = loss
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
-        # self.additional_metrics = metrics
+        self.gradient_penalty_weight = gradient_penalty_weight
 
-    def call(self, x):
-        return self.generator(x)
+    def gradient_penalty(self, real_data, fake_data):
+        batch_size = real_data.size(0)
+        epsilon = torch.rand(batch_size, 1, 1).to(real_data.device)
+        interpolated = epsilon * real_data + (1 - epsilon) * fake_data
+        interpolated.requires_grad_(True)
+
+        prob_interpolated = self.discriminator(interpolated)
+
+        gradients = torch.autograd.grad(
+            outputs=prob_interpolated,
+            inputs=interpolated,
+            grad_outputs=torch.ones(prob_interpolated.size()).to(real_data.device),
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+
+        gradients = gradients.view(batch_size, -1)
+        gradient_norm = gradients.norm(2, dim=1)
+        gradient_penalty = ((gradient_norm - 1) ** 2).mean()
+        return gradient_penalty
 
     def train_step(self, real_data):
-        x_real = real_data
-        batch_size = ops.shape(x_real)[0]
-
+        batch_size = real_data.size(0)
         noise = keras.random.normal((batch_size, self.latent_dim),
-                                    mean=0, stddev=1,
-                                    # seed=self.seed_generator
-                                    )
-
-        x_fake = self.generator(noise)
-        x = ops.concatenate([x_real, x_fake], axis=0)
-
-        # 0=real, 1=fake
-        y = ops.concatenate(
-            [ops.zeros((batch_size, 1)),
-             ops.ones((batch_size, 1))], axis=0
-        )
-
-        # trick that adds noise to labels
-        y = y + 0.05 * keras.random.uniform(ops.shape(y))
+                                    mean=0, stddev=1)
 
         # train discriminator
-        self.zero_grad()
-        y_pred = self.discriminator(x, training=True)
-        d_loss = self.loss_fn(y, y_pred)  # TODO use compute_loss?
+        fake_data = self.generator(noise)
+        self.zero_grad()  # TODO: should this be here? or on line 82?
+        real_pred = self.discriminator(real_data)
+        fake_pred = self.discriminator(fake_data.detach())
+        gp = self.gradient_penalty(real_data, fake_data)
+
+        d_loss = fake_pred.mean() - real_pred.mean() + gp * self.gradient_penalty_weight
         d_loss.backward()
         grads = [v.value.grad for v in self.discriminator.trainable_weights]
         with torch.no_grad():
@@ -83,15 +88,11 @@ class SimpleGAN(keras.Model):
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim),
-                                    mean=0, stddev=1,
-                                    # seed=self.seed_generator
-                                    )
-
-        y_misleading = ops.zeros((batch_size, 1))  # saying all are real (0)
-
+                                    mean=0, stddev=1)
+        
         self.zero_grad()
-        y_pred = self.discriminator(self.generator(noise))
-        g_loss = self.loss_fn(y_misleading, y_pred)
+        fake_pred = self.discriminator(self.generator(noise))
+        g_loss = -fake_pred.mean()  # TODO: why negative?
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():

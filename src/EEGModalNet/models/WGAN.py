@@ -40,9 +40,9 @@ class WGAN_GP(keras.Model):
         return [self.d_loss_tracker, self.g_loss_tracker,
                 self.accuracy_tracker]
 
-    def compile(self, loss, d_optimizer, g_optimizer, gradient_penalty_weight):
-        super().compile(loss=loss)
-        self.loss_fn = loss
+    def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight):
+        super().compile()
+        # self.d_loss = d_loss
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
         self.gradient_penalty_weight = gradient_penalty_weight
@@ -74,29 +74,30 @@ class WGAN_GP(keras.Model):
                                     mean=0, stddev=1)
 
         # train discriminator
-        fake_data = self.generator(noise)
-        self.zero_grad()  # TODO: should this be here? or on line 82?
+        fake_data = self.generator(noise).detach()
         real_pred = self.discriminator(real_data)
-        fake_pred = self.discriminator(fake_data.detach())
-        gp = self.gradient_penalty(real_data, fake_data)
-
-        d_loss = fake_pred.mean() - real_pred.mean() + gp * self.gradient_penalty_weight
+        fake_pred = self.discriminator(fake_data)
+        gp = self.gradient_penalty(real_data, fake_data.detach())
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+        self.d_optimizer.zero_grad()
         d_loss.backward()
-        grads = [v.value.grad for v in self.discriminator.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.discriminator.trainable_weights)
+        self.d_optimizer.step()
+        # grads = [v.value.grad for v in self.discriminator.trainable_weights]
+        # with torch.no_grad():
+        #     self.d_optimizer.apply(grads, self.discriminator.trainable_weights)
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim),
                                     mean=0, stddev=1)
-        
-        self.zero_grad()
+
         fake_pred = self.discriminator(self.generator(noise))
-        g_loss = -fake_pred.mean()  # TODO: why negative?
+        g_loss = -fake_pred.mean()
+        self.g_optimizer.zero_grad()
         g_loss.backward()
-        grads = [v.value.grad for v in self.generator.trainable_weights]
-        with torch.no_grad():
-            self.g_optimizer.apply(grads, self.generator.trainable_weights)
+        self.g_optimizer.step()
+        # grads = [v.value.grad for v in self.generator.trainable_weights]
+        # with torch.no_grad():
+        #     self.g_optimizer.apply(grads, self.generator.trainable_weights)
 
         # Update metrics and return their value.
         self.d_loss_tracker.update_state(d_loss)

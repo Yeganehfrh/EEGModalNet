@@ -18,12 +18,27 @@ class WGAN_GP(keras.Model):
         self.generator = keras.Sequential([
             keras.Input(shape=(self.latent_dim,)),
             layers.Dense(128, activation='relu'),
-            layers.BatchNormalization(),
+            # layers.BatchNormalization(),
             layers.Dense(256, activation='relu'),
-            layers.BatchNormalization(),
+            # layers.BatchNormalization(),
             layers.Dense(self.time * self.feature),
             layers.Reshape(self.input_shape)
         ], name='generator')
+
+        # self.generator = keras.Sequential([
+        #     keras.Input(shape=(self.latent_dim,)),
+        #     layers.Dense(128, activation='relu'),
+        #     layers.Dense(256, activation='relu'),
+        #     layers.Reshape((256 // self.feature, self.feature)),
+        #     layers.UpSampling1D(size=2),
+        #     layers.Conv1D(self.feature, 3, padding='same'),
+        #     layers.LeakyReLU(),
+        #     # layers.UpSampling1D(size=2),
+        #     # layers.Conv1D(self.feature, 3, padding='same'),
+        #     # layers.LeakyReLU(),
+        #     # layers.UpSampling1D(size=2),
+        #     layers.Conv1D(self.feature, 3, padding='same'),
+        # ], name='generator')
 
         self.discriminator = keras.Sequential([
             keras.Input(shape=self.input_shape),
@@ -32,6 +47,21 @@ class WGAN_GP(keras.Model):
             layers.Dense(64, activation='relu'),
             layers.Dense(1, activation='sigmoid')
         ], name='discriminator')
+
+        # self.discriminator = keras.Sequential([
+        #     keras.Input(shape=self.input_shape),
+        #     layers.Conv1D(self.feature, 3, padding='same'),
+        #     layers.LeakyReLU(),
+        #     layers.Conv1D(self.feature, 3, padding='same'),
+        #     layers.MaxPooling1D(pool_size=2),
+        #     layers.Conv1D(self.feature, 3, padding='same'),
+        #     layers.LeakyReLU(),
+        #     layers.MaxPooling1D(pool_size=2),
+        #     layers.Dense(64 * self.feature, activation='relu'),
+        #     layers.Flatten(),
+        #     layers.Dense(64, activation='relu'),
+        #     layers.Dense(1, activation='sigmoid')
+        # ], name='discriminator')
 
         self.built = True
 
@@ -42,7 +72,6 @@ class WGAN_GP(keras.Model):
 
     def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight):
         super().compile()
-        # self.d_loss = d_loss
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
         self.gradient_penalty_weight = gradient_penalty_weight
@@ -62,7 +91,6 @@ class WGAN_GP(keras.Model):
             create_graph=True,
             retain_graph=True,
         )[0]
-
         gradients = gradients.view(batch_size, -1)
         gradient_norm = gradients.norm(2, dim=1)
         gradient_penalty = ((gradient_norm - 1) ** 2).mean()
@@ -78,26 +106,24 @@ class WGAN_GP(keras.Model):
         real_pred = self.discriminator(real_data)
         fake_pred = self.discriminator(fake_data)
         gp = self.gradient_penalty(real_data, fake_data.detach())
+        self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        self.d_optimizer.zero_grad()
         d_loss.backward()
-        self.d_optimizer.step()
-        # grads = [v.value.grad for v in self.discriminator.trainable_weights]
-        # with torch.no_grad():
-        #     self.d_optimizer.apply(grads, self.discriminator.trainable_weights)
+        grads = [v.value.grad for v in self.discriminator.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.discriminator.trainable_weights)
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim),
                                     mean=0, stddev=1)
 
+        self.zero_grad()
         fake_pred = self.discriminator(self.generator(noise))
         g_loss = -fake_pred.mean()
-        self.g_optimizer.zero_grad()
         g_loss.backward()
-        self.g_optimizer.step()
-        # grads = [v.value.grad for v in self.generator.trainable_weights]
-        # with torch.no_grad():
-        #     self.g_optimizer.apply(grads, self.generator.trainable_weights)
+        grads = [v.value.grad for v in self.generator.trainable_weights]
+        with torch.no_grad():
+            self.g_optimizer.apply(grads, self.generator.trainable_weights)
 
         # Update metrics and return their value.
         self.d_loss_tracker.update_state(d_loss)

@@ -70,6 +70,9 @@ class WGAN_GP(keras.Model):
         return [self.d_loss_tracker, self.g_loss_tracker,
                 self.accuracy_tracker]
 
+    def call(self, x):
+        return self.discriminator(x)
+
     def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight):
         super().compile()
         self.d_optimizer = d_optimizer

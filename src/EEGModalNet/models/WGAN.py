@@ -101,8 +101,14 @@ class WGAN_GP(keras.Model):
 
     def train_step(self, real_data):
         batch_size = real_data.size(0)
-        noise = keras.random.normal((batch_size, self.latent_dim),
-                                    mean=0, stddev=1)
+
+        means = real_data.mean(axis=1).mean(axis=1)
+        stds = real_data.std(axis=1).mean(axis=1)
+        noise = torch.zeros((batch_size, self.latent_dim))
+        for i in range(batch_size):
+            noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
+        # noise = keras.random.normal((batch_size, self.latent_dim),
+        #                             mean=0, stddev=1)
 
         # train discriminator
         fake_data = self.generator(noise).detach()
@@ -117,8 +123,11 @@ class WGAN_GP(keras.Model):
             self.d_optimizer.apply(grads, self.discriminator.trainable_weights)
 
         # train generator
-        noise = keras.random.normal((batch_size, self.latent_dim),
-                                    mean=0, stddev=1)
+        noise = torch.zeros((batch_size, self.latent_dim))
+        for i in range(batch_size):
+            noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
+        # noise = keras.random.normal((batch_size, self.latent_dim),
+        #                             mean=0, stddev=1)
 
         self.zero_grad()
         fake_pred = self.discriminator(self.generator(noise))

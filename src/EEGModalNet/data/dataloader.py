@@ -21,7 +21,7 @@ class LEMONEEGDataModule():
                  preprocess: bool = False,
                  n_subjects: int = 10,
                  target: str = 'gender',
-                 split_type: Literal['time', 'subject'] = 'time',
+                 split_type: Literal['time', 'subject'] = 'subject',
                  shuffling: Literal['split_shuffle', 'shuffle_split', 'no_shuffle'] = 'no_shuffle',
                  stratified: bool = True,
                  patching: bool = False,

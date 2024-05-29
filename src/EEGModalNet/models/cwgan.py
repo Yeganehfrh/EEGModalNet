@@ -29,7 +29,7 @@ class ConditionalWGAN(keras.Model):
             layers.Flatten(),
             layers.Dense(self.time * self.feature, activation='relu'),
             layers.Dense(64, activation='relu'),
-            layers.Dense(1 + self.num_classes, activation='softmax')
+            layers.Dense(1 + self.num_classes, activation='softmax')  # TODO: differences.
         ], name='discriminator')
 
         self.built = True
@@ -76,13 +76,14 @@ class ConditionalWGAN(keras.Model):
                                     mean=0, stddev=1)
 
         # update the real_labels dimension to be able to concatenate with the data
-        real_labels = real_labels.unsqueeze(1).repeat(1, self.time, 1)
+        real_labels_reshaped = real_labels.unsqueeze(1).repeat(1, self.time, 1)
 
         # train discriminator
         fake_data = self.generator(torch.cat((noise, real_labels), dim=1)).detach()
-        real_pred = self.discriminator(torch.cat((real_data, real_labels), dim=-1))
-        fake_pred = self.discriminator(torch.cat((fake_data, real_labels), dim=-1))
-        gp = self.gradient_penalty(torch.cat((real_data, real_labels), dim=1), torch.cat((fake_data, real_labels), dim=1).detach())
+        real_pred = self.discriminator(torch.cat((real_data, real_labels_reshaped), dim=-1))
+        fake_pred = self.discriminator(torch.cat((fake_data, real_labels_reshaped), dim=-1))
+        gp = self.gradient_penalty(torch.cat((real_data, real_labels_reshaped), dim=-1),
+                                   torch.cat((fake_data, real_labels_reshaped), dim=-1).detach())
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
@@ -95,7 +96,7 @@ class ConditionalWGAN(keras.Model):
                                     mean=0, stddev=1)
 
         self.zero_grad()
-        fake_pred = self.discriminator(torch.cat((self.generator(torch.cat((noise.cpu(), real_labels), dim=1)), real_labels), dim=1))
+        fake_pred = self.discriminator(torch.cat((self.generator(torch.cat((noise, real_labels), dim=1)), real_labels_reshaped), dim=-1))
         g_loss = -fake_pred.mean()
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]

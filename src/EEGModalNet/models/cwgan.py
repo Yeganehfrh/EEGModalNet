@@ -29,7 +29,7 @@ class ConditionalWGAN(keras.Model):
             layers.Flatten(),
             layers.Dense(self.time * self.feature, activation='relu'),
             layers.Dense(64, activation='relu'),
-            layers.Dense(1 + self.num_classes, activation='softmax')  # TODO: differences.
+            layers.Dense(1, activation='softmax')
         ], name='discriminator')
 
         self.built = True
@@ -42,10 +42,11 @@ class ConditionalWGAN(keras.Model):
     def call(self, x):
         return self.discriminator(x)
 
-    def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight):
+    def compile(self, d_optimizer, g_optimizer, loss_fn, gradient_penalty_weight):
         super().compile()
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
+        self.loss_fn = loss_fn
         self.gradient_penalty_weight = gradient_penalty_weight
 
     def gradient_penalty(self, real_data, fake_data):
@@ -80,12 +81,22 @@ class ConditionalWGAN(keras.Model):
 
         # train discriminator
         fake_data = self.generator(torch.cat((noise, real_labels), dim=1)).detach()
-        real_pred = self.discriminator(torch.cat((real_data, real_labels_reshaped), dim=-1))
-        fake_pred = self.discriminator(torch.cat((fake_data, real_labels_reshaped), dim=-1))
-        gp = self.gradient_penalty(torch.cat((real_data, real_labels_reshaped), dim=-1),
-                                   torch.cat((fake_data, real_labels_reshaped), dim=-1).detach())
+        real_data_labels = torch.cat((real_data, real_labels_reshaped), dim=-1)
+        fake_data_labels = torch.cat((fake_data, real_labels_reshaped), dim=-1)
+        combined_images = ops.concatenate(
+            [fake_data_labels, real_data_labels], axis=0
+        )
+
+        # Assemble labels discriminating real from fake images.
+        labels = ops.concatenate(
+            [ops.ones((batch_size, 1)), ops.zeros((batch_size, 1))], axis=0
+        )
+        # gp = self.gradient_penalty(real_data_labels), fake_data_labels.detach())
         self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+        # label_loss = keras.losses.binary_crossentropy(real_labels, real_pred[:, 1:])
+        # d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + label_loss
+        predictions = self.discriminator(combined_images)
+        d_loss = self.loss_fn(labels, predictions)
         d_loss.backward()
         grads = [v.value.grad for v in self.discriminator.trainable_weights]
         with torch.no_grad():
@@ -94,10 +105,15 @@ class ConditionalWGAN(keras.Model):
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim),
                                     mean=0, stddev=1)
+        
+        noise_labels = ops.concatenate([noise, real_labels], axis=1)
+        misleading_labels = ops.zeros((batch_size, 1))
 
         self.zero_grad()
-        fake_pred = self.discriminator(torch.cat((self.generator(torch.cat((noise, real_labels), dim=1)), real_labels_reshaped), dim=-1))
-        g_loss = -fake_pred.mean()
+        fake_data = self.generator(noise_labels)
+        fake_data_labels = ops.concatenate([fake_data, real_labels_reshaped], axis=-1)
+        predictions = self.discriminator(fake_data_labels)
+        g_loss = self.loss_fn(misleading_labels, predictions)
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():

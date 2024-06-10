@@ -32,6 +32,10 @@ class ConditionalWGAN(keras.Model):
             layers.Dense(1, activation='softmax')
         ], name='discriminator')
 
+        self.classifier = keras.Sequential([
+            layers.Dense(32, activation='relu'),
+            layers.Dense(2, activation='softmax')], name='classifier')
+
         self.built = True
 
     @property

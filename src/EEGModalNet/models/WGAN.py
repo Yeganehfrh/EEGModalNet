@@ -17,11 +17,11 @@ class WGAN_GP(keras.Model):
 
         self.generator = keras.Sequential([
             keras.Input(shape=(self.latent_dim,)),
-            layers.Dense(128, activation='relu'),
+            layers.Dense(128, activation='relu', name='gen_dense1'),
             # layers.BatchNormalization(),
-            layers.Dense(256, activation='relu'),
+            layers.Dense(256, activation='relu', name='gen_dense2'),
             # layers.BatchNormalization(),
-            layers.Dense(self.time * self.feature),
+            layers.Dense(self.time * self.feature, name='gen_dense3'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
@@ -42,10 +42,10 @@ class WGAN_GP(keras.Model):
 
         self.discriminator = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            layers.Flatten(),
-            layers.Dense(self.time * self.feature, activation='relu'),
-            layers.Dense(64, activation='relu'),
-            layers.Dense(1, activation='sigmoid')
+            layers.Flatten(name='dis_flatten'),
+            layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
+            layers.Dense(64, activation='relu', name='dis_dense2'),
+            layers.Dense(1, activation='sigmoid', name='dis_dense3')
         ], name='discriminator')
 
         # self.discriminator = keras.Sequential([

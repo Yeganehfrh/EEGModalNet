@@ -45,8 +45,9 @@ class WGAN_GP(keras.Model):
             layers.Flatten(name='dis_flatten'),
             layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
             layers.Dense(64, activation='relu', name='dis_dense2'),
-            layers.Dense(1, activation='sigmoid', name='dis_dense3')
+            layers.Dense(1, name='dis_dense3')
         ], name='discriminator')
+
 
         # self.discriminator = keras.Sequential([
         #     keras.Input(shape=self.input_shape),

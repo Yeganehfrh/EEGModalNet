@@ -15,30 +15,33 @@ class WGAN_GP(keras.Model):
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
 
+        # self.generator = keras.Sequential([
+        #     keras.Input(shape=(self.latent_dim,)),
+        #     layers.Dense(128, activation='relu', name='gen_dense1'),
+        #     # layers.BatchNormalization(),
+        #     layers.Dense(256, activation='relu', name='gen_dense2'),
+        #     # layers.BatchNormalization(),
+        #     layers.Dense(self.time * self.feature, name='gen_dense3'),
+        #     layers.Reshape(self.input_shape)
+        # ], name='generator')
+
         self.generator = keras.Sequential([
             keras.Input(shape=(self.latent_dim,)),
-            layers.Dense(128, activation='relu', name='gen_dense1'),
-            # layers.BatchNormalization(),
-            layers.Dense(256, activation='relu', name='gen_dense2'),
-            # layers.BatchNormalization(),
-            layers.Dense(self.time * self.feature, name='gen_dense3'),
+            layers.Dense(128, activation='relu'),
+            layers.Dense(256, activation='relu'),
+            layers.Reshape((256 // self.feature, self.feature)),
+            layers.UpSampling1D(size=2),
+            layers.Conv1D(self.feature, 3, padding='same'),
+            layers.LeakyReLU(),
+            # layers.UpSampling1D(size=2),
+            # layers.Conv1D(self.feature, 3, padding='same'),
+            # layers.LeakyReLU(),
+            # layers.UpSampling1D(size=2),
+            layers.Conv1D(self.feature, 3, padding='same'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
-        # self.generator = keras.Sequential([
-        #     keras.Input(shape=(self.latent_dim,)),
-        #     layers.Dense(128, activation='relu'),
-        #     layers.Dense(256, activation='relu'),
-        #     layers.Reshape((256 // self.feature, self.feature)),
-        #     layers.UpSampling1D(size=2),
-        #     layers.Conv1D(self.feature, 3, padding='same'),
-        #     layers.LeakyReLU(),
-        #     # layers.UpSampling1D(size=2),
-        #     # layers.Conv1D(self.feature, 3, padding='same'),
-        #     # layers.LeakyReLU(),
-        #     # layers.UpSampling1D(size=2),
-        #     layers.Conv1D(self.feature, 3, padding='same'),
-        # ], name='generator')
+        self.generator.summary()
 
         self.discriminator = keras.Sequential([
             keras.Input(shape=self.input_shape),

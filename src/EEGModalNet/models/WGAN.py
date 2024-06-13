@@ -15,16 +15,6 @@ class WGAN_GP(keras.Model):
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
 
-        # self.generator = keras.Sequential([
-        #     keras.Input(shape=(self.latent_dim,)),
-        #     layers.Dense(128, activation='relu', name='gen_dense1'),
-        #     # layers.BatchNormalization(),
-        #     layers.Dense(256, activation='relu', name='gen_dense2'),
-        #     # layers.BatchNormalization(),
-        #     layers.Dense(self.time * self.feature, name='gen_dense3'),
-        #     layers.Reshape(self.input_shape)
-        # ], name='generator')
-
         self.generator = keras.Sequential([
             keras.Input(shape=(self.latent_dim,)),
             layers.Dense(128, activation='relu'),
@@ -32,40 +22,18 @@ class WGAN_GP(keras.Model):
             layers.Reshape((256 // self.feature, self.feature)),
             layers.UpSampling1D(size=2),
             layers.Conv1D(self.feature, 3, padding='same'),
-            layers.LeakyReLU(),
-            # layers.UpSampling1D(size=2),
-            # layers.Conv1D(self.feature, 3, padding='same'),
-            # layers.LeakyReLU(),
-            # layers.UpSampling1D(size=2),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Conv1D(self.feature, 3, padding='same'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
-        self.generator.summary()
-
-        self.discriminator = keras.Sequential([
+        self.critic = keras.Sequential([
             keras.Input(shape=self.input_shape),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
             layers.Dense(64, activation='relu', name='dis_dense2'),
             layers.Dense(1, name='dis_dense3')
-        ], name='discriminator')
-
-
-        # self.discriminator = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     layers.Conv1D(self.feature, 3, padding='same'),
-        #     layers.LeakyReLU(),
-        #     layers.Conv1D(self.feature, 3, padding='same'),
-        #     layers.MaxPooling1D(pool_size=2),
-        #     layers.Conv1D(self.feature, 3, padding='same'),
-        #     layers.LeakyReLU(),
-        #     layers.MaxPooling1D(pool_size=2),
-        #     layers.Dense(64 * self.feature, activation='relu'),
-        #     layers.Flatten(),
-        #     layers.Dense(64, activation='relu'),
-        #     layers.Dense(1, activation='sigmoid')
-        # ], name='discriminator')
+        ], name='critic')
 
         self.built = True
 
@@ -75,7 +43,7 @@ class WGAN_GP(keras.Model):
                 self.accuracy_tracker]
 
     def call(self, x):
-        return self.discriminator(x)
+        return self.critic(x)
 
     def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight):
         super().compile()
@@ -89,7 +57,7 @@ class WGAN_GP(keras.Model):
         interpolated = epsilon * real_data + (1 - epsilon) * fake_data
         interpolated.requires_grad_(True)
 
-        prob_interpolated = self.discriminator(interpolated)
+        prob_interpolated = self.critic(interpolated)
 
         gradients = torch.autograd.grad(
             outputs=prob_interpolated,
@@ -114,17 +82,17 @@ class WGAN_GP(keras.Model):
         # noise = keras.random.normal((batch_size, self.latent_dim),
         #                             mean=0, stddev=1)
 
-        # train discriminator
+        # train critic
         fake_data = self.generator(noise).detach()
-        real_pred = self.discriminator(real_data)
-        fake_pred = self.discriminator(fake_data)
+        real_pred = self.critic(real_data)
+        fake_pred = self.critic(fake_data)
         gp = self.gradient_penalty(real_data, fake_data.detach())
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
-        grads = [v.value.grad for v in self.discriminator.trainable_weights]
+        grads = [v.value.grad for v in self.critic.trainable_weights]
         with torch.no_grad():
-            self.d_optimizer.apply(grads, self.discriminator.trainable_weights)
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # train generator
         noise = torch.zeros((batch_size, self.latent_dim))
@@ -134,7 +102,7 @@ class WGAN_GP(keras.Model):
         #                             mean=0, stddev=1)
 
         self.zero_grad()
-        fake_pred = self.discriminator(self.generator(noise))
+        fake_pred = self.critic(self.generator(noise))
         g_loss = -fake_pred.mean()
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]

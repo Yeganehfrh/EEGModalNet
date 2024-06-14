@@ -1,10 +1,11 @@
 import torch
 from keras import layers, ops
 import keras
+from src.EEGModalNet.models.common import SubjectLayers
 
 
 class WGAN_GP(keras.Model):
-    def __init__(self, time_dim=100, feature_dim=2, latent_dim=64):
+    def __init__(self, time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayers=False):
         super().__init__()
         self.time = time_dim
         self.feature = feature_dim
@@ -15,14 +16,20 @@ class WGAN_GP(keras.Model):
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
 
+        if use_sublayers:
+            self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)
+
         self.generator = keras.Sequential([
             keras.Input(shape=(self.latent_dim,)),
-            layers.Dense(128, activation='relu'),
-            layers.Dense(256, activation='relu'),
+            layers.Dense(128),
+            layers.LeakyReLU(0.3),
+            layers.Dense(256),
+            layers.LeakyReLU(0.3),
             layers.Reshape((256 // self.feature, self.feature)),
             layers.UpSampling1D(size=2),
             layers.Conv1D(self.feature, 3, padding='same'),
-            layers.LeakyReLU(negative_slope=0.2),
+            layers.BatchNormalization(),
+            layers.LeakyReLU(negative_slope=0.3),
             layers.Conv1D(self.feature, 3, padding='same'),
             layers.Reshape(self.input_shape)
         ], name='generator')
@@ -31,8 +38,8 @@ class WGAN_GP(keras.Model):
             keras.Input(shape=self.input_shape),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
-            layers.Dense(64, activation='relu', name='dis_dense2'),
-            layers.Dense(1, name='dis_dense3')
+            layers.Dense(64, activation='relu', name='dis_dense3'),
+            layers.Dense(1, name='dis_dense4')
         ], name='critic')
 
         self.built = True
@@ -71,7 +78,8 @@ class WGAN_GP(keras.Model):
         gradient_penalty = ((gradient_norm - 1) ** 2).mean()
         return gradient_penalty
 
-    def train_step(self, real_data):
+    def train_step(self, data):
+        real_data, sub = data['x'], data['sub']
         batch_size = real_data.size(0)
 
         means = real_data.mean(axis=1).mean(axis=1)
@@ -81,6 +89,8 @@ class WGAN_GP(keras.Model):
             noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
         # noise = keras.random.normal((batch_size, self.latent_dim),
         #                             mean=0, stddev=1)
+        if hasattr(self, 'subject_layers'):
+            real_data = self.subject_layers(real_data, sub)
 
         # train critic
         fake_data = self.generator(noise).detach()

@@ -4,9 +4,11 @@ import keras
 from src.EEGModalNet.models.common import SubjectLayers
 
 
+@keras.saving.register_keras_serializable()
 class WGAN_GP(keras.Model):
-    def __init__(self, time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayers=False):
-        super().__init__()
+    def __init__(self,
+                 time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayers=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.time = time_dim
         self.feature = feature_dim
         self.input_shape = (time_dim, feature_dim)
@@ -48,6 +50,10 @@ class WGAN_GP(keras.Model):
     def metrics(self):
         return [self.d_loss_tracker, self.g_loss_tracker,
                 self.accuracy_tracker]
+
+    def get_config(self):
+        config = super().get_config()
+        return config
 
     def call(self, x):
         return self.critic(x)

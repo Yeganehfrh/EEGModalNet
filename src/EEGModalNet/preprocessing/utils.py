@@ -85,12 +85,10 @@ def get_channel_positions(data_dir):
     return ch_positions
 
 
-def set_channel_positions(data_dir, localizer_dir):
+def set_channel_positions(raw, localizer_dir):
     """ This function sets the channel positions for individual EEG recordings
      based on the channel positions from the localizer """
-    import mne
 
-    raw = mne.io.read_raw_brainvision(data_dir)
     channels = scipy.io.loadmat(localizer_dir)
     channels = channels['Channel'][0]
 

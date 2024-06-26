@@ -85,6 +85,31 @@ def get_channel_positions(data_dir):
     return ch_positions
 
 
+def set_channel_positions(data_dir, localizer_dir):
+    """ This function sets the channel positions for individual EEG recordings
+     based on the channel positions from the localizer """
+    import mne
+
+    raw = mne.io.read_raw_brainvision(data_dir)
+    channels = scipy.io.loadmat(localizer_dir)
+    channels = channels['Channel'][0]
+
+    def read_ch_name(channels, i):
+        return channels[i][0][0].split('_')[-1].lower()
+    ch_dict = {}
+    for i in range(len(channels)):
+        ch_dict[read_ch_name(channels, i)] = channels[i][3].reshape(-1)
+
+    ch_names = [raw.ch_names[i].lower() for i in range(len(raw.ch_names))]
+
+    # adding channel positions to raw data
+    for ch in ch_names:
+        raw.info['chs'][ch_names.index(ch)]['loc'][:3] = ch_dict[ch]
+        raw.info['chs'][ch_names.index(ch)]['loc'][3:6] = 0
+
+    return raw
+
+
 def get_headpoints(data_dir):
     headpoints = {}
     for path in Path(data_dir).glob('sub*'):

@@ -12,6 +12,7 @@ dependencies:
   - pip
   - pytest
   - pytorch
+  - torchvision
   - seaborn
   - pandas
   - flake8
@@ -25,6 +26,7 @@ dependencies:
   - dvc-gdrive
   - dvc-ssh
   - scikit-learn
+  - mne
 
   - pip:
     - keras>3

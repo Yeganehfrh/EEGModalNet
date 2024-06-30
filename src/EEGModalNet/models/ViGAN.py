@@ -21,10 +21,9 @@ class ViT_GAN(keras.Model):
         self.critic = Sequential([
             Input(shape=(frames, height, width, 3)),
             # Apply Conv2D to each frame independently
-            TimeDistributed(Conv2D(filters=32, kernel_size=(3, 3), activation='relu', padding='same')),
-            TimeDistributed(MaxPooling2D(pool_size=(2, 2))),
-            TimeDistributed(Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same')),
-            TimeDistributed(MaxPooling2D(pool_size=(2, 2))),
+            TimeDistributed(Conv2D(filters=32, kernel_size=(3, 3), activation='relu', padding='same', strides=(2, 2))),
+            TimeDistributed(Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same', strides=(2, 2))),
+            TimeDistributed(Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same', strides=(2, 2))),
             # Flatten each frame's feature maps
             TimeDistributed(Flatten()),
             # Now the shape should be (batch_size, num_frames, flattened_features)

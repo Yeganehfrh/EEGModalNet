@@ -1,9 +1,8 @@
 import torch
-from keras import layers, ops, Sequential
+from keras import Sequential
 import keras
 from keras.layers import Input, Dense, Reshape, UpSampling1D, Conv1D, BatchNormalization, ReLU, UpSampling2D, Conv2D, TimeDistributed
-from keras.layers import MaxPooling2D, Flatten, Conv1D, GlobalAveragePooling1D, Dropout
-from src.EEGModalNet.models.common import SubjectLayers, ChannelMerger
+from keras.layers import Flatten, Conv1D, GlobalAveragePooling1D, Dropout
 
 
 @keras.saving.register_keras_serializable()
@@ -112,7 +111,7 @@ class ViT_GAN(keras.Model):
         }
 
 
-def build_generator(latent_dim, num_frames, height, width, channels):
+def build_generator(latent_dim, num_frames, height, width):
     model = Sequential()
 
     model.add(Input(shape=(latent_dim,)))

@@ -1,5 +1,130 @@
-from torch import nn
+import math
+import typing as tp
+import mne
 import torch
+from torch import nn
+
+
+class PositionGetter:
+    INVALID = -0.1
+
+    def __init__(self) -> None:
+        self._cache: tp.Dict[int, torch.Tensor] = {}
+        self._invalid_names: tp.Set[str] = set()
+
+    def get_recording_layout(self, info) -> torch.Tensor:
+        layout = mne.channels.find_layout(info)
+        positions = torch.full((len(info.ch_names), 2), self.INVALID)
+        x, y = layout.pos[:, :2].T
+        x = (x - x.min()) / (x.max() - x.min())
+        y = (y - y.min()) / (y.max() - y.min())
+        x = torch.from_numpy(x).float()
+        y = torch.from_numpy(y).float()
+        positions[:, 0] = x
+        positions[:, 1] = y
+        return positions
+
+    def get_positions(self, batch):
+        eeg, _, info = batch
+        B, C, _ = eeg.shape
+        positions = torch.full((B, C, 2), self.INVALID, device=eeg.device)
+        for idx in range(len(batch)):
+            # recording = batch._recordings[idx]
+            rec_pos = self.get_recording_layout(info)
+            positions[idx, :len(rec_pos)] = rec_pos.to(eeg.device)
+        return positions
+
+    def is_invalid(self, positions):
+        return (positions == self.INVALID).all(dim=-1)
+
+
+class FourierEmb(nn.Module):
+    """
+    Fourier positional embedding.
+    Unlike trad. embedding this is not using exponential periods
+    for cosines and sinuses, but typical `2 pi k` which can represent
+    any function over [0, 1]. As this function would be necessarily periodic,
+    we take a bit of margin and do over [-0.2, 1.2].
+    """
+    def __init__(self, dimension: int = 256, margin: float = 0.2):
+        super().__init__()
+        n_freqs = (dimension // 2)**0.5
+        assert int(n_freqs ** 2 * 2) == dimension
+        self.dimension = dimension
+        self.margin = margin
+
+    def forward(self, positions):
+        *O, D = positions.shape
+        assert D == 2
+        *O, D = positions.shape
+        n_freqs = (self.dimension // 2)**0.5
+        freqs_y = torch.arange(n_freqs).to(positions)
+        freqs_x = freqs_y[:, None]
+        width = 1 + 2 * self.margin
+        positions = positions + self.margin
+        p_x = 2 * math.pi * freqs_x / width
+        p_y = 2 * math.pi * freqs_y / width
+        positions = positions[..., None, None, :]
+        loc = (positions[..., 0] * p_x + positions[..., 1] * p_y).view(*O, -1)
+        emb = torch.cat([
+            torch.cos(loc),
+            torch.sin(loc),
+        ], dim=-1)
+        return emb
+
+
+class ChannelMerger(nn.Module):
+    def __init__(self, chout: int, pos_dim: int = 256,
+                 dropout: float = 0, usage_penalty: float = 0.,
+                 n_subjects: int = 200, per_subject: bool = False):
+        super().__init__()
+        assert pos_dim % 4 == 0
+        self.position_getter = PositionGetter()
+        self.per_subject = per_subject
+        if self.per_subject:
+            self.heads = nn.Parameter(torch.randn(n_subjects, chout, pos_dim, requires_grad=True))
+        else:
+            self.heads = nn.Parameter(torch.randn(chout, pos_dim, requires_grad=True))
+        self.heads.data /= pos_dim ** 0.5
+        self.dropout = dropout
+        self.embedding = FourierEmb(pos_dim)
+        self.usage_penalty = usage_penalty
+        self._penalty = torch.tensor(0.)
+
+    @property
+    def training_penalty(self):
+        return self._penalty.to(next(self.parameters()).device)
+
+    def forward(self, eeg, positions):
+        # eeg = eeg.permute(0, 2, 1)
+        B, C, T = eeg.shape
+        eeg = eeg.clone()
+        # positions = self.position_getter.get_positions(batch)
+        embedding = self.embedding(positions)
+        score_offset = torch.zeros(B, C, device=eeg.device)
+        # score_offset[self.position_getter.is_invalid(positions)] = float('-inf')
+
+        if self.training and self.dropout:
+            center_to_ban = torch.rand(2, device=eeg.device)
+            radius_to_ban = self.dropout
+            banned = (positions - center_to_ban).norm(dim=-1) <= radius_to_ban
+            score_offset[banned] = float('-inf')
+
+        if self.per_subject:
+            _, cout, pos_dim = self.heads.shape
+            subject = batch.subject_index
+            heads = self.heads.gather(0, subject.view(-1, 1, 1).expand(-1, cout, pos_dim))
+        else:
+            heads = self.heads[None].expand(B, -1, -1)
+
+        scores = torch.einsum("bcd,bod->boc", embedding, heads)
+        scores += score_offset[:, None]
+        weights = torch.softmax(scores, dim=2)
+        out = torch.einsum("bct,boc->bot", eeg, weights)
+        if self.training and self.usage_penalty > 0.:
+            usage = weights.mean(dim=(0, 1)).sum()
+            self._penalty = self.usage_penalty * usage
+        return out
 
 
 class SubjectLayers(nn.Module):

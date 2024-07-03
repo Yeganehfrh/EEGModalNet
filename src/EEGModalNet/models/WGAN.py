@@ -28,70 +28,67 @@ class WGAN_GP(keras.Model):
         # if use_sublayers:
         #     self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)  # TODO should change it to feature_dim??
 
-        # self.generator = keras.Sequential([
-        #     keras.Input(shape=(self.latent_dim,)),
-        #     layers.Dense(128),
-        #     layers.LeakyReLU(0.3),
-        #     layers.Dense(256),
-        #     layers.LeakyReLU(0.3),
-        #     layers.Reshape((256 // 1, 1)),
-        #     layers.UpSampling1D(size=2),
-        #     layers.Conv1D(self.feature, 3, padding='same'),
-        #     layers.BatchNormalization(),
-        #     layers.LeakyReLU(negative_slope=0.3),
-        #     layers.Conv1D(self.feature, 3, padding='same'),
-        #     layers.Reshape(self.input_shape)
-        # ], name='generator')
-
         self.generator = keras.Sequential([
-            keras.Input(shape=(latent_dim,)),
+            keras.Input(shape=(self.latent_dim,)),
             layers.Dense(128),
             layers.LeakyReLU(0.3),
             layers.Dense(256),
             layers.LeakyReLU(0.3),
-            layers.Reshape((reshap_dim[0] // reshap_dim[1], reshap_dim[1])),
+            layers.Reshape((256 // 1, 1)),
             layers.UpSampling1D(size=2),
-            layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
+            layers.Conv1D(self.feature, 3, padding='same'),
             layers.BatchNormalization(),
             layers.LeakyReLU(negative_slope=0.3),
-            layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
-            layers.BatchNormalization(),
-            layers.LeakyReLU(negative_slope=0.3),
-            layers.UpSampling1D(size=2),
-            layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
-            layers.BatchNormalization(),
-            layers.LeakyReLU(negative_slope=0.3),
-            layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
-            layers.BatchNormalization(),
-            layers.LeakyReLU(negative_slope=0.3),
-            layers.UpSampling1D(size=2),
-            layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
-            layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
+            layers.Conv1D(self.feature, 3, padding='same'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
-        # self.critic = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     layers.Conv1D(16, 3, padding='same', strides=3, activation='relu'),  # TODO: add batch norm
-        #     layers.Conv1D(32, 3, padding='same', strides=3, activation='relu'),
-        #     layers.Conv1D(32, 3, padding='same', strides=3, activation='relu'),
-        #     layers.Flatten(name='dis_flatten'),
-        #     layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
-        #     layers.Dense(64, activation='relu', name='dis_dense3'),
-        #     layers.Dense(1, name='dis_dense4')
-        # ], name='critic')
+        # self.generator = keras.Sequential([
+        #     keras.Input(shape=(latent_dim,)),
+        #     layers.Dense(128),
+        #     layers.LeakyReLU(0.3),
+        #     layers.Dense(256),
+        #     layers.LeakyReLU(0.3),
+        #     layers.Reshape((reshap_dim[0] // reshap_dim[1], reshap_dim[1])),
+        #     layers.UpSampling1D(size=2),
+        #     layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
+        #     layers.BatchNormalization(),
+        #     layers.LeakyReLU(negative_slope=0.3),
+        #     layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
+        #     layers.BatchNormalization(),
+        #     layers.LeakyReLU(negative_slope=0.3),
+        #     layers.UpSampling1D(size=2),
+        #     layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
+        #     layers.BatchNormalization(),
+        #     layers.LeakyReLU(negative_slope=0.3),
+        #     layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
+        #     layers.BatchNormalization(),
+        #     layers.LeakyReLU(negative_slope=0.3),
+        #     layers.UpSampling1D(size=2),
+        #     layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
+        #     layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
+        #     layers.Reshape(self.input_shape)
+        # ], name='generator')
 
         self.critic = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            layers.Conv1D(16, 3, padding='same', strides=2),
-            layers.Conv1D(8, 3, padding='same', strides=2),
-            layers.Conv1D(4, 3, padding='same', strides=2),
-            layers.Conv1D(2, 3, padding='same', strides=2),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(64, activation='relu', name='dis_dense1'),
-            layers.Dense(32, activation='relu', name='dis_dense3'),
+            layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
+            layers.Dense(64, activation='relu', name='dis_dense3'),
             layers.Dense(1, name='dis_dense4')
         ], name='critic')
+
+        # self.critic = keras.Sequential([
+        #     keras.Input(shape=self.input_shape),
+        #     layers.Conv1D(16, 3, padding='same', strides=2),
+        #     layers.Conv1D(8, 3, padding='same', strides=2),
+        #     layers.Conv1D(4, 3, padding='same', strides=2),
+        #     layers.Conv1D(2, 3, padding='same', strides=2),
+        #     layers.Flatten(name='dis_flatten'),
+        #     layers.Dense(64, activation='relu', name='dis_dense1'),
+        #     layers.Dense(32, activation='relu', name='dis_dense3'),
+        #     layers.Dense(1, name='dis_dense4')
+        # ], name='critic')
 
         self.built = True
 

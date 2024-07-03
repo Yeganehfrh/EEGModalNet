@@ -1,13 +1,14 @@
 import torch
 from keras import layers, ops
 import keras
-from src.EEGModalNet.models.common import SubjectLayers
+from src.EEGModalNet.models.common import SubjectLayers, ChannelMerger
 
 
 @keras.saving.register_keras_serializable()
 class WGAN_GP(keras.Model):
     def __init__(self,
-                 time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayers=False, *args, **kwargs):
+                 time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayers=False,
+                 use_channel_merger=False, reshap_dim=(256, 2), *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
         self.feature = feature_dim
@@ -18,29 +19,77 @@ class WGAN_GP(keras.Model):
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
 
-        if use_sublayers:
-            self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)
+        # # Fourier positional embedding
+        # if use_channel_merger:
+        #     self.pos_emb = ChannelMerger(
+        #         chout=feature_dim, pos_dim=288, n_subjects=n_subjects
+        #     )  # TODO: check if this is the right dimension
+
+        # if use_sublayers:
+        #     self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)  # TODO should change it to feature_dim??
+
+        # self.generator = keras.Sequential([
+        #     keras.Input(shape=(self.latent_dim,)),
+        #     layers.Dense(128),
+        #     layers.LeakyReLU(0.3),
+        #     layers.Dense(256),
+        #     layers.LeakyReLU(0.3),
+        #     layers.Reshape((256 // 1, 1)),
+        #     layers.UpSampling1D(size=2),
+        #     layers.Conv1D(self.feature, 3, padding='same'),
+        #     layers.BatchNormalization(),
+        #     layers.LeakyReLU(negative_slope=0.3),
+        #     layers.Conv1D(self.feature, 3, padding='same'),
+        #     layers.Reshape(self.input_shape)
+        # ], name='generator')
 
         self.generator = keras.Sequential([
-            keras.Input(shape=(self.latent_dim,)),
+            keras.Input(shape=(latent_dim,)),
             layers.Dense(128),
             layers.LeakyReLU(0.3),
             layers.Dense(256),
             layers.LeakyReLU(0.3),
-            layers.Reshape((256 // self.feature, self.feature)),
+            layers.Reshape((reshap_dim[0] // reshap_dim[1], reshap_dim[1])),
             layers.UpSampling1D(size=2),
-            layers.Conv1D(self.feature, 3, padding='same'),
+            layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
             layers.BatchNormalization(),
             layers.LeakyReLU(negative_slope=0.3),
-            layers.Conv1D(self.feature, 3, padding='same'),
+            layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
+            layers.BatchNormalization(),
+            layers.LeakyReLU(negative_slope=0.3),
+            layers.UpSampling1D(size=2),
+            layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
+            layers.BatchNormalization(),
+            layers.LeakyReLU(negative_slope=0.3),
+            layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
+            layers.BatchNormalization(),
+            layers.LeakyReLU(negative_slope=0.3),
+            layers.UpSampling1D(size=2),
+            layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
+            layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
+        # self.critic = keras.Sequential([
+        #     keras.Input(shape=self.input_shape),
+        #     layers.Conv1D(16, 3, padding='same', strides=3, activation='relu'),  # TODO: add batch norm
+        #     layers.Conv1D(32, 3, padding='same', strides=3, activation='relu'),
+        #     layers.Conv1D(32, 3, padding='same', strides=3, activation='relu'),
+        #     layers.Flatten(name='dis_flatten'),
+        #     layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
+        #     layers.Dense(64, activation='relu', name='dis_dense3'),
+        #     layers.Dense(1, name='dis_dense4')
+        # ], name='critic')
+
         self.critic = keras.Sequential([
             keras.Input(shape=self.input_shape),
+            layers.Conv1D(16, 3, padding='same', strides=2),
+            layers.Conv1D(8, 3, padding='same', strides=2),
+            layers.Conv1D(4, 3, padding='same', strides=2),
+            layers.Conv1D(2, 3, padding='same', strides=2),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
-            layers.Dense(64, activation='relu', name='dis_dense3'),
+            layers.Dense(64, activation='relu', name='dis_dense1'),
+            layers.Dense(32, activation='relu', name='dis_dense3'),
             layers.Dense(1, name='dis_dense4')
         ], name='critic')
 
@@ -79,7 +128,7 @@ class WGAN_GP(keras.Model):
             create_graph=True,
             retain_graph=True,
         )[0]
-        gradients = gradients.view(batch_size, -1)
+        gradients = gradients.reshape(batch_size, -1)  # TODO: it was view before changed to reshape because of error
         gradient_norm = gradients.norm(2, dim=1)
         gradient_penalty = ((gradient_norm - 1) ** 2).mean()
         return gradient_penalty

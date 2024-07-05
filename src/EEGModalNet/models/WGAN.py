@@ -25,8 +25,8 @@ class WGAN_GP(keras.Model):
         #         chout=feature_dim, pos_dim=288, n_subjects=n_subjects
         #     )  # TODO: check if this is the right dimension
 
-        # if use_sublayers:
-        #     self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)  # TODO should change it to feature_dim??
+        if use_sublayers:
+            self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)  # TODO should change it to feature_dim??
 
         self.generator = keras.Sequential([
             keras.Input(shape=(self.latent_dim,)),

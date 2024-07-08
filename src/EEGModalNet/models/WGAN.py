@@ -75,7 +75,7 @@ class WGAN_GP(keras.Model):
             layers.Flatten(name='dis_flatten'),
             layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
             layers.Dense(64, activation='relu', name='dis_dense3'),
-            layers.Dense(1, name='dis_dense4')
+            layers.Dense(1, name='dis_dense4', activation='sigmoid')
         ], name='critic')
 
         # self.critic = keras.Sequential([

@@ -28,21 +28,6 @@ class WGAN_GP(keras.Model):
         if use_sublayers:
             self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)  # TODO should change it to feature_dim??
 
-        # self.generator = keras.Sequential([
-        #     keras.Input(shape=(self.latent_dim,)),
-        #     layers.Dense(128),
-        #     layers.LeakyReLU(negative_slope=0.5),
-        #     layers.Dense(256),
-        #     layers.LeakyReLU(negative_slope=0.5),
-        #     layers.Reshape((256 // 1, 1)),
-        #     layers.UpSampling1D(size=2),
-        #     layers.Conv1D(self.feature, 5, padding='same'),
-        #     layers.BatchNormalization(),
-        #     layers.LeakyReLU(negative_slope=0.5),
-        #     layers.Conv1D(self.feature, 5, padding='same'),
-        #     layers.Reshape(self.input_shape)
-        # ], name='generator')
-
         self.generator = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
             layers.Dense(128),
@@ -50,11 +35,15 @@ class WGAN_GP(keras.Model):
             layers.Dense(256),
             layers.LeakyReLU(negative_slope=0.5),
             layers.Reshape((256 // 1, 1)),
-            layers.LSTM(1, return_sequences=True),
             layers.UpSampling1D(size=2),
-            layers.Conv1D(self.feature, 5, padding='same'),
+            layers.Conv1D(self.feature, 3, padding='same'),
             layers.BatchNormalization(),
             layers.LeakyReLU(negative_slope=0.5),
+            layers.UpSampling1D(size=2),
+            layers.Conv1D(self.feature, 3, padding='same'),
+            layers.BatchNormalization(),
+            layers.LeakyReLU(negative_slope=0.5),
+            layers.Conv1D(1, 3, padding='same'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
@@ -87,25 +76,15 @@ class WGAN_GP(keras.Model):
 
         self.critic = keras.Sequential([
             keras.Input(shape=self.input_shape),
+            # layers.Conv1D(4, 3, padding='same', activation='relu', name='conv1', strides=2),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(self.time * self.feature, activation='relu', name='dis_dense1'),
-            layers.Dense(64, activation='relu', name='dis_dense2'),
-            layers.Dense(1, name='dis_dense3')
+            layers.Dense(512, activation='relu', name='dis_dense1'),
+            layers.Dense(128, activation='relu', name='dis_dense2'),
+            layers.Dense(64, activation='relu', name='dis_dense3'),
+            layers.Dense(1, name='dis_dense4')
         ], name='critic')
 
         # self.critic.summary()
-
-        # self.critic = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     layers.Conv1D(16, 3, padding='same', strides=2),
-        #     layers.Conv1D(8, 3, padding='same', strides=2),
-        #     layers.Conv1D(4, 3, padding='same', strides=2),
-        #     layers.Conv1D(2, 3, padding='same', strides=2),
-        #     layers.Flatten(name='dis_flatten'),
-        #     layers.Dense(64, activation='relu', name='dis_dense1'),
-        #     layers.Dense(32, activation='relu', name='dis_dense3'),
-        #     layers.Dense(1, name='dis_dense4')
-        # ], name='critic')
 
         self.built = True
 
@@ -122,7 +101,7 @@ class WGAN_GP(keras.Model):
         return self.critic(x)
 
     def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight):
-        super().compile()
+        super().compile(run_eagerly=True)
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
         self.gradient_penalty_weight = gradient_penalty_weight
@@ -151,13 +130,13 @@ class WGAN_GP(keras.Model):
         real_data, sub = data['x'], data['sub']
         batch_size = real_data.size(0)
 
-        means = real_data.mean(axis=1).mean(axis=1)
-        stds = real_data.std(axis=1).mean(axis=1)
-        noise = torch.zeros((batch_size, self.latent_dim))
-        for i in range(batch_size):
-            noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
-        # noise = keras.random.normal((batch_size, self.latent_dim),
-        #                             mean=0, stddev=1)
+        # means = real_data.mean(axis=1).mean(axis=1)
+        # stds = real_data.std(axis=1).mean(axis=1)
+        # noise = torch.zeros((batch_size, self.latent_dim))
+        # for i in range(batch_size):
+        #     noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=real_data.mean(), stddev=real_data.std())
+
         if hasattr(self, 'subject_layers'):
             real_data = self.subject_layers(real_data, sub)
 
@@ -174,14 +153,14 @@ class WGAN_GP(keras.Model):
             self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # train generator
-        noise = torch.zeros((batch_size, self.latent_dim))
-        for i in range(batch_size):
-            noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
-        # noise = keras.random.normal((batch_size, self.latent_dim),
-        #                             mean=0, stddev=1)
+        # noise = torch.zeros((batch_size, self.latent_dim))
+        # for i in range(batch_size):
+        #     noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=real_data.mean(), stddev=real_data.std())
 
         self.zero_grad()
-        fake_pred = self.critic(self.generator(noise))
+        x_gen = self.generator(noise)
+        fake_pred = self.critic(x_gen)
         g_loss = -fake_pred.mean()
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]

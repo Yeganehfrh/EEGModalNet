@@ -76,9 +76,9 @@ class WGAN_GP(keras.Model):
 
         self.critic = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            # layers.Conv1D(4, 3, padding='same', activation='relu', name='conv1', strides=2),
+            layers.Conv1D(1, 3, padding='same', activation='relu', name='conv1'),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(512, activation='relu', name='dis_dense1'),
+            layers.Dense(256, activation='relu', name='dis_dense1'),
             layers.Dense(128, activation='relu', name='dis_dense2'),
             layers.Dense(64, activation='relu', name='dis_dense3'),
             layers.Dense(1, name='dis_dense4')

@@ -130,15 +130,14 @@ class WGAN_GP(keras.Model):
         real_data, sub = data['x'], data['sub']
         batch_size = real_data.size(0)
 
-        # means = real_data.mean(axis=1).mean(axis=1)
-        # stds = real_data.std(axis=1).mean(axis=1)
-        # noise = torch.zeros((batch_size, self.latent_dim))
-        # for i in range(batch_size):
-        #     noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=real_data.mean(), stddev=real_data.std())
+        mean = real_data.mean()
+        std = real_data.std()
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
 
+        print(real_data[0][0][0])  # TODO: why the real data is changing, there seem to be no randomness!???
         if hasattr(self, 'subject_layers'):
             real_data = self.subject_layers(real_data, sub)
+            print(real_data[0][0][0])
 
         # train critic
         fake_data = self.generator(noise).detach()
@@ -153,10 +152,7 @@ class WGAN_GP(keras.Model):
             self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # train generator
-        # noise = torch.zeros((batch_size, self.latent_dim))
-        # for i in range(batch_size):
-        #     noise[i] = keras.random.normal((self.latent_dim,), mean=means[i], stddev=stds[i])
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=real_data.mean(), stddev=real_data.std())
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
 
         self.zero_grad()
         x_gen = self.generator(noise)

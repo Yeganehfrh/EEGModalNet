@@ -134,7 +134,6 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
 
-        print(real_data[0][0][0])  # TODO: why the real data is changing, there seem to be no randomness!???
         if hasattr(self, 'subject_layers'):
             real_data = self.subject_layers(real_data, sub)
             print(real_data[0][0][0])

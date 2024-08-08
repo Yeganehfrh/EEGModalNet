@@ -109,7 +109,7 @@ class ConditionalWGAN(keras.Model):
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim),
                                     mean=0, stddev=1)
-        
+
         noise_labels = ops.concatenate([noise, real_labels], axis=1)
         misleading_labels = ops.zeros((batch_size, 1))
 

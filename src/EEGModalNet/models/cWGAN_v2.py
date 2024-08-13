@@ -1,7 +1,6 @@
 import torch
 from keras import layers, ops
 import keras
-from src.EEGModalNet.models.common import SubjectLayers, ChannelMerger
 
 
 @keras.saving.register_keras_serializable()

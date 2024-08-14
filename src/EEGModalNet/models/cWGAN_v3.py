@@ -12,15 +12,18 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim + num_classes,)),
-            layers.Dense(128 * self.init_size),
-            layers.Reshape((128, self.init_size)),
+            layers.Dense(256),
+            layers.LeakyReLU(negative_slope=0.3),
+            layers.Dense(256 * 2),
+            layers.LeakyReLU(negative_slope=0.3),
+            layers.Reshape((256, 2)),
             layers.BatchNormalization(),
             layers.UpSampling1D(2),
-            layers.Conv1D(128, 3, padding="same"),
+            layers.Conv1D(4, 3, padding="same"),
             layers.BatchNormalization(),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.UpSampling1D(size=2),
-            layers.Conv1D(64, 3, padding="same"),
+            layers.UpSampling1D(2),
+            layers.Conv1D(8, 3, padding="same"),
             layers.BatchNormalization(),
             layers.LeakyReLU(negative_slope=0.2),
             layers.Conv1D(1, 3, padding="same"),
@@ -32,7 +35,7 @@ class Generator(keras.Model):
     def call(self, noise, labels):
         gen_input = torch.cat((self.emb_layer_g(labels).squeeze(), noise), -1)
         out = self.model(gen_input)
-        return out
+        return out.permute(0, 2, 1)
 
 
 class Critic(keras.Model):
@@ -42,24 +45,23 @@ class Critic(keras.Model):
         self.emb_layer_c = torch.nn.Embedding(num_classes, num_classes)
 
         self.model = keras.Sequential([
-            keras.Input(shape=(time_series_length, features + num_classes,)),
-            layers.Conv1D(64, 3, strides=2, padding="same"),
+            keras.Input(shape=(features + num_classes, time_series_length, )),
+            layers.Conv1D(64, 3, strides=2, padding="same", name='conv1'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Conv1D(128, 3, strides=2, padding="same"),
+            layers.Conv1D(128, 3, strides=2, padding="same", name='conv2'),
             layers.BatchNormalization(),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Conv1D(128, 3, strides=2, padding="same"),
+            layers.Conv1D(128, 3, strides=2, padding="same", name='conv3'),
             layers.BatchNormalization(),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Conv1D(1, 3, strides=2, padding="same"),
+            layers.Conv1D(1, 3, strides=2, padding="same", name='conv4'),
             layers.Flatten(),
-            layers.Dense(1)
+            layers.Dense(1, name='dense')
         ], name='critic')
-
         self.built = True
 
     def call(self, time_series, labels):
-        label_embedding = self.emb_layer_c(labels).unsqueeze(-1).repeat(1, 1, time_series.size(2))
+        label_embedding = self.emb_layer_c(labels).repeat(1, time_series.size(2), 1).permute(0, 2, 1)
         d_in = torch.cat((time_series, label_embedding), 1)
         out = self.model(d_in)
         return out
@@ -82,7 +84,7 @@ class cWGAN_GP(keras.Model):
 
         self.generator = Generator(self.latent_dim, self.num_classes, self.time)
         self.critic = Critic(self.num_classes, self.feature, self.time)
-        self.build = True
+        # self.build = True
 
     @property
     def metrics(self):
@@ -122,7 +124,6 @@ class cWGAN_GP(keras.Model):
     def train_step(self, data):
         real_data, sub_labels = data['x'], data['sub']
         batch_size = real_data.size(0)
-        real_data = real_data.permute(0, 2, 1)
 
         mean = real_data.mean()
         std = real_data.std()
@@ -149,7 +150,7 @@ class cWGAN_GP(keras.Model):
         # self.g_optimizer.zero_grad()  # TODO: check if this is necessary
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
         self.zero_grad()
-        gen_labels = torch.randint(0, self.num_classes, (batch_size,))
+        gen_labels = torch.randint(0, self.num_classes, (batch_size, 1)).to(real_data.device)
         fake_data = self.generator(noise, gen_labels)
 
         fake_pred = self.critic(fake_data, gen_labels)

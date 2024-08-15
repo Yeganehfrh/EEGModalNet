@@ -118,7 +118,7 @@ class cWGAN_GP(keras.Model):
             create_graph=True,
             retain_graph=True,
         )[0]
-        gradients = gradients.view(real_data.size(0), -1)  # TODO: it was view before changed to reshape because of error
+        gradients = gradients.view(real_data.size(0), -1)
         return ((gradients.norm(2, dim=1) - 1) ** 2).mean()
 
     def train_step(self, data):
@@ -131,20 +131,17 @@ class cWGAN_GP(keras.Model):
 
         # train discriminator
         fake_data = self.generator(noise, sub_labels).detach()
-        real_pred = self.critic(real_data, sub_labels)  # TODO: maybe we should use generated_labels here
-        fake_pred = self.critic(fake_data, sub_labels)
+        real_pred = self.critic(real_data, sub_labels)
+        gen_labels = torch.randint(0, self.num_classes, (batch_size, 1)).to('mps')
+        fake_pred = self.critic(fake_data, gen_labels)  # TODO: change it back to real labels if necessary
 
         gp = self.gradient_penalty(real_data, fake_data, sub_labels)
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()  # TODO: check if retain_graph=True is necessary
+        d_loss.backward()
         grads = [v.value.grad for v in self.critic.trainable_weights]
         with torch.no_grad():
             self.d_optimizer.apply(grads, self.critic.trainable_weights)
-
-        # # Clip weights of discriminator  # TODO: check if this is necessary
-        # for p in self.critic.parameters():
-        #     p.data.clamp_(-clip_value, clip_value)
 
         # train generator
         # self.g_optimizer.zero_grad()  # TODO: check if this is necessary

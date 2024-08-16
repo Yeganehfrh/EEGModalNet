@@ -136,7 +136,6 @@ class WGAN_GP(keras.Model):
 
         if hasattr(self, 'subject_layers'):
             real_data = self.subject_layers(real_data, sub)
-            print(real_data[0][0][0])
 
         # train critic
         fake_data = self.generator(noise).detach()

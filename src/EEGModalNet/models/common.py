@@ -140,7 +140,8 @@ class SubjectLayers(nn.Module):
     def forward(self, x, subjects):
         _, C, D = self.weights.shape
         weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D))
-        return torch.einsum("bct,bcd->bdt", x, weights)
+        x_ = torch.einsum("bct,bcd->bdt", x, weights)
+        return x_
 
     def __repr__(self):
         S, C, D = self.weights.shape

@@ -12,23 +12,27 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim + num_classes,)),
-            layers.Dense(256),
+            layers.Dense(128),
+            layers.Dropout(0.5),
             layers.LeakyReLU(negative_slope=0.3),
-            layers.Dense(256 * 2),
+            layers.Dense(128 * 2),
+            layers.Dropout(0.5),
             layers.LeakyReLU(negative_slope=0.3),
-            layers.Reshape((256, 2)),
+            layers.Reshape((128, 2)),
             layers.BatchNormalization(),
             layers.UpSampling1D(2),
             layers.Conv1D(4, 3, padding="same"),
             layers.BatchNormalization(),
+            layers.Dropout(0.5),
             layers.LeakyReLU(negative_slope=0.2),
             layers.UpSampling1D(2),
             layers.Conv1D(8, 3, padding="same"),
             layers.BatchNormalization(),
+            layers.Dropout(0.5),
             layers.LeakyReLU(negative_slope=0.2),
             layers.Conv1D(1, 3, padding="same"),
-            layers.Activation('tanh')
         ], name='generator')
+        # self.model.summary()
 
         self.built = True
 

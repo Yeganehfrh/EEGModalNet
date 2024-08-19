@@ -1,14 +1,38 @@
 import torch
 from keras import layers, ops
 import keras
-from src.EEGModalNet.models.common import SubjectLayers, ChannelMerger
+from src.EEGModalNet.models.common import SubjectLayers_v2, ChannelMerger
 
+
+class Critic(keras.Model):
+    def __init__(self, num_classes, emb_dim=20, use_sublayers=False, *args, **kwargs):
+        super(Critic, self).__init__()
+
+        if use_sublayers:
+            self.subject_layers = SubjectLayers_v2(num_classes, emb_dim)
+
+        self.model = keras.Sequential([
+            keras.Input(shape=self.input_shape),
+            layers.Conv1D(1, 3, padding='same', activation='relu', name='conv1'),
+            layers.Flatten(name='dis_flatten'),
+            layers.Dense(256, activation='relu', name='dis_dense1'),
+            layers.Dense(128, activation='relu', name='dis_dense2'),
+            layers.Dense(64, activation='relu', name='dis_dense3'),
+            layers.Dense(1, name='dis_dense4')
+        ], name='critic')
+        self.built = True
+
+    def call(self, time_series, labels):
+        if hasattr(self, 'subject_layers'):
+            x = self.subject_layers(time_series, labels)
+        out = self.model(x)
+        return out
 
 @keras.saving.register_keras_serializable()
 class WGAN_GP(keras.Model):
     def __init__(self,
-                 time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayers=False,
-                 use_channel_merger=False, reshap_dim=(256, 2), *args, **kwargs):
+                 time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayers=False, emb_dim=20,
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
         self.feature = feature_dim
@@ -18,15 +42,6 @@ class WGAN_GP(keras.Model):
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
-
-        # # Fourier positional embedding
-        # if use_channel_merger:
-        #     self.pos_emb = ChannelMerger(
-        #         chout=feature_dim, pos_dim=288, n_subjects=n_subjects
-        #     )  # TODO: check if this is the right dimension
-
-        if use_sublayers:
-            self.subject_layers = SubjectLayers(self.time, self.time, n_subjects)  # TODO should change it to feature_dim??
 
         self.generator = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
@@ -47,44 +62,7 @@ class WGAN_GP(keras.Model):
             layers.Reshape(self.input_shape)
         ], name='generator')
 
-        # self.generator = keras.Sequential([
-        #     keras.Input(shape=(latent_dim,)),
-        #     layers.Dense(128),
-        #     layers.LeakyReLU(0.3),
-        #     layers.Dense(256),
-        #     layers.LeakyReLU(0.3),
-        #     layers.Reshape((reshap_dim[0] // reshap_dim[1], reshap_dim[1])),
-        #     layers.UpSampling1D(size=2),
-        #     layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
-        #     layers.BatchNormalization(),
-        #     layers.LeakyReLU(negative_slope=0.3),
-        #     layers.Conv1D(reshap_dim[1] * 2, 3, padding='same'),
-        #     layers.BatchNormalization(),
-        #     layers.LeakyReLU(negative_slope=0.3),
-        #     layers.UpSampling1D(size=2),
-        #     layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
-        #     layers.BatchNormalization(),
-        #     layers.LeakyReLU(negative_slope=0.3),
-        #     layers.Conv1D(reshap_dim[1] * 4, 3, padding='same'),
-        #     layers.BatchNormalization(),
-        #     layers.LeakyReLU(negative_slope=0.3),
-        #     layers.UpSampling1D(size=2),
-        #     layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
-        #     layers.Conv1D(reshap_dim[1] * 8, 3, padding='same'),
-        #     layers.Reshape(self.input_shape)
-        # ], name='generator')
-
-        self.critic = keras.Sequential([
-            keras.Input(shape=self.input_shape),
-            layers.Conv1D(1, 3, padding='same', activation='relu', name='conv1'),
-            layers.Flatten(name='dis_flatten'),
-            layers.Dense(256, activation='relu', name='dis_dense1'),
-            layers.Dense(128, activation='relu', name='dis_dense2'),
-            layers.Dense(64, activation='relu', name='dis_dense3'),
-            layers.Dense(1, name='dis_dense4')
-        ], name='critic')
-
-        # self.critic.summary()
+        self.critic = Critic(n_subjects, emb_dim=emb_dim, use_sublayers=use_sublayers)
 
         self.built = True
 
@@ -134,13 +112,10 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
 
-        if hasattr(self, 'subject_layers'):
-            real_data = self.subject_layers(real_data, sub)
-
         # train critic
         fake_data = self.generator(noise).detach()
-        real_pred = self.critic(real_data)
-        fake_pred = self.critic(fake_data)
+        real_pred = self.critic(real_data, sub)
+        fake_pred = self.critic(fake_data, sub)
         gp = self.gradient_penalty(real_data, fake_data.detach())
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
@@ -154,7 +129,8 @@ class WGAN_GP(keras.Model):
 
         self.zero_grad()
         x_gen = self.generator(noise)
-        fake_pred = self.critic(x_gen)
+        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1)).to(real_data.device)  # TODO: change it back to real labels if necessary
+        fake_pred = self.critic(x_gen, random_sub)
         g_loss = -fake_pred.mean()
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]

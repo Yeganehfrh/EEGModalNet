@@ -5,11 +5,13 @@ from src.EEGModalNet.models.common import SubjectLayers_v2, ChannelMerger
 
 
 class Critic(keras.Model):
-    def __init__(self, num_classes, emb_dim=20, use_sublayers=False, *args, **kwargs):
+    def __init__(self, time_dime, feature_dim, num_classes, emb_dim=20, use_sublayers=False, *args, **kwargs):
         super(Critic, self).__init__()
 
+        self.input_shape = (time_dime, feature_dim)
+
         if use_sublayers:
-            self.subject_layers = SubjectLayers_v2(num_classes, emb_dim)
+            self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
@@ -23,8 +25,8 @@ class Critic(keras.Model):
         self.built = True
 
     def call(self, time_series, labels):
-        if hasattr(self, 'subject_layers'):
-            x = self.subject_layers(time_series, labels)
+        if hasattr(self, 'sub_layer'):
+            x = self.sub_layer(time_series, labels)
         out = self.model(x)
         return out
 
@@ -62,7 +64,7 @@ class WGAN_GP(keras.Model):
             layers.Reshape(self.input_shape)
         ], name='generator')
 
-        self.critic = Critic(n_subjects, emb_dim=emb_dim, use_sublayers=use_sublayers)
+        self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayers=use_sublayers)
 
         self.built = True
 
@@ -84,13 +86,13 @@ class WGAN_GP(keras.Model):
         self.g_optimizer = g_optimizer
         self.gradient_penalty_weight = gradient_penalty_weight
 
-    def gradient_penalty(self, real_data, fake_data):
+    def gradient_penalty(self, real_data, fake_data, sub):
         batch_size = real_data.size(0)
         epsilon = torch.rand(batch_size, 1, 1).to(real_data.device)
         interpolated = epsilon * real_data + (1 - epsilon) * fake_data
         interpolated.requires_grad_(True)
 
-        prob_interpolated = self.critic(interpolated)
+        prob_interpolated = self.critic(interpolated, sub)
 
         gradients = torch.autograd.grad(
             outputs=prob_interpolated,
@@ -116,7 +118,7 @@ class WGAN_GP(keras.Model):
         fake_data = self.generator(noise).detach()
         real_pred = self.critic(real_data, sub)
         fake_pred = self.critic(fake_data, sub)
-        gp = self.gradient_penalty(real_data, fake_data.detach())
+        gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()

@@ -146,3 +146,15 @@ class SubjectLayers(nn.Module):
     def __repr__(self):
         S, C, D = self.weights.shape
         return f"SubjectLayers({C}, {D}, {S})"
+
+
+class SubjectLayers_v2(nn.Module):
+    """Per subject linear layer."""
+    def __init__(self, n_subjects: int, emb_dim: int):
+        super().__init__()
+        self.sub_emb = nn.Embedding(n_subjects, emb_dim)
+
+    def forward(self, x, subjects):
+        weights = self.sub_emb(subjects)
+        x_ = torch.einsum("btc,bcd->btc", x, weights)
+        return x_

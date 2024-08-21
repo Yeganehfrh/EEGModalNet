@@ -9,6 +9,7 @@ class Critic(keras.Model):
         super(Critic, self).__init__()
 
         self.input_shape = (time_dime, feature_dim)
+        self.sub_layer = use_sublayer
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
@@ -16,7 +17,8 @@ class Critic(keras.Model):
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             layers.Conv1D(8, 5, padding='same', activation='relu', name='conv1'),
-            layers.Conv1D(16, 5, padding='same', activation='relu', name='conv2'),
+            layers.Conv1D(4, 5, padding='same', activation='relu', name='conv2'),
+            layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(256, activation='relu', name='dis_dense1'),
             layers.Dropout(0.3),
@@ -40,6 +42,8 @@ class Generator(keras.Model):
         super(Generator, self).__init__()
         self.negative_slope = 0.2
         self.input_shape = (time_dim, feature_dim)
+        self.sub_layer = use_sublayer
+        self.latent_dim = latent_dim
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)

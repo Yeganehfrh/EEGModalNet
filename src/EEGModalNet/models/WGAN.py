@@ -29,6 +29,7 @@ class Critic(keras.Model):
 
     def call(self, x, labels):
         if hasattr(self, 'sub_layer'):
+            print('using sublayer in critic')
             x = self.sub_layer(x, labels)
         out = self.model(x)
         return out
@@ -74,7 +75,9 @@ class Generator(keras.Model):
 @keras.saving.register_keras_serializable()
 class WGAN_GP(keras.Model):
     def __init__(self,
-                 time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1, use_sublayer=False, emb_dim=20,
+                 time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
+                 use_sublayer_generator=False, use_sublayer_critic=False,
+                 emb_dim=20,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
@@ -86,8 +89,8 @@ class WGAN_GP(keras.Model):
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
 
-        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer, n_subjects, emb_dim)
-        self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer)
+        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim)
+        self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer_critic)
 
         self.built = True
 

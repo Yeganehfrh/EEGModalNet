@@ -1,7 +1,7 @@
 # =============================================================================
 import pandas as pd
 from pathlib import Path
-from typing import List
+from typing import List, Union
 import torch
 from mne.io import read_raw_eeglab
 from scipy.signal import butter, sosfiltfilt
@@ -11,11 +11,11 @@ from torch import nn
 
 class EEGProcessing(nn.Module):
     def __init__(self,
-                 baseline_correction: int = 0.5,
+                 baseline_correction: float = 0.5,
                  scaling: bool = True,
                  clamping: int = 20,
-                 rereference: str = None,
-                 filtering: list = None,
+                 rereference: str | None = None,
+                 filtering: List[float] | None = None,
                  **kwargs):
         super().__init__()
 
@@ -28,15 +28,15 @@ class EEGProcessing(nn.Module):
 
 
 def forward(self, X, y=None):
-    if baseline_correction is not None:
+    if self.baseline_correction is not None:
         self.X = correct_baseline(self.X)
-    if scaling:
+    if self.scaling:
         self.X = robust_scaling(self.X)
-    if clamping is not None:
+    if self.clamping is not None:
         self.X = clamp(self.X, clamp=clamp)
-    if rereference is not None:
-        self.X = rereferencing(self.X, rereferencing=rereferencing)
-    if filtering is not None:
+    if self.rereference is not None:
+        self.X = rereferencing(self.X, rereferencing=self.rereferencing)
+    if self.filtering is not None:
         self.X = bandpass_filter(self.X, bandpass=filter)
 
     return self.X

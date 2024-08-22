@@ -1,5 +1,9 @@
 # =============================================================================
+import pandas as pd
+from pathlib import Path
+from typing import List
 import torch
+from mne.io import read_raw_eeglab
 from scipy.signal import butter, sosfiltfilt
 from sklearn.preprocessing import RobustScaler
 from torch import nn
@@ -146,3 +150,16 @@ def rereferencing(x, rereferencing='average'):
     elif rereferencing == 'common':
         x = x - x.mean(axis=0, keepdims=True)
     return x
+
+
+def find_excluded_channels(data_path: str, full_ch_list: List[str], pattern: str):
+    exc_chs = {}
+    for i in Path(data_path).glob(pattern):
+        raw = read_raw_eeglab(i, verbose=False)
+        sub = i.stem[:-3]
+        excluded_chs = [i for i in full_ch_list if i not in raw.ch_names]
+        exc_chs[sub] = [excluded_chs]
+        df = pd.DataFrame.from_dict(exc_chs, orient='index', columns=['excluded_channels'])
+        # replace the empty list with None
+        df['bad_channels'] = df['bad_channels'].apply(lambda x: None if x == [] else x)
+    return df

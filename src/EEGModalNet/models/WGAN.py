@@ -1,7 +1,7 @@
 import torch
 from keras import layers, ops
 import keras
-from src.EEGModalNet.models.common import SubjectLayers_v2
+from src.EEGModalNet.models.common import SubjectLayers_v2, convBlock
 
 
 class Critic(keras.Model):
@@ -55,15 +55,8 @@ class Generator(keras.Model):
             layers.Dense(256),
             layers.LeakyReLU(negative_slope=self.negative_slope),
             layers.Reshape((256 // 1, 1)),
-            layers.UpSampling1D(size=2),
-            layers.Conv1D(1, 3, padding='same', name='gen_conv1'),
-            layers.BatchNormalization(),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.UpSampling1D(size=2),
-            layers.Conv1D(1, 5, padding='same', name='gen_conv2'),
-            layers.BatchNormalization(),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Conv1D(1, 7, padding='same', name='gen_conv3'),
+            *convBlock([1, 2, 4, 4, 2, 1], [5] * 6, [0, 1] * 3, 1, 'same', 0.2, True),
+            layers.Conv1D(1, 7, padding='same', name='last_conv_lyr'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 

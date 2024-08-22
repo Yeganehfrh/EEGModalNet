@@ -9,7 +9,7 @@ class Critic(keras.Model):
         super(Critic, self).__init__()
 
         self.input_shape = (time_dime, feature_dim)
-        self.sub_layer = use_sublayer
+        self.use_sublayer = use_sublayer
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
@@ -42,7 +42,7 @@ class Generator(keras.Model):
         super(Generator, self).__init__()
         self.negative_slope = 0.2
         self.input_shape = (time_dim, feature_dim)
-        self.sub_layer = use_sublayer
+        self.use_sublayer = use_sublayer
         self.latent_dim = latent_dim
 
         if use_sublayer:
@@ -50,11 +50,11 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
+            layers.Dense(64),
+            layers.LeakyReLU(negative_slope=self.negative_slope),
             layers.Dense(128),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Dense(256),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Reshape((256 // 1, 1)),
+            layers.Reshape((128 // 1, 1)),
             *convBlock([1, 2, 4, 4, 2, 1], [5] * 6, [0, 1] * 3, 1, 'same', 0.2, True),
             layers.Conv1D(1, 7, padding='same', name='last_conv_lyr'),
             layers.Reshape(self.input_shape)
@@ -145,9 +145,16 @@ class WGAN_GP(keras.Model):
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
+
         grads = [v.value.grad for v in self.critic.trainable_weights]
         with torch.no_grad():
             self.d_optimizer.apply(grads, self.critic.trainable_weights)
+
+        # monitor gradient norms to ensure a stable training
+        gradient_norms = []
+        for p in self.critic.parameters():
+            if p.grad is not None:
+                gradient_norms.append(p.grad.norm().item())
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
@@ -168,4 +175,5 @@ class WGAN_GP(keras.Model):
         return {
             'd_loss': self.d_loss_tracker.result(),
             'g_loss': self.g_loss_tracker.result(),
+            'critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
         }

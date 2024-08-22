@@ -1,7 +1,7 @@
 # =============================================================================
 import pandas as pd
 from pathlib import Path
-from typing import List, Union
+from typing import List
 import torch
 from mne.io import read_raw_eeglab
 from scipy.signal import butter, sosfiltfilt
@@ -33,7 +33,7 @@ def forward(self, X, y=None):
     if self.scaling:
         self.X = robust_scaling(self.X)
     if self.clamping is not None:
-        self.X = clamp(self.X, clamp=clamp)
+        self.X = clamp_EEG(self.X, dev=self.clamping)
     if self.rereference is not None:
         self.X = rereferencing(self.X, rereferencing=self.rereferencing)
     if self.filtering is not None:
@@ -61,7 +61,7 @@ def bandpass_filter(x, bandpass, sf=128):
     """
 
     print(f'>>>>>> Filtering data with bandpass filter {bandpass} Hz')
-    sos = butter(4, bandpass, 'bp', sf=sf, output='sos')
+    sos = butter(4, bandpass, 'bp', output='sos')
     x = torch.from_numpy(sosfiltfilt(sos, x, axis=1).copy()).float()
     return x
 
@@ -124,7 +124,7 @@ def clamp_EEG(x, dev=20):
     """
 
     print('>>>>>> Clamping data')
-    x = torch.clamp(x, -clamp, clamp)
+    x = torch.clamp(x, -dev, dev)
     return x
 
 

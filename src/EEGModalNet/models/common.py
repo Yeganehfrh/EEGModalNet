@@ -1,8 +1,11 @@
 import math
 import typing as tp
+from typing import List, Union
 import mne
 import torch
 from torch import nn
+import keras
+from keras import layers
 
 
 class PositionGetter:
@@ -158,3 +161,21 @@ class SubjectLayers_v2(nn.Module):
         weights = self.sub_emb(subjects)
         x_ = torch.einsum("btc,bcd->btc", x, weights)
         return x_
+
+
+def convBlock(filters: List[int],
+              kernel_sizes: List[Union[int, tuple]],
+              upsampling: List[Union[bool, int]],
+              stride: int,
+              padding: str,
+              negative_slope: float = 0.2,
+              batch_norm: bool = True) -> List[layers.Layer]:
+    lyrs = []
+    for i, (filter, kernel_size) in enumerate(zip(filters, kernel_sizes), 1):
+        if upsampling[i - 1]:
+            lyrs.append(layers.UpSampling1D(2, name=f'upsample_{i}'))
+        lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, name=f'conv_{i}'))
+        if batch_norm:
+            lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
+        lyrs.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))
+    return lyrs

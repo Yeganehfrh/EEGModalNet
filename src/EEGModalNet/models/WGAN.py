@@ -50,13 +50,15 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
-            layers.Dense(64),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
             layers.Dense(128),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Reshape((128 // 1, 1)),
-            *convBlock([1, 2, 4, 4, 2, 1], [5] * 6, [0, 1] * 3, 1, 'same', 0.2, True),
-            layers.Conv1D(1, 7, padding='same', name='last_conv_lyr'),
+            layers.Dense(256),
+            layers.LeakyReLU(negative_slope=self.negative_slope),
+            layers.Dense(256 * 2),
+            layers.LeakyReLU(negative_slope=self.negative_slope),
+            layers.Reshape((256, 2)),
+            *convBlock([2, 2], [5] * 2, [1, 1], 1, 'same', 0.2, True),
+            layers.Conv1D(2, 7, padding='same', name='last_conv_lyr'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 

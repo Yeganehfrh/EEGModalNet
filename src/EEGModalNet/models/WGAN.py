@@ -21,9 +21,9 @@ class Critic(keras.Model):
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(256, activation='relu', name='dis_dense1'),
-            layers.Dropout(0.3),
+            # layers.Dropout(0.1),
             layers.Dense(128, activation='relu', name='dis_dense2'),
-            layers.Dropout(0.3),
+            # layers.Dropout(0.1),
             layers.Dense(64, activation='relu', name='dis_dense3'),
             layers.Dense(1, name='dis_dense4')
         ], name='critic')
@@ -54,11 +54,9 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=self.negative_slope),
             layers.Dense(256),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Dense(256 * 2),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Reshape((256, 2)),
-            *convBlock([2, 2], [5] * 2, [1, 1], 1, 'same', 0.2, True),
-            layers.Conv1D(2, 7, padding='same', name='last_conv_lyr'),
+            layers.Reshape((256, 1)),
+            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', 0.2, True),
+            layers.Conv1D(1, 7, padding='same', name='last_conv_lyr'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 

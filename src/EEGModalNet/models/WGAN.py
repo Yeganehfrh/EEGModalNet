@@ -20,12 +20,15 @@ class Critic(keras.Model):
             layers.Conv1D(4, 5, padding='same', activation='relu', name='conv2'),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(256, activation='relu', name='dis_dense1'),
-            # layers.Dropout(0.1),
+            layers.Dense(512, activation='relu', name='dis_dense1'),
+            layers.Dropout(0.2),
             layers.Dense(128, activation='relu', name='dis_dense2'),
-            # layers.Dropout(0.1),
-            layers.Dense(64, activation='relu', name='dis_dense3'),
-            layers.Dense(1, name='dis_dense4')
+            layers.Dropout(0.2),
+            layers.Dense(32, activation='relu', name='dis_dense3'),
+            layers.Dropout(0.2),
+            layers.Dense(8, activation='relu', name='dis_dense4'),
+            layers.Dropout(0.2),
+            layers.Dense(1, name='dis_dense5')
         ], name='critic')
         self.built = True
 
@@ -135,48 +138,48 @@ class WGAN_GP(keras.Model):
         mean = real_data.mean()
         std = real_data.std()
 
-        # # train critic
-        # noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-        # fake_data = self.generator(noise, sub).detach()  # TODO: consider using random labels
-        # real_pred = self.critic(real_data, sub)
-        # fake_pred = self.critic(fake_data, sub)
-        # gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
-        # self.zero_grad()
-        # d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        # d_loss.backward()
+        # train critic
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
+        fake_data = self.generator(noise, sub).detach()  # TODO: consider using random labels
+        real_pred = self.critic(real_data, sub)
+        fake_pred = self.critic(fake_data, sub)
+        gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
+        self.zero_grad()
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+        d_loss.backward()
 
-        # grads = [v.value.grad for v in self.critic.trainable_weights]
-        # with torch.no_grad():
-        #     self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
-        # # monitor gradient norms to ensure a stable training
-        # gradient_norms = []
-        # for p in self.critic.parameters():
-        #     if p.grad is not None:
-        #         gradient_norms.append(p.grad.norm().item())
+        # monitor gradient norms to ensure a stable training
+        gradient_norms = []
+        for p in self.critic.parameters():
+            if p.grad is not None:
+                gradient_norms.append(p.grad.norm().item())
 
-        # Train the critic more frequently than the generator
-        critic_updates = 5  # Set the number of critic updates per generator update
+        # # Train the critic more frequently than the generator
+        # critic_updates = 5  # Set the number of critic updates per generator update
 
-        for _ in range(critic_updates):
-            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-            fake_data = self.generator(noise, sub).detach()
-            real_pred = self.critic(real_data, sub)
-            fake_pred = self.critic(fake_data, sub)
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
-            self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-            d_loss.backward()
+        # for _ in range(critic_updates):
+        #     noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
+        #     fake_data = self.generator(noise, sub).detach()
+        #     real_pred = self.critic(real_data, sub)
+        #     fake_pred = self.critic(fake_data, sub)
+        #     gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
+        #     self.zero_grad()
+        #     d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+        #     d_loss.backward()
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        #     grads = [v.value.grad for v in self.critic.trainable_weights]
+        #     with torch.no_grad():
+        #         self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
-            # Monitor gradient norms
-            gradient_norms = []
-            for p in self.critic.parameters():
-                if p.grad is not None:
-                    gradient_norms.append(p.grad.norm().item())
+        #     # Monitor gradient norms
+        #     gradient_norms = []
+        #     for p in self.critic.parameters():
+        #         if p.grad is not None:
+        #             gradient_norms.append(p.grad.norm().item())
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)

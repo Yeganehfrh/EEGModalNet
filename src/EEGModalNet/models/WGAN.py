@@ -8,13 +8,15 @@ class ResidualBlock(layers.Layer):
     def __init__(self, filters, kernel_size, activation='relu', **kwargs):
         super(ResidualBlock, self).__init__(**kwargs)
         self.conv1 = layers.Conv1D(filters, kernel_size, padding='same', activation=activation)
-        self.conv2 = layers.Conv1D(filters // 2, kernel_size, padding='same')
+        self.conv2 = layers.Conv1D(filters // 2, kernel_size, padding='same', activation=activation,)
+        self.conv3 = layers.Conv1D(filters // 4, kernel_size, padding='same')
         self.activation = layers.Activation(activation)
 
     def call(self, inputs):
         x = self.conv1(inputs)
         x = self.conv2(x)
-        x = layers.add([x, inputs])  # Add the input (shortcut connection)
+        x = self.conv3(x)
+        x = layers.add([x, inputs])  # shortcut connection
         x = self.activation(x)
         return x
 
@@ -32,9 +34,6 @@ class Critic(keras.Model):
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             ResidualBlock(8, 5, activation='relu'),
-            # ResidualBlock(4, 5, activation='relu'), 
-            # layers.Conv1D(8, 5, padding='same', activation='relu', name='conv1'),
-            # layers.Conv1D(4, 5, padding='same', activation='relu', name='conv2'),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(512, activation='relu', name='dis_dense1'),

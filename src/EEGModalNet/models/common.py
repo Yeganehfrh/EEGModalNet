@@ -169,12 +169,13 @@ def convBlock(filters: List[int],
               stride: int,
               padding: str,
               negative_slope: float = 0.2,
+              kernel_initializer='glorot_uniform',
               batch_norm: bool = True) -> List[layers.Layer]:
     lyrs = []
     for i, (filter, kernel_size) in enumerate(zip(filters, kernel_sizes), 1):
         if upsampling[i - 1]:
             lyrs.append(layers.UpSampling1D(2, name=f'upsample_{i}'))
-        lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, name=f'conv_{i}'))
+        lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer, name=f'conv_{i}'))
         if batch_norm:
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
         lyrs.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))

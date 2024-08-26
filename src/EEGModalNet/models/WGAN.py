@@ -57,7 +57,7 @@ class Critic(keras.Model):
 
 
 class Generator(keras.Model):
-    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim, *args, **kwargs):
+    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim, kerner_initializer, *args, **kwargs):
         super(Generator, self).__init__()
         self.negative_slope = 0.2
         self.input_shape = (time_dim, feature_dim)
@@ -69,13 +69,13 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
-            layers.Dense(128),
+            layers.Dense(128, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Dense(256),
+            layers.Dense(256, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
             layers.Reshape((256, 1)),
-            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', 0.2, True),
-            layers.Conv1D(1, 7, padding='same', name='last_conv_lyr'),
+            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', 0.2, kerner_initializer, True),
+            layers.Conv1D(1, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
@@ -93,7 +93,7 @@ class WGAN_GP(keras.Model):
     def __init__(self,
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
-                 emb_dim=20,
+                 emb_dim=20, kerner_initializer='glorot_uniform',
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
@@ -105,8 +105,8 @@ class WGAN_GP(keras.Model):
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
 
-        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim)
-        self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer_critic)
+        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim, kerner_initializer)
+        self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer_critic,)
 
         self.built = True
 

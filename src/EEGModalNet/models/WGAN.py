@@ -34,6 +34,8 @@ class Critic(keras.Model):
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             ResidualBlock(8, 5, activation='relu'),
+            # layers.Conv1D(8, 5, padding='same', activation='relu', name='conv1'),
+            # layers.Conv1D(4, 5, padding='same', activation='relu', name='conv2'),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(512, activation='relu', name='dis_dense1'),

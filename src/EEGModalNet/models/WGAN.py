@@ -1,7 +1,7 @@
 import torch
 from keras import layers, ops
 import keras
-from src.EEGModalNet.models.common import SubjectLayers_v2, convBlock
+from src.EEGModalNet.models.common import SubjectLayers_v2, convBlock, ChannelMerger
 
 
 class ResidualBlock(layers.Layer):
@@ -59,7 +59,8 @@ class Critic(keras.Model):
 
 
 class Generator(keras.Model):
-    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim, kerner_initializer, *args, **kwargs):
+    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim, kerner_initializer,
+                 n_subjects, use_channel_merger, *args, **kwargs):
         super(Generator, self).__init__()
         self.negative_slope = 0.2
         self.input_shape = (time_dim, feature_dim)
@@ -68,6 +69,11 @@ class Generator(keras.Model):
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
+
+        if use_channel_merger:
+            self.pos_emb = ChannelMerger(
+                chout=feature_dim, pos_dim=288, n_subjects=n_subjects
+            )  # TODO: check if this is the right dimension
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
@@ -96,6 +102,7 @@ class WGAN_GP(keras.Model):
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
                  emb_dim=20, kerner_initializer='glorot_uniform',
+                 use_channel_merger=False,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
@@ -107,7 +114,8 @@ class WGAN_GP(keras.Model):
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
 
-        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim, kerner_initializer)
+        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,
+                                   kerner_initializer, n_subjects, use_channel_merger=use_channel_merger)
         self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer_critic,)
 
         self.built = True

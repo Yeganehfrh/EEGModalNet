@@ -118,7 +118,7 @@ class ChannelMerger(nn.Module):
             subject = batch.subject_index
             heads = self.heads.gather(0, subject.view(-1, 1, 1).expand(-1, cout, pos_dim))
         else:
-            heads = self.heads[None].expand(B, -1, -1)
+            heads = self.heads.unsqueeze(0).repeat(118, 1, 1)
 
         scores = torch.einsum("bcd,bod->boc", embedding, heads)
         scores += score_offset[:, None]

@@ -36,7 +36,7 @@ class Critic(keras.Model):
             ResidualBlock(8, 5, activation='relu'),
             # layers.Conv1D(8, 5, padding='same', activation='relu', name='conv1'),
             # layers.Conv1D(4, 5, padding='same', activation='relu', name='conv2'),
-            layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
+            layers.Conv1D(feature_dim, 5, padding='same', activation='relu', name='conv3'),  # TODO: update this layer based on the number of features
             layers.Flatten(name='dis_flatten'),
             layers.Dense(512, activation='relu', name='dis_dense1'),
             layers.Dropout(0.2),
@@ -72,27 +72,29 @@ class Generator(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=288, n_subjects=n_subjects
-            )  # TODO: check if this is the right dimension
+                chout=feature_dim, pos_dim=32, n_subjects=n_subjects  # TODO: that's pos_dim is temporary value
+            )
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
-            layers.Dense(128, kernel_initializer=kerner_initializer),
+            layers.Dense(128 * feature_dim, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Dense(256, kernel_initializer=kerner_initializer),
+            layers.Dense(256 * feature_dim, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Reshape((256, 1)),
-            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', 0.2, kerner_initializer, True),
-            layers.Conv1D(1, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
+            layers.Reshape((256, feature_dim)),
+            *convBlock([2, 2], [3, 5], [1, 1], 1, 'same', 0.2, kerner_initializer, True),
+            layers.Conv1D(2, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
         self.built = True
 
-    def call(self, noise, labels):
+    def call(self, noise, sub_labels, positions):
         x = self.model(noise)
+        if hasattr(self, 'pos_emb'):
+            x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, labels)  # TODO: this layer can be used before or after data generation
+            x = self.sub_layer(x, sub_labels)  # TODO: this layer can be used before or after data generation
         return x
 
 
@@ -159,14 +161,14 @@ class WGAN_GP(keras.Model):
         return gradient_penalty
 
     def train_step(self, data):
-        real_data, sub = data['x'], data['sub']
+        real_data, sub, pos = data['x'], data['sub'], data['pos']
         batch_size = real_data.size(0)
         mean = real_data.mean()
         std = real_data.std()
 
         # train critic
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-        fake_data = self.generator(noise, sub).detach()  # TODO: consider using random labels
+        fake_data = self.generator(noise, sub, pos).detach()  # TODO: consider using random labels
         real_pred = self.critic(real_data, sub)
         fake_pred = self.critic(fake_data, sub)
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
@@ -212,7 +214,7 @@ class WGAN_GP(keras.Model):
 
         self.zero_grad()
         random_sub = torch.randint(0, sub.max().item(), (batch_size, 1)).to(real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator(noise, random_sub)
+        x_gen = self.generator(noise, random_sub, pos)  # TODO: consider using random positions
         fake_pred = self.critic(x_gen, random_sub)
         g_loss = -fake_pred.mean()
         g_loss.backward()

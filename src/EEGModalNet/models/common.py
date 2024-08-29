@@ -99,7 +99,7 @@ class ChannelMerger(nn.Module):
         return self._penalty.to(next(self.parameters()).device)
 
     def forward(self, eeg, positions):
-        # eeg = eeg.permute(0, 2, 1)
+        eeg = eeg.permute(0, 2, 1)
         B, C, T = eeg.shape
         eeg = eeg.clone()
         # positions = self.position_getter.get_positions(batch)
@@ -118,7 +118,7 @@ class ChannelMerger(nn.Module):
             subject = batch.subject_index
             heads = self.heads.gather(0, subject.view(-1, 1, 1).expand(-1, cout, pos_dim))
         else:
-            heads = self.heads.unsqueeze(0).repeat(118, 1, 1)
+            heads = self.heads.unsqueeze(0).repeat(B, 1, 1)
 
         scores = torch.einsum("bcd,bod->boc", embedding, heads)
         scores += score_offset[:, None]

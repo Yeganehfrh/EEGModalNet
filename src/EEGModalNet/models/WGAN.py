@@ -22,10 +22,10 @@ class ResidualBlock(layers.Layer):
 
 
 class Critic(keras.Model):
-    def __init__(self, time_dime, feature_dim, num_classes, emb_dim, use_sublayer, *args, **kwargs):
+    def __init__(self, time_dim, feature_dim, num_classes, emb_dim, use_sublayer, *args, **kwargs):
         super(Critic, self).__init__()
 
-        self.input_shape = (time_dime, feature_dim)
+        self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
 
         if use_sublayer:
@@ -33,21 +33,26 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(8, 5, activation='relu'),
+            ResidualBlock(16, 5, activation='relu'),
             # layers.Conv1D(8, 5, padding='same', activation='relu', name='conv1'),
             # layers.Conv1D(4, 5, padding='same', activation='relu', name='conv2'),
-            layers.Conv1D(feature_dim, 5, padding='same', activation='relu', name='conv3'),  # TODO: update this layer based on the number of features
+            layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(512, activation='relu', name='dis_dense1'),
+            layers.Dense(512, name='dis_dense1'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(128, activation='relu', name='dis_dense2'),
+            layers.Dense(128, name='dis_dense2'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(32, activation='relu', name='dis_dense3'),
+            layers.Dense(32, name='dis_dense3'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(8, activation='relu', name='dis_dense4'),
+            layers.Dense(8, name='dis_dense4'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
             layers.Dense(1, name='dis_dense5')
         ], name='critic')
+
         self.built = True
 
     def call(self, x, labels):
@@ -72,18 +77,18 @@ class Generator(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=32, n_subjects=n_subjects  # TODO: that's pos_dim is temporary value
+                chout=feature_dim, pos_dim=288, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
             )
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
-            layers.Dense(128 * feature_dim, kernel_initializer=kerner_initializer),
+            layers.Dense(128 * 1, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Dense(256 * feature_dim, kernel_initializer=kerner_initializer),
+            layers.Dense(256 * 1, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Reshape((256, feature_dim)),
-            *convBlock([2, 2], [3, 5], [1, 1], 1, 'same', 0.2, kerner_initializer, True),
-            layers.Conv1D(2, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
+            layers.Reshape((256, 1)),
+            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', 0.2, kerner_initializer, True),
+            layers.Conv1D(feature_dim, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
             layers.Reshape(self.input_shape)
         ], name='generator')
 

@@ -8,6 +8,23 @@ import keras
 from keras import layers
 
 
+class ResidualBlock(layers.Layer):
+    def __init__(self, filters, kernel_size, activation='relu', **kwargs):
+        super(ResidualBlock, self).__init__(**kwargs)
+        self.conv1 = layers.Conv1D(filters, kernel_size, padding='same', activation=activation)
+        self.conv2 = layers.Conv1D(filters // 2, kernel_size, padding='same', activation=activation,)
+        self.conv3 = layers.Conv1D(filters // 4, kernel_size, padding='same')
+        self.activation = layers.Activation(activation)
+
+    def call(self, inputs):
+        x = self.conv1(inputs)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = layers.add([x, inputs])  # shortcut connection
+        x = self.activation(x)
+        return x
+
+
 class PositionGetter:
     INVALID = -0.1
 

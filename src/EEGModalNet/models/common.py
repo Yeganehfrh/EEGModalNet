@@ -25,6 +25,39 @@ class ResidualBlock(layers.Layer):
         return x
 
 
+# transformer encoder based on example on https://keras.io/examples/timeseries/timeseries_classification_transformer/
+class TransformerEncoder(layers.Layer):
+    def __init__(self, feature_dim, head_size, num_heads, ff_dim, dropout=0.0):
+        super(TransformerEncoder, self).__init__()
+        self.head_size = head_size
+        self.num_heads = num_heads
+        self.ff_dim = ff_dim
+        self.dropout = dropout
+
+        self.attention = layers.MultiHeadAttention(
+            num_heads=self.num_heads, key_dim=self.head_size, dropout=self.dropout
+        )
+        self.dropout_layer = layers.Dropout(self.dropout)
+        self.layer_norm1 = layers.LayerNormalization(epsilon=1e-6)
+
+        self.conv1 = layers.Conv1D(filters=self.ff_dim, kernel_size=1, activation="relu")
+        self.dropout_layer2 = layers.Dropout(self.dropout)
+        self.conv2 = layers.Conv1D(filters=feature_dim, kernel_size=1)
+        self.layer_norm2 = layers.LayerNormalization(epsilon=1e-6)
+
+    def call(self, inputs):
+        x = self.attention(inputs, inputs)
+        x = self.dropout_layer(x)
+        x = self.layer_norm1(x)
+        res = x + inputs
+
+        x = self.conv1(res)
+        x = self.dropout_layer2(x)
+        x = self.conv2(x)
+        x = self.layer_norm2(x)
+        return x + res
+
+
 class PositionGetter:
     INVALID = -0.1
 

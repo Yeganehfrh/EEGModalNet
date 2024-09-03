@@ -16,8 +16,8 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            # ResidualBlock(16, 5, activation='relu'),
-            TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
+            ResidualBlock(16, 5, activation='relu'),
+            # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(512, name='dis_dense1'),
@@ -64,11 +64,11 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
-            layers.Dense(64 * 1, kernel_initializer=kerner_initializer),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
             layers.Dense(128 * 1, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Reshape((128, 1)),
+            layers.Dense(256 * 1, kernel_initializer=kerner_initializer),
+            layers.LeakyReLU(negative_slope=self.negative_slope),
+            layers.Reshape((256, 1)),
             *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', 0.2, kerner_initializer, True),
             layers.Conv1D(feature_dim, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
             layers.Reshape(self.input_shape)

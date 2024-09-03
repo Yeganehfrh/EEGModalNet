@@ -10,7 +10,6 @@ dependencies:
   - pip
   - pytorch
   - pandas
-  - flake8
   - ipykernel
   - xarray
   - h5netcdf

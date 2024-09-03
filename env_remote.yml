@@ -1,0 +1,19 @@
+name: EEGModalNet
+
+channels:
+  - pytorch
+  - conda-forge
+  - default
+
+dependencies:
+  - python
+  - pip
+  - pytorch
+  - pandas
+  - flake8
+  - ipykernel
+  - xarray
+  - h5netcdf
+
+  - pip:
+    - keras>3

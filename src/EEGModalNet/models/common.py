@@ -1,7 +1,7 @@
 import math
 import typing as tp
 from typing import List, Union
-import mne
+#import mne
 import torch
 from torch import nn
 import keras

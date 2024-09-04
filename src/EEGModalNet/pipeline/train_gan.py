@@ -1,3 +1,7 @@
+import os
+os.environ['KERAS_BACKEND'] = 'torch'
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
+
 import torch
 import keras
 from ...EEGModalNet import WGAN_GP

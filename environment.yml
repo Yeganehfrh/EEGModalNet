@@ -7,26 +7,24 @@ channels:
   - default
 
 dependencies:
-  - transformers
+  # - transformers
   - python
   - pip
   - pytest
   - pytorch
-  - torchvision
+  - keras
+  # - torchvision
   - seaborn
   - pandas
   - flake8
   - ipykernel
-  - jupyter
-  - notebook
+  # - jupyter
+  # - notebook
   - xarray
   - h5netcdf
-  - tensorboard
-  - dvc>3
-  - dvc-gdrive
-  - dvc-ssh
+  # - tensorboard
+  # - dvc>3
+  # - dvc-gdrive
+  # - dvc-ssh
   - scikit-learn
   - mne
-
-  - pip:
-    - keras>3

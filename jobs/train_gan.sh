@@ -22,5 +22,6 @@ alias micromamba=~/.local/bin/micromamba
 # micromamba self-update -c conda-forge -y
 # micromamba create -f environment.yml -y
 
+export KERAS_BACKEND=torch
 # SECTION Run pipeline
 micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan

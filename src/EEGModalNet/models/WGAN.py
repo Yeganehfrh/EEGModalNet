@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from ...EEGModalNet import SubjectLayers_v2, convBlock, ChannelMerger, ResidualBlock
+from .common import SubjectLayers_v2, convBlock, ChannelMerger, ResidualBlock
 
 
 class Critic(keras.Model):

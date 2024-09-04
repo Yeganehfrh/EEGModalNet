@@ -36,7 +36,14 @@ def load_data(data_path: str,
     return {'x': x, 'sub': sub, 'pos': pos}
 
 
-def run(data, n_subjects, max_epochs=100_000, latent_dim=64):
+def run(data,
+        n_subjects,
+        max_epochs=100_000,
+        latent_dim=64,
+        cvloger_path='tmp/tmp/simple_gan_v1.csv',
+        model_path='tmp/tmp/wgan_v2.model.keras',
+        reuse_model=False,
+        reuse_model_path=None):
 
     reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
 
@@ -46,6 +53,9 @@ def run(data, n_subjects, max_epochs=100_000, latent_dim=64):
                     use_sublayer_critic=False,
                     use_channel_merger=True,
                     kerner_initializer='random_normal')
+
+    if reuse_model:
+        model.load_weights(reuse_model_path)
 
     model.compile(d_optimizer=keras.optimizers.Adam(0.0001, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(0.001, beta_1=0.5, beta_2=0.9),
@@ -57,13 +67,15 @@ def run(data, n_subjects, max_epochs=100_000, latent_dim=64):
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            keras.callbacks.ModelCheckpoint('tmp/keras_models/wgan_v1.model.keras', monitor='d_loss', mode='min'),
+                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=True),
                             keras.callbacks.EarlyStopping(monitor='g_loss', mode='min', patience=500),
-                            keras.callbacks.CSVLogger('tmp/keras_logs/simple_gan_v1.csv'),
+                            keras.callbacks.CSVLogger(cvloger_path),
                             ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
 
 
 if __name__ == '__main__':
-    data = load_data('data/EEGData.h5', n_subjects=20, channels=['F1'], highpass_filter=1)
-    run(data, n_subjects=20, max_epochs=100, latent_dim=64)
+    data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
+                     n_subjects=4, channels=['F1'], highpass_filter=1)
+    run(data, n_subjects=20, max_epochs=10, latent_dim=64, cvloger_path='logs/losses/F1_4.09.2024.csv',
+        model_path='models/F1_4.09.2024.model.keras', reuse_model=False, reuse_model_path=None)

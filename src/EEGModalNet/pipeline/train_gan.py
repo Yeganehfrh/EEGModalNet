@@ -5,8 +5,8 @@ os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
 import torch
 import keras
 from ...EEGModalNet import WGAN_GP
-from ...EEGModalNet import ProgressBarCallback
-from tqdm.auto import tqdm
+#from ...EEGModalNet import ProgressBarCallback
+#from tqdm.auto import tqdm
 from typing import List
 import numpy as np
 import xarray as xr
@@ -49,7 +49,7 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
+    #reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
 
     model = WGAN_GP(time_dim=1024, feature_dim=1,
                     latent_dim=latent_dim, n_subjects=n_subjects,
@@ -74,12 +74,12 @@ def run(data,
                             keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=True),
                             keras.callbacks.EarlyStopping(monitor='g_loss', mode='min', patience=500),
                             keras.callbacks.CSVLogger(cvloger_path),
-                            ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
+                           # ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
 
 
 if __name__ == '__main__':
     data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
-                     n_subjects=4, channels=['F1'], highpass_filter=1)
+                     n_subjects=4, channels=['F1'], highpass_filter=None)
     run(data, n_subjects=20, max_epochs=10, latent_dim=64, cvloger_path='logs/losses/F1_4.09.2024.csv',
-        model_path='models/F1_4.09.2024.model.keras', reuse_model=False, reuse_model_path=None)
+        model_path='logs/models/F1_4.09.2024.model.keras', reuse_model=False, reuse_model_path=None)

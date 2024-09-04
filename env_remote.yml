@@ -13,6 +13,6 @@ dependencies:
   - ipykernel
   - xarray
   - h5netcdf
+  - scipy
+  - keras>3
 
-  - pip:
-    - keras>3

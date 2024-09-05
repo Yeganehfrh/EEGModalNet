@@ -90,7 +90,7 @@ class WGAN_GP(keras.Model):
     def __init__(self,
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
-                 emb_dim=20, kerner_initializer='glorot_uniform',
+                 emb_dim=202, kerner_initializer='glorot_uniform',
                  use_channel_merger=False,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)

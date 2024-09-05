@@ -55,7 +55,7 @@ def run(data,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger=True,
+                    use_channel_merger=False,
                     kerner_initializer='random_normal')
 
     if reuse_model:
@@ -80,6 +80,6 @@ def run(data,
 
 if __name__ == '__main__':
     data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
-                     n_subjects=4, channels=['F1'], highpass_filter=1)
-    run(data, n_subjects=202, max_epochs=200, latent_dim=64, cvloger_path='logs/losses/F1_5.09.2024.csv',
+                     n_subjects=202, channels=['F1'], highpass_filter=1)
+    run(data, n_subjects=202, max_epochs=100, latent_dim=64, cvloger_path='logs/losses/F1_5.09.2024.csv',
         model_path='logs/models/F1_5.09.2024.model.keras', reuse_model=False, reuse_model_path=None)

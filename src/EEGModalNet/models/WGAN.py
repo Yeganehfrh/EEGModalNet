@@ -16,7 +16,7 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(16, 5, activation='relu'),
+            ResidualBlock(8, 5, activation='relu'),
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),

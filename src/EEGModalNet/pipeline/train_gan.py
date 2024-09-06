@@ -37,7 +37,7 @@ def load_data(data_path: str,
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
     sub = np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis]
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
-    return {'x': x, 'sub': sub, 'pos': pos}
+    return {'x': x[:8192, :, :], 'sub': sub, 'pos': pos}
 
 
 def run(data,
@@ -65,21 +65,22 @@ def run(data,
                   g_optimizer=keras.optimizers.Adam(0.001, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=1.0)
 
-
     history = model.fit(data,
                         batch_size=64,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=True),
-                            keras.callbacks.EarlyStopping(monitor='g_loss', mode='min', patience=500),
+                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=False),
                             keras.callbacks.CSVLogger(cvloger_path),
                             ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
+    return model, history
 
 
 if __name__ == '__main__':
     data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                      n_subjects=202, channels=['F1'], highpass_filter=1)
-    run(data, n_subjects=202, max_epochs=2000, latent_dim=64, cvloger_path='logs/losses/F1_6.09.2024.csv',
-        model_path='logs/models/F1_6.09.2024.model.keras', reuse_model=False, reuse_model_path=None)
+    model, _ = run(data, n_subjects=202, max_epochs=500, latent_dim=64, cvloger_path='logs/losses/F1_6.09.2024_2.csv',
+                   model_path='logs/models/F1_6.09.2024_2.model.keras', reuse_model=False, reuse_model_path=None)
+
+    model.save('logs/models/F1_6.09.2024_2_BU.model.keras')

@@ -37,7 +37,7 @@ def load_data(data_path: str,
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
     sub = np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis]
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
-    return {'x': x[:8192, :, :], 'sub': sub, 'pos': pos}
+    return {'x': x, 'sub': sub, 'pos': pos}
 
 
 def run(data,
@@ -80,7 +80,7 @@ def run(data,
 if __name__ == '__main__':
     data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                      n_subjects=202, channels=['F1'], highpass_filter=1)
-    model, _ = run(data, n_subjects=202, max_epochs=500, latent_dim=64, cvloger_path='logs/losses/F1_6.09.2024_2.csv',
-                   model_path='logs/models/F1_6.09.2024_2.model.keras', reuse_model=False, reuse_model_path=None)
+    model, _ = run(data, n_subjects=202, max_epochs=1500, latent_dim=64, cvloger_path='logs/losses/F1_7.09.2024.csv',
+                   model_path='logs/models/F1_7.09.2024.model.keras', reuse_model=False, reuse_model_path=None)
 
-    model.save('logs/models/F1_6.09.2024_2_BU.model.keras')
+    model.save('logs/models/F1_7.09.2024_BU.model.keras')

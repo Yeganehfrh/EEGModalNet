@@ -80,7 +80,7 @@ def run(data,
 if __name__ == '__main__':
     data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                      n_subjects=202, channels=['F1'], highpass_filter=1)
-    model, _ = run(data, n_subjects=202, max_epochs=1500, latent_dim=64, cvloger_path='logs/losses/F1_7.09.2024.csv',
+    model, _ = run(data, n_subjects=202, max_epochs=1000, latent_dim=64, cvloger_path='logs/losses/F1_7.09.2024.csv',
                    model_path='logs/models/F1_7.09.2024.model.keras', reuse_model=False, reuse_model_path=None)
 
     model.save('logs/models/F1_7.09.2024_BU.model.keras')

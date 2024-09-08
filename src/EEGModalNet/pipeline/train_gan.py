@@ -31,7 +31,7 @@ def load_data(data_path: str,
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
 
     x = x.to_numpy()
-    n_included_subjects = x.shape[0]
+    n_subjects = x.shape[0]
 
     if channels[0] != 'all':
         ch_ind = find_channel_ids(xarray, channels)
@@ -44,7 +44,7 @@ def load_data(data_path: str,
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
     sub = np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis]
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
-    return {'x': x, 'sub': sub, 'pos': pos}, n_included_subjects
+    return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
 
 
 def run(data,

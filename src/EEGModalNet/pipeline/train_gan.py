@@ -21,10 +21,17 @@ def load_data(data_path: str,
               n_subjects: int = 202,
               channels: List[str] = ['all'],
               highpass_filter: float = 1,
-              time_dim: int = 1024) -> dict:
+              time_dim: int = 1024,
+              exclude_sub_ids=None) -> dict:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = xarray.sel(subject=xarray.subject[:n_subjects]).to_numpy()
+    x = xarray.sel(subject=xarray.subject[:n_subjects])
+
+    if exclude_sub_ids is not None:
+        x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
+
+    x = x.to_numpy()
+    n_included_subjects = x.shape[0]
 
     if channels[0] != 'all':
         ch_ind = find_channel_ids(xarray, channels)
@@ -37,7 +44,7 @@ def load_data(data_path: str,
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
     sub = np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis]
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
-    return {'x': x, 'sub': sub, 'pos': pos}
+    return {'x': x, 'sub': sub, 'pos': pos}, n_included_subjects
 
 
 def run(data,
@@ -71,7 +78,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=True),
+                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=False, verbose=0),
                             keras.callbacks.CSVLogger(cvloger_path),
                             ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
@@ -79,19 +86,19 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
-                     n_subjects=202, channels=['F1'], highpass_filter=1)
+    data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
+                             n_subjects=202, channels=['O1'], highpass_filter=1,
+                             exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/F1_8.09.2024'
+    output_path = 'logs/outputs/O1/O1_8.09.2024'
 
-    for i in range(2, 4):
-        model, _ = run(data,
-                       n_subjects=202,
-                       max_epochs=500,
-                       latent_dim=64,
-                       cvloger_path=f'{output_path}_{i}.csv',
-                       model_path=f'{output_path}_{i}.model.keras',
-                       reuse_model=True,
-                       reuse_model_path=f'{output_path}_{i-1}_final.model.keras')
+    model, _ = run(data,
+                   n_subjects=n_subs,
+                   max_epochs=2000,
+                   latent_dim=64,
+                   cvloger_path=f'{output_path}.csv',
+                   model_path=f'{output_path}.model.keras',
+                   reuse_model=False,
+                   reuse_model_path=None)
 
-        model.save(f'{output_path}_{i}_final.model.keras')
+    model.save(f'{output_path}_final.model.keras')

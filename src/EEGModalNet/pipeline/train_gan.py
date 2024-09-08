@@ -59,6 +59,7 @@ def run(data,
                     kerner_initializer='random_normal')
 
     if reuse_model:
+        print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
     model.compile(d_optimizer=keras.optimizers.Adam(0.0001, beta_1=0.5, beta_2=0.9),
@@ -70,7 +71,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=False),
+                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
                             ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
@@ -80,7 +81,17 @@ def run(data,
 if __name__ == '__main__':
     data = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                      n_subjects=202, channels=['F1'], highpass_filter=1)
-    model, _ = run(data, n_subjects=202, max_epochs=1000, latent_dim=64, cvloger_path='logs/losses/F1_7.09.2024.csv',
-                   model_path='logs/models/F1_7.09.2024.model.keras', reuse_model=False, reuse_model_path=None)
 
-    model.save('logs/models/F1_7.09.2024_BU.model.keras')
+    output_path = 'logs/outputs/F1_8.09.2024'
+
+    for i in range(2, 4):
+        model, _ = run(data,
+                       n_subjects=202,
+                       max_epochs=500,
+                       latent_dim=64,
+                       cvloger_path=f'{output_path}_{i}.csv',
+                       model_path=f'{output_path}_{i}.model.keras',
+                       reuse_model=True,
+                       reuse_model_path=f'{output_path}_{i-1}_final.model.keras')
+
+        model.save(f'{output_path}_{i}_final.model.keras')

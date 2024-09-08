@@ -62,8 +62,7 @@ def run(data,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger=False,
-                    kerner_initializer='random_normal')
+                    use_channel_merger=False)
 
     if reuse_model:
         print(reuse_model_path)

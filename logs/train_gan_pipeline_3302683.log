@@ -1,0 +1,16 @@
+  0%|          | 0/2000 [00:00<?, ?epoch/s]run 00/01:   0%|          | 0/2000 [00:00<?, ?epoch/s]Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/pipeline/train_gan.py", line 94, in <module>
+    model, _ = run(data,
+               ^^^^^^^^^
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/pipeline/train_gan.py", line 75, in run
+    history = model.fit(data,
+              ^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/keras/src/utils/traceback_utils.py", line 122, in error_handler
+    raise e.with_traceback(filtered_tb) from None
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/keras/src/utils/file_utils.py", line 436, in File
+    return open(path, mode=mode)
+           ^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'logs/outputs/O1/O1_8.09.2024.csv'
+                                                      

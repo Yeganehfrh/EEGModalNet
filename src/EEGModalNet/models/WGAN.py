@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers_v2, convBlock, ChannelMerger, ResidualBlock
+from .common import SubjectLayers_v2, SubjectLayers, convBlock, ChannelMerger, ResidualBlock
 
 
 class Critic(keras.Model):
@@ -20,17 +20,17 @@ class Critic(keras.Model):
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(512, name='dis_dense1'),
-            layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(512, name='dis_dense1', activation='relu'),
+            # layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(128, name='dis_dense2'),
-            layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(128, name='dis_dense2', activation='relu'),
+            # layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(32, name='dis_dense3'),
-            layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(32, name='dis_dense3', activation='relu'),
+            # layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(8, name='dis_dense4'),
-            layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(8, name='dis_dense4', activation='relu'),
+            # layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
             layers.Dense(1, name='dis_dense5')
         ], name='critic')
@@ -55,7 +55,8 @@ class Generator(keras.Model):
         self.latent_dim = latent_dim
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
+            self.sub_layer = SubjectLayers(feature_dim, feature_dim, num_classes, init_id=True)
+            # self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
@@ -81,8 +82,8 @@ class Generator(keras.Model):
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, sub_labels)  # TODO: this layer can be used before or after data generation
-        return x
+            x = self.sub_layer(x.permute(0, 2, 1), sub_labels)  # TODO: this layer can be used before or after data generation
+        return x.permute(0, 2, 1)
 
 
 @keras.saving.register_keras_serializable()
@@ -90,7 +91,7 @@ class WGAN_GP(keras.Model):
     def __init__(self,
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
-                 emb_dim=202, kerner_initializer='glorot_uniform',
+                 emb_dim=20, kerner_initializer='glorot_uniform',
                  use_channel_merger=False,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)

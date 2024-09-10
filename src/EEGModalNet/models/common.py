@@ -181,7 +181,7 @@ class ChannelMerger(nn.Module):
 
 
 class SubjectLayers(nn.Module):
-    """Per subject linear layer."""
+    """subject layer from Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick)"""
     def __init__(self, in_channels: int, out_channels: int, n_subjects: int, init_id: bool = False):
         super().__init__()
         self.weights = nn.Parameter(torch.randn(n_subjects, in_channels, out_channels))

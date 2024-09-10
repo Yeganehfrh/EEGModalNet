@@ -77,7 +77,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            keras.callbacks.ModelCheckpoint(model_path, monitor='d_loss', mode='min', save_best_only=False, verbose=0),
+                            keras.callbacks.ModelCheckpoint(model_path, monitor='g_loss', mode='min', save_best_only=True, verbose=0),
                             keras.callbacks.CSVLogger(cvloger_path),
                             ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
@@ -89,11 +89,11 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/O1/O1_8.09.2024'
+    output_path = 'logs/outputs/O1/O1_10.09.2024'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=2000,
+                   max_epochs=1000,
                    latent_dim=64,
                    cvloger_path=f'{output_path}.csv',
                    model_path=f'{output_path}.model.keras',

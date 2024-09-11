@@ -2,19 +2,17 @@ import keras
 from tqdm import tqdm
 
 
-class CustomModelCheckpoint(keras.callbacks.ModelCheckpoint):
-    def __init__(self, filepath, save_period, **kwargs):
-        super().__init__(filepath, **kwargs)
-        self.save_period = save_period
+class CustomModelCheckpoint(keras.callbacks.Callback):
+    def __init__(self, filepath, save_freq=200):
+        super().__init__()
+        self.filepath = filepath
+        self.save_freq = save_freq
 
     def on_epoch_end(self, epoch, logs=None):
         super().on_epoch_end(epoch, logs)
-
-        # Every 20 epochs, save a separate model file
-        if (epoch + 1) % self.save_period == 0:
-            # Save model with a dynamic file name including the epoch number
-            filepath = self.filepath.format(epoch=epoch + 1)
-            self.model.save(filepath)
+        if epoch % self.save_freq == 0:
+            self.model.save(f'{self.filepath}_epoch_{epoch}.model.keras')
+            print(f"Checkpoint saved at epoch {epoch}")
 
 
 class ProgressBarCallback(keras.callbacks.Callback):

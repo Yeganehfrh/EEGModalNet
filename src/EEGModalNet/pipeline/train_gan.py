@@ -79,6 +79,7 @@ def run(data,
                         callbacks=[
                             CustomModelCheckpoint(model_path, save_freq=200),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
+                            keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
                             ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
@@ -94,11 +95,9 @@ if __name__ == '__main__':
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=2000,
+                   max_epochs=3000,
                    latent_dim=64,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=True,
-                   reuse_model_path='logs/outputs/O1/O1_10.09.2024_final.model.keras')
-
-    model.save(f'{output_path}_final.model.keras')
+                   reuse_model_path='logs/outputs/O1/O1_11.09.2024_final.model.keras')

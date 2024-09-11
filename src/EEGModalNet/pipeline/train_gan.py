@@ -91,7 +91,7 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/O1/O1_11.09.2024'
+    output_path = 'logs/outputs/O1/O1_11.09.2024_2'
 
     model, _ = run(data,
                    n_subjects=n_subs,
@@ -101,3 +101,5 @@ if __name__ == '__main__':
                    model_path=output_path,
                    reuse_model=True,
                    reuse_model_path='logs/outputs/O1/O1_11.09.2024_final.model.keras')
+
+    model.save(f'{output_path}_final.model.keras')

@@ -98,7 +98,7 @@ if __name__ == '__main__':
                    latent_dim=64,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
-                   reuse_model=False,
-                   reuse_model_path=None)
+                   reuse_model=True,
+                   reuse_model_path='logs/outputs/O1/O1_10.09.2024_final.model.keras')
 
     model.save(f'{output_path}_final.model.keras')

@@ -10,9 +10,9 @@ class CustomModelCheckpoint(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         super().on_epoch_end(epoch, logs)
-        if epoch % self.save_freq == 0:
-            self.model.save(f'{self.filepath}_epoch_{epoch}.model.keras')
-            print(f"Checkpoint saved at epoch {epoch}")
+        if (epoch + 1) % self.save_freq == 0:
+            self.model.save(f'{self.filepath}_epoch_{epoch+1}.model.keras')
+            print(f"Checkpoint saved at epoch {epoch+1}")
 
 
 class ProgressBarCallback(keras.callbacks.Callback):

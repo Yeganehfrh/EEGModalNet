@@ -230,3 +230,63 @@ def convBlock(filters: List[int],
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
         lyrs.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))
     return lyrs
+
+
+# Custom Positional Embedding Layer
+class PositionalEmbedding(layers.Layer):
+    def __init__(self, sequence_length, embed_dim):
+        super(PositionalEmbedding, self).__init__()
+        self.position_embeddings = layers.Embedding(input_dim=sequence_length, output_dim=embed_dim)
+        self.sequence_length = sequence_length
+
+    def call(self, inputs):
+        positions = torch.arange(start=0, end=self.sequence_length, step=1)
+        position_embeddings = self.position_embeddings(positions)
+        return inputs + position_embeddings
+
+
+# Transformer Encoder Block
+def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0.1):
+    # Multi-Head Self-Attention
+    x = layers.MultiHeadAttention(key_dim=head_size, num_heads=num_heads, dropout=dropout)(inputs, inputs)
+
+    # Residual Connection + Layer Normalization
+    x = layers.Add()([x, inputs])
+    x = layers.LayerNormalization(epsilon=1e-6)(x)
+
+    # Feed-Forward Network
+    x_ff = layers.Dense(ff_dim, activation='relu')(x)
+    x_ff = layers.Dense(inputs.shape[-1])(x_ff)
+
+    # Residual Connection + Layer Normalization
+    x = layers.Add()([x, x_ff])
+    x = layers.LayerNormalization(epsilon=1e-6)(x)
+
+    return x
+
+
+# EEG Model for n-Channel Data
+def build_eeg_transformer(sequence_length, embed_dim, num_heads, ff_dim, num_layers, n_channels):
+    # Input layer for EEG data (n-channel input)
+    inputs = layers.Input(shape=(sequence_length, n_channels))
+
+    # Linear projection from 4 channels to embed_dim
+    x = layers.Dense(embed_dim)(inputs)
+
+    # Positional Embedding
+    x = PositionalEmbedding(sequence_length, embed_dim)(x)
+
+    # Stack multiple transformer encoders
+    for _ in range(num_layers):
+        x = transformer_encoder(x, head_size=embed_dim, num_heads=num_heads, ff_dim=ff_dim)
+
+    # Global average pooling before final classification or regression
+    x = layers.GlobalAveragePooling1D()(x)
+
+    # Output layer (assuming regression or binary classification)
+    outputs = layers.Dense(2, activation='sigmoid')(x)
+
+    # Create the model
+    model = keras.Model(inputs=inputs, outputs=outputs)
+
+    return model

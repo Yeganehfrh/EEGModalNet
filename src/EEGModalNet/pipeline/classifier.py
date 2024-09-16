@@ -46,11 +46,18 @@ def load_data(data_path: str,
     y = torch.tensor(y).reshape(-1, 1).repeat(1, x.shape[1])
     y = F.one_hot(y, num_classes=2).float()
 
-    train_ids, val_ids = train_test_split(np.arange(x.shape[0]), test_size=0.3, stratify=y[:, 0].numpy() if stratified else None)
+    train_ids, test_ids = train_test_split(np.arange(x.shape[0]),
+                                           test_size=0.2,
+                                           stratify=xarray.gender[:n_subjects] if stratified else None)
+
+    train_ids, val_ids = train_test_split(train_ids,
+                                          test_size=0.2,
+                                          stratify=xarray.gender[:n_subjects][train_ids] if stratified else None)
+
     x_train, x_val = x[train_ids].flatten(0, 1), x[val_ids].flatten(0, 1)
     y_train, y_val = y[train_ids].flatten(0, 1), y[val_ids].flatten(0, 1)
 
-    return x_train, x_val, y_train, y_val
+    return (x_train, x_val, y_train, y_val), test_ids
 
 
 def run(data,
@@ -101,12 +108,12 @@ if __name__ == '__main__':
     input_path = 'data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5'
     output_path = 'logs/models/classifier/transformer_16.09.2024'
 
-    data = load_data(input_path,
-                     n_subjects=202,
-                     channels=channels,
-                     highpass_filter=1,
-                     time_dim=512,
-                     stratified=False)
+    data, test_ids = load_data(input_path,
+                               n_subjects=202,
+                               channels=channels,
+                               highpass_filter=1,
+                               time_dim=512,
+                               stratified=True)
 
     model, _ = run(data,
                    sequence_length=512,
@@ -122,3 +129,6 @@ if __name__ == '__main__':
                    reuse_model_path=None)
     # backup
     model.save(f'{output_path}_final.model.keras')
+
+    # save test ids
+    np.save(f'{output_path}_test_ids.npy', test_ids)

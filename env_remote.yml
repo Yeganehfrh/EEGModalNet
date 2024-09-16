@@ -15,4 +15,5 @@ dependencies:
   - h5netcdf
   - scipy
   - keras>3
+  - scikit-learn
 

@@ -110,8 +110,9 @@ if __name__ == '__main__':
     time_dim = 512
     n_splits = 5
     n_epochs = 500
+    n_subject = 51
     X_input_hyp, y, train_val_splits = load_data(eeg_data_path, session_data_path, channels, time_dim=time_dim,
-                                                 n_subject=10, n_splits=n_splits)
+                                                 n_subject=n_subject, n_splits=n_splits)
     all_val_acc = []
     all_acc = []
     all_loss = []

@@ -1,9 +1,7 @@
 import os
-from matplotlib import pyplot as plt
 import numpy as np
 import xarray as xr
 import pandas as pd
-import seaborn as sns
 os.environ['KERAS_BACKEND'] = 'torch'
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
 os.environ["CUDA_VISIBLE_DEVICES"] = ""  # force CPU usage

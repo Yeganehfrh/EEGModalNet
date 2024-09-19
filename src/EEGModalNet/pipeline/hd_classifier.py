@@ -27,7 +27,7 @@ def load_data(eeg_data_path,
               n_splits=5,
               highpass_filter=True,):
 
-    EEG_data = xr.open_dataarray(eeg_data_path)
+    EEG_data = xr.open_dataarray(eeg_data_path, engine='h5netcdf')
 
     # open session data
     session_data = pd.read_csv(session_data_path)

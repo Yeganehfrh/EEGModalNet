@@ -107,7 +107,7 @@ if __name__ == '__main__':
     channels = ['Oz', 'Fz', 'Cz', 'Pz', 'Fp1', 'Fp2', 'F1', 'F2']
     time_dim = 512
     n_splits = 5
-    n_epochs = 500
+    n_epochs = 300
     n_subject = 51
     X_input_hyp, y, train_val_splits = load_data(eeg_data_path, session_data_path, channels, time_dim=time_dim,
                                                  n_subject=n_subject, n_splits=n_splits)
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     all_loss = []
     all_val_loss = []
 
-    for i in range(n_splits):
+    for i in range(2, n_splits):
         print(f'>>>>>> Fold {i+1}')
         model = build_model(time_dim, len(channels))
         train_idx, val_idx = train_val_splits[i]
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         all_val_loss.append(history.history['val_loss'])
 
         # save the model
-        model.save(f'logs/model_{i+1}.model.keras')
+        model.save(f'logs/model_{i+1}_2nd.model.keras')
 
     # restore all the parameters into one dataframe and save it
     all_val_acc, all_acc = np.array(all_val_acc), np.array(all_acc)
@@ -139,4 +139,4 @@ if __name__ == '__main__':
     history = {'val_accuracy': all_val_acc.flatten(), 'accuracy': all_acc.flatten(),
                'loss': all_loss.flatten(), 'val_loss': all_val_loss.flatten()}
 
-    pd.DataFrame(history).to_csv('logs/history.csv')
+    pd.DataFrame(history).to_csv('logs/history_last3folds.csv')

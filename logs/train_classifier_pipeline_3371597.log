@@ -1,0 +1,62 @@
+Traceback (most recent call last):
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 211, in _acquire_with_cache_info
+    file = self._cache[self._key]
+           ~~~~~~~~~~~^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/lru_cache.py", line 56, in __getitem__
+    value = self._cache[key]
+            ~~~~~~~~~~~^^^^^
+KeyError: [<class 'h5netcdf.core.File'>, ('/mnt/aiongpfs/projects/acnets/EEGModalNet/data/OTKA/experiment_EEG_data.nc5',), 'r', (('decode_vlen_strings', True), ('driver', None), ('invalid_netcdf', None)), 'b62f7300-190b-455c-b747-768102e24b26']
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/pipeline/hd_classifier.py", line 112, in <module>
+    X_input_hyp, y, train_val_splits = load_data(eeg_data_path, session_data_path, channels, time_dim=time_dim,
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/pipeline/hd_classifier.py", line 30, in load_data
+    EEG_data = xr.open_dataarray(eeg_data_path, engine='h5netcdf')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/api.py", line 769, in open_dataarray
+    dataset = open_dataset(
+              ^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/api.py", line 588, in open_dataset
+    backend_ds = backend.open_dataset(
+                 ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/h5netcdf_.py", line 404, in open_dataset
+    store = H5NetCDFStore.open(
+            ^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/h5netcdf_.py", line 184, in open
+    return cls(manager, group=group, mode=mode, lock=lock, autoclose=autoclose)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/h5netcdf_.py", line 130, in __init__
+    self._filename = find_root_and_group(self.ds)[0].filename
+                                         ^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/h5netcdf_.py", line 195, in ds
+    return self._acquire()
+           ^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/h5netcdf_.py", line 187, in _acquire
+    with self._manager.acquire_context(needs_lock) as root:
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 199, in acquire_context
+    file, cached = self._acquire_with_cache_info(needs_lock)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/xarray/backends/file_manager.py", line 217, in _acquire_with_cache_info
+    file = self._opener(*self._args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/h5netcdf/core.py", line 1054, in __init__
+    self._h5file = self._h5py.File(
+                   ^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/h5py/_hl/files.py", line 562, in __init__
+    fid = make_fid(name, mode, userblock_size, fapl, fcpl, swmr=swmr)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/h5py/_hl/files.py", line 235, in make_fid
+    fid = h5f.open(name, flags, fapl=fapl)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "h5py/_objects.pyx", line 54, in h5py._objects.with_phil.wrapper
+  File "h5py/_objects.pyx", line 55, in h5py._objects.with_phil.wrapper
+  File "h5py/h5f.pyx", line 102, in h5py.h5f.open
+FileNotFoundError: [Errno 2] Unable to synchronously open file (unable to open file: name = '/mnt/aiongpfs/projects/acnets/EEGModalNet/data/OTKA/experiment_EEG_data.nc5', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0)

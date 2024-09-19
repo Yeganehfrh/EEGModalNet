@@ -15,10 +15,6 @@ from sklearn.model_selection import train_test_split
 import torch.nn.functional as F
 
 
-def find_channel_ids(dataarray, ch_names):
-    return [i for i, ch in enumerate(dataarray.channel.to_numpy()) if ch in ch_names]
-
-
 def load_data(data_path: str,
               n_subjects: int,
               channels: List[str] = ['all'],
@@ -27,12 +23,8 @@ def load_data(data_path: str,
               stratified=True) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    xarray = xarray.sel(subject=xarray.subject[:n_subjects])
+    xarray = xarray.sel(subject=xarray.subject[:n_subjects], channels=channels)
     x = xarray.to_numpy()
-
-    if channels[0] != 'all':
-        ch_ind = find_channel_ids(xarray, channels)
-        x = x[:, ch_ind, 440:]
 
     if highpass_filter is not None:
         sos = butter(4, highpass_filter, btype='high', fs=128, output='sos')

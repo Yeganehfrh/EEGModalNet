@@ -232,32 +232,21 @@ def split_data(data,
 
 def get_averaged_data(data):
     ''' Average over specific brain areas and return a new dataarray '''
-    ba_patches = {'LF': ['Fp1', 'F3', 'F7', 'AF3', 'F1', 'F5', 'AF7'],
+    ba_patches = {'LF': ['Fp1', 'F3', 'F7', 'AF3', 'F1', 'F5'],
                   'LC': ['C3', 'T7', 'FC1', 'FC3', 'FC5', 'C1', 'C5', 'FT7'],
                   'LP': ['P3', 'P7', 'CP1', 'CP3', 'CP5', 'TP7', 'P1', 'P5'],
-                  'LO': ['O1', 'PO3', 'PO7', 'PO9'],
-                  'RF': ['Fp2', 'F4', 'F8', 'AF4', 'F2', 'F6', 'AF8'],
+                  'LO': ['O1', 'PO3'],
+                  'RF': ['Fp2', 'F4', 'F8', 'AF4', 'F2', 'F6'],
                   'RC': ['C4', 'T8', 'FC2', 'FC4', 'FC6', 'C2', 'C6', 'FT8'],
                   'RP': ['P4', 'P8', 'CP2', 'CP4', 'CP6', 'TP8', 'P2', 'P6'],
-                  'RO': ['O2', 'PO4', 'PO8', 'PO10'],
-                  'FZ': ['Fz', 'AFz'],
+                  'RO': ['O2', 'PO4'],
+                  'FZ': ['Fz', 'Fpz'],
                   'CZ': ['Cz'],
                   'PZ': ['Pz', 'CPz'],
-                  'OZ': ['POz', 'Oz']}
+                  'OZ': ['POz', 'Oz', 'Iz']}
     # average over each brain area patch and save in a new empty dataset
-    C, S, T = len(ba_patches), data.sizes.get('subject'), data.sizes.get('time')
-    data_numpy = np.zeros([C, S, T])
-    positions_numpy = np.zeros([C, 2])
+    C, S, T, ses = len(ba_patches), data.sizes.get('subject'), data.sizes.get('time'), 4
+    data_numpy = np.zeros([S, ses, C, T])
     for i, (v) in enumerate(ba_patches.values()):
-        data_numpy[i, :, :] = data.sel(channel=v).mean(dim='channel').values
-        idx = [data.channel.values.tolist().index(i) for i in v]
-        positions_numpy[i, :] = data.ch_positions[idx].mean(axis=0)
-
-    # create a new dataset
-    data_ba = xr.DataArray(data_numpy,
-                           dims=['brain_area', 'subject', 'time'],
-                           coords={'brain_area': list(ba_patches.keys()),
-                                   'subject': data.subject.values},
-                           attrs=data.attrs)
-    data_ba.attrs['ch_positions'] = positions_numpy
-    return data_ba.transpose('subject', 'brain_area', 'time')
+        data_numpy[:, :, i, :] = data.sel(channel=v).mean(dim='channel').values
+    return data_numpy, list(ba_patches.keys())

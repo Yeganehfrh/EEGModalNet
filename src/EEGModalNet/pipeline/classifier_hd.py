@@ -8,7 +8,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""  # force CPU usage
 from sklearn.model_selection import StratifiedGroupKFold
 from scipy.signal import butter, sosfilt
 
-from ...EEGModalNet import ResidualBlock
+from ...EEGModalNet import ResidualBlock, get_averaged_data
 
 import torch
 import keras
@@ -25,7 +25,8 @@ def load_data(eeg_data_path,
               n_subject=51,
               n_sessions=2,
               n_splits=5,
-              highpass_filter=True,):
+              highpass_filter=True,
+              average_over_channels=True):
 
     EEG_data = xr.open_dataarray(eeg_data_path, engine='h5netcdf')
 
@@ -33,12 +34,17 @@ def load_data(eeg_data_path,
     session_data = pd.read_csv(session_data_path)
     described_as_hyp = session_data.query('description == "hypnosis"')[['bids_id', 'session', 'score', 'procedure']].set_index('bids_id')
 
-    X_input = EEG_data.sel(subject=EEG_data.subject[:n_subject], channel=channels).to_numpy()
+    if average_over_channels:
+        EEG_data = EEG_data.sel(subject=EEG_data.subject[:n_subject])
+        X_input, channels = get_averaged_data(EEG_data)
+
+    else:
+        X_input = EEG_data.sel(subject=EEG_data.subject[:n_subject], channel=channels).to_numpy()
 
     # including only hypnosis sessions
     X_input_ = np.zeros([n_subject, n_sessions, len(channels), X_input.shape[-1]])
     for i in range(X_input.shape[0]):
-        ses = described_as_hyp.loc[i+1, 'session'].values - 1
+        ses = described_as_hyp.loc[i + 1, 'session'].values - 1
         X_input_[i] = X_input[i, ses, :, :]
 
     # preparing x
@@ -62,7 +68,7 @@ def load_data(eeg_data_path,
 
     y = torch.tensor(y).reshape(-1, 1).repeat(1, X_input_.shape[1])
 
-    return X_input_, y, train_val_splits
+    return X_input_, y, train_val_splits, channels
 
 
 class Critic(keras.Model):
@@ -106,17 +112,17 @@ if __name__ == '__main__':
     session_data_path = 'data/OTKA/behavioral_data.csv'
     channels = ['Oz', 'Fz', 'Cz', 'Pz', 'Fp1', 'Fp2', 'F1', 'F2']
     time_dim = 512
-    n_splits = 5
+    n_splits = 4
     n_epochs = 300
     n_subject = 51
-    X_input_hyp, y, train_val_splits = load_data(eeg_data_path, session_data_path, channels, time_dim=time_dim,
+    X_input_hyp, y, train_val_splits, channels = load_data(eeg_data_path, session_data_path, channels, time_dim=time_dim,
                                                  n_subject=n_subject, n_splits=n_splits)
     all_val_acc = []
     all_acc = []
     all_loss = []
     all_val_loss = []
 
-    for i in range(2, n_splits):
+    for i in range(n_splits):
         print(f'>>>>>> Fold {i+1}')
         model = build_model(time_dim, len(channels))
         train_idx, val_idx = train_val_splits[i]
@@ -131,7 +137,7 @@ if __name__ == '__main__':
         all_val_loss.append(history.history['val_loss'])
 
         # save the model
-        model.save(f'logs/model_{i+1}_2nd.model.keras')
+        model.save(f'logs/model_{i+1}.model.keras')
 
     # restore all the parameters into one dataframe and save it
     all_val_acc, all_acc = np.array(all_val_acc), np.array(all_acc)
@@ -139,4 +145,4 @@ if __name__ == '__main__':
     history = {'val_accuracy': all_val_acc.flatten(), 'accuracy': all_acc.flatten(),
                'loss': all_loss.flatten(), 'val_loss': all_val_loss.flatten()}
 
-    pd.DataFrame(history).to_csv('logs/history_last3folds.csv')
+    pd.DataFrame(history).to_csv('logs/history.csv')

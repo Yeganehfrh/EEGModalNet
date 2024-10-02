@@ -26,5 +26,6 @@ dependencies:
   # - dvc>3
   # - dvc-gdrive
   # - dvc-ssh
+  - openai
   - scikit-learn
   - mne

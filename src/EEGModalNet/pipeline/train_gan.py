@@ -25,17 +25,13 @@ def load_data(data_path: str,
               exclude_sub_ids=None) -> dict:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = xarray.sel(subject=xarray.subject[:n_subjects])
+    x = xarray.sel(subject=xarray.subject[:n_subjects], channels=channels)
 
     if exclude_sub_ids is not None:
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
 
     x = x.to_numpy()
     n_subjects = x.shape[0]
-
-    if channels[0] != 'all':
-        ch_ind = find_channel_ids(xarray, channels)
-        x = x[:, ch_ind, 440:]
 
     if highpass_filter is not None:
         sos = butter(4, highpass_filter, btype='high', fs=128, output='sos')
@@ -77,7 +73,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=200),
+                            CustomModelCheckpoint(model_path, save_freq=10),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
@@ -91,16 +87,16 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/O1/O1_12.09.2024'
+    output_path = 'logs/outputs/F1/F1_08.10.2024'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=3000,
+                   max_epochs=1500,
                    latent_dim=64,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
-                   reuse_model=True,
-                   reuse_model_path='logs/outputs/O1/O1_11.09.2024_4800.model.keras')  # TODO: update path
+                   reuse_model=False,
+                   reuse_model_path=None)  # TODO: update path
 
     # backup
     model.save(f'{output_path}_final.model.keras')

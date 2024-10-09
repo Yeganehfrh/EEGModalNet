@@ -22,7 +22,7 @@ def load_data(data_path: str,
               channels: List[str] = ['all'],
               highpass_filter: float = 1,
               time_dim: int = 1024,
-              exclude_sub_ids=None) -> dict:
+              exclude_sub_ids=None) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     x = xarray.sel(subject=xarray.subject[:n_subjects], channels=channels)
@@ -38,8 +38,12 @@ def load_data(data_path: str,
         x = sosfilt(sos, x, axis=-1)
 
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
+
     sub = np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis]
+
+    ch_ind = find_channel_ids(xarray, channels)
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
+
     return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
 
 
@@ -96,7 +100,7 @@ if __name__ == '__main__':
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=False,
-                   reuse_model_path=None)  # TODO: update path
+                   reuse_model_path=None)
 
     # backup
     model.save(f'{output_path}_final.model.keras')

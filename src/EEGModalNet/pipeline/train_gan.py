@@ -25,7 +25,7 @@ def load_data(data_path: str,
               exclude_sub_ids=None) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = xarray.sel(subject=xarray.subject[:n_subjects], channels=channels)
+    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
     if exclude_sub_ids is not None:
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
@@ -56,13 +56,15 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
+    # reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
 
     model = WGAN_GP(time_dim=1024, feature_dim=1,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger=False)
+                    use_channel_merger=False,
+                    kerner_initializer='random_normal',
+                    interpolation='bilinear')
 
     if reuse_model:
         print(reuse_model_path)
@@ -77,11 +79,11 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=10),
+                            CustomModelCheckpoint(model_path, save_freq=20),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
-                            ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
+                            # ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
     return model, history
 
@@ -91,11 +93,11 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/F1/F1_08.10.2024'
+    output_path = 'logs/outputs/O1/O1_09.10.2024'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=1500,
+                   max_epochs=2000,
                    latent_dim=64,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,

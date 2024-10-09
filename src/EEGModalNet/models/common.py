@@ -6,6 +6,8 @@ import torch
 from torch import nn
 import keras
 from keras import layers
+from keras import Layer
+from keras import ops
 
 
 class ResidualBlock(layers.Layer):
@@ -218,13 +220,14 @@ def convBlock(filters: List[int],
               upsampling: List[Union[bool, int]],
               stride: int,
               padding: str,
+              interpolation: str,
               negative_slope: float = 0.2,
-              kernel_initializer='glorot_uniform',
+              kernel_initializer: str = 'glorot_uniform',
               batch_norm: bool = True) -> List[layers.Layer]:
     lyrs = []
     for i, (filter, kernel_size) in enumerate(zip(filters, kernel_sizes), 1):
         if upsampling[i - 1]:
-            lyrs.append(layers.UpSampling1D(2, name=f'upsample_{i}'))
+            lyrs.append(CustomUpSampling1D(2, method=interpolation))
         lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer, name=f'conv_{i}'))
         if batch_norm:
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
@@ -290,3 +293,22 @@ def build_eeg_transformer(sequence_length, embed_dim, num_heads, ff_dim, num_lay
     model = keras.Model(inputs=inputs, outputs=outputs)
 
     return model
+
+
+class CustomUpSampling1D(Layer):
+    def __init__(self, size=2, method='bilinear'):
+        super(CustomUpSampling1D, self).__init__()
+        self.size = size
+        self.method = method
+
+    def call(self, inputs):
+        # Expand dimensions to 2D (batch, time, 1) -> (batch, time, width=1, channels)
+        inputs_expanded = ops.expand_dims(inputs, axis=2)
+
+        # Apply resize operation with the chosen interpolation method
+        upsampled = ops.image.resize(inputs_expanded,
+                                     size=[inputs.shape[1] * self.size, 1],
+                                     interpolation=self.method)
+
+        # Remove the width dimension and return (batch, time * size, channels)
+        return ops.squeeze(upsampled, axis=2)

@@ -20,17 +20,17 @@ class Critic(keras.Model):
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(512, name='dis_dense1', activation='relu'),
-            # layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(512, name='dis_dense1'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(128, name='dis_dense2', activation='relu'),
-            # layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(128, name='dis_dense2'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(32, name='dis_dense3', activation='relu'),
-            # layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(32, name='dis_dense3'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
-            layers.Dense(8, name='dis_dense4', activation='relu'),
-            # layers.LeakyReLU(negative_slope=0.2),
+            layers.Dense(8, name='dis_dense4'),
+            layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(0.2),
             layers.Dense(1, name='dis_dense5')
         ], name='critic')
@@ -47,7 +47,7 @@ class Critic(keras.Model):
 
 class Generator(keras.Model):
     def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim, kerner_initializer,
-                 n_subjects, use_channel_merger, *args, **kwargs):
+                 n_subjects, use_channel_merger, interpolation, *args, **kwargs):
         super(Generator, self).__init__()
         self.negative_slope = 0.2
         self.input_shape = (time_dim, feature_dim)
@@ -70,7 +70,7 @@ class Generator(keras.Model):
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer),
             layers.LeakyReLU(negative_slope=self.negative_slope),
             layers.Reshape((256, 1)),
-            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', 0.2, kerner_initializer, True),
+            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', interpolation, 0.2, kerner_initializer, True),  # TODO: convert to keyword arguments to aviod any potential bug
             layers.Conv1D(feature_dim, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
             layers.Reshape(self.input_shape)
         ], name='generator')
@@ -93,6 +93,7 @@ class WGAN_GP(keras.Model):
                  use_sublayer_generator=False, use_sublayer_critic=False,
                  emb_dim=20, kerner_initializer='glorot_uniform',
                  use_channel_merger=False,
+                 interpolation='bilinear',
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
@@ -105,7 +106,8 @@ class WGAN_GP(keras.Model):
         self.seed_generator = keras.random.SeedGenerator(42)
 
         self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,
-                                   kerner_initializer, n_subjects, use_channel_merger=use_channel_merger)
+                                   kerner_initializer, n_subjects, use_channel_merger=use_channel_merger,
+                                   interpolation=interpolation)
         self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer_critic,)
 
         self.built = True

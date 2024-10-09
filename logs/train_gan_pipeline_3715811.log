@@ -1,0 +1,44 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/pipeline/train_gan.py", line 98, in <module>
+    model, _ = run(data,
+               ^^^^^^^^^
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/pipeline/train_gan.py", line 61, in run
+    model = WGAN_GP(time_dim=1024, feature_dim=1,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/models/WGAN.py", line 108, in __init__
+    self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/models/WGAN.py", line 66, in __init__
+    self.model = keras.Sequential([
+                 ^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/keras/src/models/sequential.py", line 75, in __init__
+    self._maybe_rebuild()
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/keras/src/models/sequential.py", line 140, in _maybe_rebuild
+    self.build(input_shape)
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/keras/src/layers/layer.py", line 226, in build_wrapper
+    original_build_method(*args, **kwargs)
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/keras/src/models/sequential.py", line 186, in build
+    x = layer(x)
+        ^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/keras/src/utils/traceback_utils.py", line 122, in error_handler
+    raise e.with_traceback(filtered_tb) from None
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/models/common.py", line 309, in call
+    upsampled = ops.image.resize(inputs_expanded,
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ImportError: Exception encountered when calling CustomUpSampling1D.call().
+
+[1mCould not automatically infer the output shape / dtype of 'custom_up_sampling1d' (of type CustomUpSampling1D). Either the `CustomUpSampling1D.call()` method is incorrect, or you need to implement the `CustomUpSampling1D.compute_output_spec() / compute_output_shape()` method. Error encountered:
+
+This requires the torchvision module. You can install it via `pip install torchvision`[0m
+
+Arguments received by CustomUpSampling1D.call():
+  • args=('<KerasTensor shape=(None, 256, 1), dtype=float32, sparse=False, name=keras_tensor_5>',)
+  • kwargs=<class 'inspect._empty'>

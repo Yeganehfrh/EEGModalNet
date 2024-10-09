@@ -1,14 +1,8 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
-# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
-print(torch.cuda.is_available())
-print(torch.version.cuda)
-print(torch.backends.cudnn.version())
-torch.cuda.init()
-torch.cuda.set_device(0)
 import keras
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import ProgressBarCallback, CustomModelCheckpoint
@@ -44,13 +38,12 @@ def load_data(data_path: str,
         x = sosfilt(sos, x, axis=-1)
 
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
-    x = x.to('cuda')
-    print('x_device', x.device)
+
     sub = np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis]
-    sub = torch.tensor(sub).to('cuda')
+
     ch_ind = find_channel_ids(xarray, channels)
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
-    pos = torch.tensor(pos).to('cuda')
+
     return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
 
 
@@ -73,7 +66,6 @@ def run(data,
                     kerner_initializer='random_normal',
                     interpolation='bilinear')
 
-    model = model.to('cuda')
     if reuse_model:
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
@@ -105,7 +97,7 @@ if __name__ == '__main__':
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=5,
+                   max_epochs=2000,
                    latent_dim=64,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,

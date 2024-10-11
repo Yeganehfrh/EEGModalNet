@@ -29,3 +29,4 @@ dependencies:
   - openai
   - scikit-learn
   - mne
+  - wordcloud

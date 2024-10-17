@@ -85,32 +85,66 @@ def load_data(eeg_data_path,
     return X_input, y, train_val_splits, channels
 
 
+# class Critic(keras.Model):
+#     def __init__(self, time_dim, feature_dim, l2_lambda=0.01, dropout_rate=0.2, use_sublayer=False):
+#         super(Critic, self).__init__()
+
+#         self.input_shape = (time_dim, feature_dim)
+#         self.use_sublayer = use_sublayer
+
+#         self.model = keras.Sequential([
+#             keras.Input(shape=self.input_shape),
+#             ResidualBlock(feature_dim * 4, 5, activation='relu'),
+#             layers.Conv1D(2, 5, padding='same', activation='relu', name='conv3', kernel_regularizer=regularizers.L2(l2_lambda)),
+#             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv4', kernel_regularizer=regularizers.L2(l2_lambda)),
+#             layers.Flatten(name='dis_flatten'),
+#             layers.Dense(512, name='dis_dense1', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
+#             layers.Dropout(dropout_rate),
+#             layers.Dense(128, name='dis_dense2', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
+#             layers.Dropout(dropout_rate),
+#             layers.Dense(32, name='dis_dense3', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
+#             layers.Dropout(dropout_rate),
+#             layers.Dense(8, name='dis_dense4', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
+#             layers.Dropout(dropout_rate),
+#             layers.Dense(1, name='sigmoid', activation='sigmoid', kernel_regularizer=regularizers.L2(l2_lambda))
+#         ], name='critic')
+
+#     def call(self, inputs):
+#         return self.model(inputs)
+
+
 class Critic(keras.Model):
-    def __init__(self, time_dim, feature_dim, l2_lambda=0.01, dropout_rate=0.2, use_sublayer=False):
+    def __init__(self, feature_dim, l2_lambda=0.01, dropout_rate=0.4):
         super(Critic, self).__init__()
 
-        self.input_shape = (time_dim, feature_dim)
-        self.use_sublayer = use_sublayer
-
-        self.model = keras.Sequential([
-            keras.Input(shape=self.input_shape),
-            ResidualBlock(feature_dim * 4, 5, activation='relu'),
-            layers.Conv1D(2, 5, padding='same', activation='relu', name='conv3', kernel_regularizer=regularizers.L2(l2_lambda)),
-            layers.Conv1D(1, 5, padding='same', activation='relu', name='conv4', kernel_regularizer=regularizers.L2(l2_lambda)),
-            layers.Flatten(name='dis_flatten'),
-            layers.Dense(512, name='dis_dense1', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
-            layers.Dropout(dropout_rate),
-            layers.Dense(128, name='dis_dense2', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
-            layers.Dropout(dropout_rate),
-            layers.Dense(32, name='dis_dense3', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
-            layers.Dropout(dropout_rate),
-            layers.Dense(8, name='dis_dense4', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda)),
-            layers.Dropout(dropout_rate),
-            layers.Dense(1, name='sigmoid', activation='sigmoid', kernel_regularizer=regularizers.L2(l2_lambda))
-        ], name='critic')
+        self.conv1 = ResidualBlock(feature_dim * 4, 5, activation='relu')
+        self.conv2 = layers.Conv1D(2, 5, padding='same', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.conv3 = layers.Conv1D(1, 5, padding='same', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.flatten = layers.Flatten()
+        self.dense1 = layers.Dense(512, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout1 = layers.Dropout(dropout_rate)
+        self.dense2 = layers.Dense(128, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout2 = layers.Dropout(dropout_rate)
+        self.dense3 = layers.Dense(32, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout3 = layers.Dropout(dropout_rate)
+        self.dense4 = layers.Dense(8, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout4 = layers.Dropout(dropout_rate)
+        self.output_layer = layers.Dense(1, activation='sigmoid', kernel_regularizer=regularizers.L2(l2_lambda))
 
     def call(self, inputs):
-        return self.model(inputs)
+        x = self.conv1(inputs)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.flatten(x)
+        x = self.dense1(x)
+        x = self.dropout1(x)
+        x = self.dense2(x)
+        x = self.dropout2(x)
+        x = self.dense3(x)
+        x = self.dropout3(x)
+        x = self.dense4(x)
+        x = self.dropout4(x)
+        return self.output_layer(x)
 
 
 if __name__ == '__main__':
@@ -133,9 +167,8 @@ if __name__ == '__main__':
 
     for i in range(1, 2):
         print(f'>>>>>> Fold {i+1}')
-        model = Critic(time_dim=512, feature_dim=len(channels), use_sublayer=False, dropout_rate=dropout_rate)
+        model = Critic(feature_dim=len(channels), dropout_rate=dropout_rate)
         model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
-        model.train()
         train_idx, val_idx = train_val_splits[i]
         history = model.fit(X_input_hyp[train_idx].flatten(0, 1), y[train_idx].flatten(0, 1),
                             epochs=n_epochs,

@@ -9,28 +9,10 @@ from sklearn.model_selection import StratifiedGroupKFold
 from scipy.signal import butter, sosfilt
 
 from ...EEGModalNet import get_averaged_data
-from ...EEGModalNet import Classifier
-
 
 import torch
-import keras
-from keras import layers
-from keras import regularizers
 import xarray as xr
 import pandas as pd
-import random
-
-
-def set_seed(seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-# Set seed for reproducibility
-set_seed(42)
 
 
 def load_data(eeg_data_path,
@@ -98,54 +80,3 @@ def load_data(eeg_data_path,
     y = torch.tensor(y).reshape(-1, 1).repeat(1, X_input.shape[1])
 
     return X_input, y, train_val_splits, channels
-
-
-if __name__ == '__main__':
-
-    eeg_data_path = 'data/OTKA/experiment_EEG_data.nc5'
-    session_data_path = 'data/OTKA/behavioral_data.csv'
-    channels = ['Oz', 'Fz', 'Cz', 'Pz', 'Fp1', 'Fp2', 'F1', 'F2']
-    time_dim = 512
-    n_splits = 3
-    n_epochs = 400
-    n_subject = 52
-    dropout_rate = 0.4
-    model_name = 'label_classifier17092024'
-    X_input_hyp, y, train_val_splits, channels = load_data(eeg_data_path, session_data_path, channels, time_dim=time_dim,
-                                                           n_subject=n_subject, n_splits=n_splits)
-    all_val_acc = []
-    all_acc = []
-    all_loss = []
-    all_val_loss = []
-
-    for i in range(n_splits):
-        print(f'>>>>>> Fold {i+1}')
-        model = Classifier(feature_dim=len(channels), dropout_rate=dropout_rate)
-        model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
-        model.train()
-        set_seed(42)
-        train_idx, val_idx = train_val_splits[i]
-        history = model.fit(X_input_hyp[train_idx].flatten(0, 1), y[train_idx].flatten(0, 1),
-                            epochs=n_epochs,
-                            batch_size=64,
-                            callbacks=[keras.callbacks.ModelCheckpoint(f'logs/{model_name}_fold-{i+1}_best_val_acc.model.keras',
-                                                                       monitor='val_accuracy'),
-                                       keras.callbacks.ModelCheckpoint(f'logs/{model_name}_fold-{i+1}_best_val_loss.model.keras',
-                                                                       monitor='val_loss')],
-                            validation_data=(X_input_hyp[val_idx].flatten(0, 1), y[val_idx].flatten(0, 1)))
-
-        all_val_acc.append(history.history['val_accuracy'])
-        all_acc.append(history.history['accuracy'])
-        all_loss.append(history.history['loss'])
-        all_val_loss.append(history.history['val_loss'])
-
-        # save the model
-        model.save(f'logs/{model_name}_{i+1}.model.keras')
-
-    # restore all the parameters into one dataframe and save it
-    all_val_acc, all_acc = np.array(all_val_acc), np.array(all_acc)
-    all_loss, all_val_loss = np.array(all_loss), np.array(all_val_loss)
-    history = {'val_accuracy': all_val_acc.flatten(), 'accuracy': all_acc.flatten(),
-               'loss': all_loss.flatten(), 'val_loss': all_val_loss.flatten()}
-
-    pd.DataFrame(history).to_csv(f'logs/{model_name}_history.csv')

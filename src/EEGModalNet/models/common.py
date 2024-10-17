@@ -5,9 +5,7 @@ from typing import List, Union
 import torch
 from torch import nn
 import keras
-from keras import layers
-from keras import Layer
-from keras import ops
+from keras import layers, Layer, regularizers, ops
 
 
 class ResidualBlock(layers.Layer):
@@ -312,3 +310,37 @@ class CustomUpSampling1D(Layer):
 
         # Remove the width dimension and return (batch, time * size, channels)
         return ops.squeeze(upsampled, axis=2)
+
+
+class Classifier(keras.Model):
+    def __init__(self, feature_dim, l2_lambda=0.01, dropout_rate=0.4):
+        super(Classifier, self).__init__()
+
+        self.conv1 = ResidualBlock(feature_dim * 4, 5, activation='relu')
+        self.conv2 = layers.Conv1D(2, 5, padding='same', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.conv3 = layers.Conv1D(1, 5, padding='same', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.flatten = layers.Flatten()
+        self.dense1 = layers.Dense(512, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout1 = layers.Dropout(dropout_rate)
+        self.dense2 = layers.Dense(128, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout2 = layers.Dropout(dropout_rate)
+        self.dense3 = layers.Dense(32, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout3 = layers.Dropout(dropout_rate)
+        self.dense4 = layers.Dense(8, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
+        self.dropout4 = layers.Dropout(dropout_rate)
+        self.output_layer = layers.Dense(1, activation='sigmoid', kernel_regularizer=regularizers.L2(l2_lambda))
+
+    def call(self, inputs):
+        x = self.conv1(inputs)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.flatten(x)
+        x = self.dense1(x)
+        x = self.dropout1(x)
+        x = self.dense2(x)
+        x = self.dropout2(x)
+        x = self.dense3(x)
+        x = self.dropout3(x)
+        x = self.dense4(x)
+        x = self.dropout4(x)
+        return self.output_layer(x)

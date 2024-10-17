@@ -4,7 +4,6 @@ from ...EEGModalNet import load_data
 import numpy as np
 import torch
 from torch.autograd import grad
-import pandas as pd
 
 
 # Integrated Gradients function

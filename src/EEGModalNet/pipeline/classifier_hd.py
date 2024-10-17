@@ -16,6 +16,19 @@ from keras import layers
 from keras import regularizers
 import xarray as xr
 import pandas as pd
+import random
+
+
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+# Set seed for reproducibility
+set_seed(42)
 
 
 def load_data(eeg_data_path,
@@ -154,7 +167,7 @@ if __name__ == '__main__':
     channels = ['Oz', 'Fz', 'Cz', 'Pz', 'Fp1', 'Fp2', 'F1', 'F2']
     time_dim = 512
     n_splits = 3
-    n_epochs = 1000
+    n_epochs = 400
     n_subject = 52
     dropout_rate = 0.4
     model_name = 'label_classifier17092024'
@@ -165,10 +178,12 @@ if __name__ == '__main__':
     all_loss = []
     all_val_loss = []
 
-    for i in range(1, 2):
+    for i in range(n_splits):
         print(f'>>>>>> Fold {i+1}')
         model = Critic(feature_dim=len(channels), dropout_rate=dropout_rate)
         model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+        model.train()
+        set_seed(42)
         train_idx, val_idx = train_val_splits[i]
         history = model.fit(X_input_hyp[train_idx].flatten(0, 1), y[train_idx].flatten(0, 1),
                             epochs=n_epochs,

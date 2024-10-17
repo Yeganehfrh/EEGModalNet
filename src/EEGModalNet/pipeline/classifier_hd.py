@@ -113,13 +113,6 @@ class Critic(keras.Model):
         return self.model(inputs)
 
 
-def build_model(time_dim, feature_dim, dropout_rate=0.2):
-    model = Critic(time_dim=time_dim, feature_dim=feature_dim, dropout_rate=dropout_rate)
-
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
-    return model
-
-
 if __name__ == '__main__':
 
     eeg_data_path = 'data/OTKA/experiment_EEG_data.nc5'
@@ -138,10 +131,11 @@ if __name__ == '__main__':
     all_loss = []
     all_val_loss = []
 
-    for i in range(n_splits):
+    for i in range(1, 2):
         print(f'>>>>>> Fold {i+1}')
-        torch.cuda.empty_cache()
-        model = build_model(time_dim, len(channels), dropout_rate=dropout_rate)
+        model = Critic(time_dim=512, feature_dim=len(channels), use_sublayer=False, dropout_rate=dropout_rate)
+        model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+        model.train()
         train_idx, val_idx = train_val_splits[i]
         history = model.fit(X_input_hyp[train_idx].flatten(0, 1), y[train_idx].flatten(0, 1),
                             epochs=n_epochs,

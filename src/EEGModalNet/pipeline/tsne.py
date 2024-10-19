@@ -2,10 +2,11 @@ import os
 os.environ['KERAS_BACKEND'] = 'torch'
 from typing import List
 import numpy as np
+import time
 import torch
 import keras
 import xarray as xr
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 from scipy.signal import butter, sosfilt
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
@@ -59,23 +60,7 @@ def plot_2d_components(x, x_gen, method='pca', plot_name='test'):
     tsne_results = tsne.fit_transform(x_flat_final)
 
     # save the results
-    np.save(f'tsne_results_{plot_name}.npy', tsne_results)
-
-    # Plotting
-    f, ax = plt.subplots(1)
-    colors = ["red" for i in range(sample_len)] + ["blue" for i in range(sample_len)]
-
-    plt.scatter(tsne_results[:sample_len, 0], tsne_results[:sample_len, 1],
-                c=colors[:sample_len], alpha=0.2, label="Original")
-    plt.scatter(tsne_results[sample_len:, 0], tsne_results[sample_len:, 1],
-                c=colors[sample_len:], alpha=0.2, label="Synthetic")
-
-    ax.legend()
-    plt.title(f'{plot_name}')
-    plt.xlabel('x-tsne')
-    plt.ylabel('y_tsne')
-    f.savefig(f'{plot_name}.png')
-    plt.close(f)
+    np.save(f'logs/tsne/tsne_results_{plot_name}.npy', tsne_results)
 
 
 if __name__ == '__main__':
@@ -93,9 +78,12 @@ if __name__ == '__main__':
                       use_channel_merger=False,)
 
     # load the model weights
-    for i in range(20, 100, 20):
+    start = time.time()
+    for i in range(20, 60, 20):
         wgan_gp.load_weights(f'data/logs/O1/O1_09.10.2024_epoch_{i}.model.keras')
 
-        x_gen = wgan_gp.generator(keras.random.normal((len(x), 64), mean_x, std_x), torch.tensor(sub).to('mps'),
+        x_gen = wgan_gp.generator(keras.random.normal((len(x), 64), mean_x, std_x), torch.tensor(sub).to('cuda'),
                                   pos).cpu().detach()
+        print(f'computing tsne for epoch {i}')
         plot_2d_components(x, x_gen, 'tsne', f"Epoch_{i}")
+        print(time.time() - start)

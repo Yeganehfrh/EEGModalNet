@@ -15,4 +15,4 @@
 alias micromamba=~/.local/bin/micromamba
 
 # SECTION Run pipeline
-micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.IG
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.tsne

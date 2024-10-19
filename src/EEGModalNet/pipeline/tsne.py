@@ -6,7 +6,6 @@ import time
 import torch
 import keras
 import xarray as xr
-# from matplotlib import pyplot as plt
 from scipy.signal import butter, sosfilt
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
@@ -47,14 +46,13 @@ def load_data(data_path: str,
     return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
 
 
-def plot_2d_components(x, x_gen, method='pca', plot_name='test'):
-    sample_len = x.shape[0]
+def compute_components(x, x_gen, method='pca', plot_name='test'):
     x_flat = x.mean(axis=2)
     x_flat_hat = x_gen.mean(axis=2)
 
     x_flat_final = np.concatenate((x_flat, x_flat_hat), axis=0)
     if method == 'tsne':
-        tsne = TSNE(n_components=2, verbose=1, perplexity=20)
+        tsne = TSNE(n_components=2, verbose=1, perplexity=20, n_jobs=-1)
     if method == 'pca':
         tsne = PCA(n_components=2)
     tsne_results = tsne.fit_transform(x_flat_final)
@@ -79,11 +77,11 @@ if __name__ == '__main__':
 
     # load the model weights
     start = time.time()
-    for i in range(20, 60, 20):
+    for i in range(20, 1300, 20):
         wgan_gp.load_weights(f'data/logs/O1/O1_09.10.2024_epoch_{i}.model.keras')
 
         x_gen = wgan_gp.generator(keras.random.normal((len(x), 64), mean_x, std_x), torch.tensor(sub).to('cuda'),
                                   pos).cpu().detach()
         print(f'computing tsne for epoch {i}')
-        plot_2d_components(x, x_gen, 'tsne', f"Epoch_{i}")
-        print(time.time() - start)
+        compute_components(x, x_gen, 'tsne', f"Epoch_{i}")
+        print(f'Execution time: {time.time() - start}')

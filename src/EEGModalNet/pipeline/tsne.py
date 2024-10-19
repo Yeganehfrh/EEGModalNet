@@ -80,7 +80,7 @@ if __name__ == '__main__':
     for i in range(20, 1300, 20):
         wgan_gp.load_weights(f'data/logs/O1/O1_09.10.2024_epoch_{i}.model.keras')
 
-        x_gen = wgan_gp.generator(keras.random.normal((len(x), 64), mean_x, std_x), torch.tensor(sub).to('cuda'),
+        x_gen = wgan_gp.generator(keras.random.normal((len(x), 64), mean_x, std_x), torch.tensor(sub).to(x.device),
                                   pos).cpu().detach()
         print(f'computing tsne for epoch {i}')
         compute_components(x, x_gen, 'tsne', f"Epoch_{i}")

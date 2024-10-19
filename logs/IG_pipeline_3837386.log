@@ -1,0 +1,2048 @@
+computing tsne for epoch 20
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.451s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.428911
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 117.411934
+[t-SNE] KL divergence after 1000 iterations: 3.915645
+Execution time: 53.85024952888489
+computing tsne for epoch 40
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.432s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.485360
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 118.650963
+[t-SNE] KL divergence after 1000 iterations: 4.233367
+Execution time: 112.32397627830505
+computing tsne for epoch 60
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.428s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.442770
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 115.064301
+[t-SNE] KL divergence after 1000 iterations: 4.477358
+Execution time: 166.718843460083
+computing tsne for epoch 80
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.433s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.457179
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 117.204254
+[t-SNE] KL divergence after 1000 iterations: 4.514706
+Execution time: 222.2504062652588
+computing tsne for epoch 100
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.434s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.454931
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 119.620667
+[t-SNE] KL divergence after 1000 iterations: 4.172479
+Execution time: 272.3821265697479
+computing tsne for epoch 120
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.441s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.287737
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 107.536011
+[t-SNE] KL divergence after 1000 iterations: 4.574098
+Execution time: 326.9365210533142
+computing tsne for epoch 140
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.432s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.426332
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 113.911255
+[t-SNE] KL divergence after 1000 iterations: 4.566801
+Execution time: 380.83351469039917
+computing tsne for epoch 160
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.441s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.224491
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 106.168282
+[t-SNE] KL divergence after 1000 iterations: 4.499295
+Execution time: 438.06681966781616
+computing tsne for epoch 180
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.431s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.111740
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 106.864677
+[t-SNE] KL divergence after 1000 iterations: 4.598942
+Execution time: 496.9368951320648
+computing tsne for epoch 200
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.460s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.317383
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 107.172272
+[t-SNE] KL divergence after 1000 iterations: 4.406378
+Execution time: 553.1117134094238
+computing tsne for epoch 220
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.462s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.235964
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 105.463524
+[t-SNE] KL divergence after 1000 iterations: 4.039835
+Execution time: 606.4210126399994
+computing tsne for epoch 240
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.472s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.101434
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 102.358170
+[t-SNE] KL divergence after 1000 iterations: 3.929296
+Execution time: 660.4213201999664
+computing tsne for epoch 260
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.470s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.026551
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 106.021355
+[t-SNE] KL divergence after 1000 iterations: 4.404213
+Execution time: 716.183230638504
+computing tsne for epoch 280
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.431s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.104308
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 105.024414
+[t-SNE] KL divergence after 1000 iterations: 4.302206
+Execution time: 771.2468802928925
+computing tsne for epoch 300
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.392s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.269090
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 106.283134
+[t-SNE] KL divergence after 1000 iterations: 4.109870
+Execution time: 827.6472187042236
+computing tsne for epoch 320
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.498s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.170277
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 105.307739
+[t-SNE] KL divergence after 1000 iterations: 3.959905
+Execution time: 884.0011994838715
+computing tsne for epoch 340
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.466s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.348394
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 108.473656
+[t-SNE] KL divergence after 1000 iterations: 4.409218
+Execution time: 939.2159082889557
+computing tsne for epoch 360
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.421s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.324724
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 113.940598
+[t-SNE] KL divergence after 1000 iterations: 4.354923
+Execution time: 993.7374186515808
+computing tsne for epoch 380
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.445s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.452351
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 114.667992
+[t-SNE] KL divergence after 1000 iterations: 4.292082
+Execution time: 1047.0757105350494
+computing tsne for epoch 400
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.515s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.289762
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 113.716644
+[t-SNE] KL divergence after 1000 iterations: 4.485303
+Execution time: 1109.822244644165
+computing tsne for epoch 420
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.431s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.413647
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 120.790298
+[t-SNE] KL divergence after 1000 iterations: 4.442067
+Execution time: 1159.658555984497
+computing tsne for epoch 440
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.462s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.456336
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 114.111282
+[t-SNE] KL divergence after 1000 iterations: 3.974498
+Execution time: 1211.569988489151
+computing tsne for epoch 460
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.448s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.460830
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 115.427948
+[t-SNE] KL divergence after 1000 iterations: 4.173816
+Execution time: 1266.4664053916931
+computing tsne for epoch 480
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.446s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.401033
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 116.426048
+[t-SNE] KL divergence after 1000 iterations: 4.218472
+Execution time: 1320.2001707553864
+computing tsne for epoch 500
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.477s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.297346
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 105.070488
+[t-SNE] KL divergence after 1000 iterations: 4.167250
+Execution time: 1375.6885287761688
+computing tsne for epoch 520
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.473s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.372672
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 110.931541
+[t-SNE] KL divergence after 1000 iterations: 4.109043
+Execution time: 1427.5361738204956
+computing tsne for epoch 540
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.418s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.399920
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 116.201378
+[t-SNE] KL divergence after 1000 iterations: 4.199917
+Execution time: 1481.3168139457703
+computing tsne for epoch 560
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.429s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.471874
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 118.327805
+[t-SNE] KL divergence after 1000 iterations: 4.080389
+Execution time: 1533.7725286483765
+computing tsne for epoch 580
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.456s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.350854
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 111.113914
+[t-SNE] KL divergence after 1000 iterations: 3.990918
+Execution time: 1588.7552545070648
+computing tsne for epoch 600
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.456s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.247256
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 105.898376
+[t-SNE] KL divergence after 1000 iterations: 3.847298
+Execution time: 1640.7320132255554
+computing tsne for epoch 620
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.425s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.164770
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 104.143768
+[t-SNE] KL divergence after 1000 iterations: 3.945030
+Execution time: 1702.0893659591675
+computing tsne for epoch 640
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.439s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.181577
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 104.527481
+[t-SNE] KL divergence after 1000 iterations: 4.069766
+Execution time: 1756.1942110061646
+computing tsne for epoch 660
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.439s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.005804
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 105.582214
+[t-SNE] KL divergence after 1000 iterations: 4.145336
+Execution time: 1809.9797596931458
+computing tsne for epoch 680
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.430s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.441498
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 118.559990
+[t-SNE] KL divergence after 1000 iterations: 3.957090
+Execution time: 1861.6302092075348
+computing tsne for epoch 700
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.449s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.437632
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 112.479660
+[t-SNE] KL divergence after 1000 iterations: 3.918006
+Execution time: 1912.8862907886505
+computing tsne for epoch 720
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.445s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.351938
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 108.722549
+[t-SNE] KL divergence after 1000 iterations: 4.096497
+Execution time: 1971.0246818065643
+computing tsne for epoch 740
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.461s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.105071
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 102.571152
+[t-SNE] KL divergence after 1000 iterations: 4.001546
+Execution time: 2028.160650253296
+computing tsne for epoch 760
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.457s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.086650
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 102.535660
+[t-SNE] KL divergence after 1000 iterations: 4.065145
+Execution time: 2082.3459918498993
+computing tsne for epoch 780
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.450s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.253237
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 103.969391
+[t-SNE] KL divergence after 1000 iterations: 4.083280
+Execution time: 2136.7802662849426
+computing tsne for epoch 800
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.429s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.085068
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 103.253716
+[t-SNE] KL divergence after 1000 iterations: 4.096242
+Execution time: 2190.0660638809204
+computing tsne for epoch 820
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.458s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.421706
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 117.526093
+[t-SNE] KL divergence after 1000 iterations: 4.175655
+Execution time: 2243.288985967636
+computing tsne for epoch 840
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.436s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.310321
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 108.270752
+[t-SNE] KL divergence after 1000 iterations: 4.002222
+Execution time: 2298.6846911907196
+computing tsne for epoch 860
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.451s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.222577
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 114.146088
+[t-SNE] KL divergence after 1000 iterations: 4.151947
+Execution time: 2355.6052849292755
+computing tsne for epoch 880
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.441s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.361221
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 108.143806
+[t-SNE] KL divergence after 1000 iterations: 3.955029
+Execution time: 2414.033460855484
+computing tsne for epoch 900
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.427s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.408742
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 115.675240
+[t-SNE] KL divergence after 1000 iterations: 4.156909
+Execution time: 2473.211799144745
+computing tsne for epoch 920
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.436s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.020865
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 103.025314
+[t-SNE] KL divergence after 1000 iterations: 3.872659
+Execution time: 2532.893438577652
+computing tsne for epoch 940
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.446s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.145962
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 102.635483
+[t-SNE] KL divergence after 1000 iterations: 3.894612
+Execution time: 2586.5018758773804
+computing tsne for epoch 960
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.438s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.434115
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 114.344383
+[t-SNE] KL divergence after 1000 iterations: 3.943827
+Execution time: 2636.9533100128174
+computing tsne for epoch 980
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.457s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.176262
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 101.270775
+[t-SNE] KL divergence after 1000 iterations: 3.740850
+Execution time: 2695.854450941086
+computing tsne for epoch 1000
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.452s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.386429
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 109.087143
+[t-SNE] KL divergence after 1000 iterations: 3.950612
+Execution time: 2751.225522518158
+computing tsne for epoch 1020
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.460s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.312519
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 106.324432
+[t-SNE] KL divergence after 1000 iterations: 3.995383
+Execution time: 2805.636701822281
+computing tsne for epoch 1040
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.396s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.355946
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 106.088997
+[t-SNE] KL divergence after 1000 iterations: 3.973795
+Execution time: 2858.485144138336
+computing tsne for epoch 1060
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.439s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.400155
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 109.049294
+[t-SNE] KL divergence after 1000 iterations: 4.039029
+Execution time: 2918.207980155945
+computing tsne for epoch 1080
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.477s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.006567
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 102.847183
+[t-SNE] KL divergence after 1000 iterations: 3.841732
+Execution time: 2974.7577731609344
+computing tsne for epoch 1100
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.472s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.036935
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 102.545692
+[t-SNE] KL divergence after 1000 iterations: 3.839669
+Execution time: 3033.7824194431305
+computing tsne for epoch 1120
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.471s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.127046
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 101.792648
+[t-SNE] KL divergence after 1000 iterations: 3.830181
+Execution time: 3091.0730531215668
+computing tsne for epoch 1140
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.435s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.394553
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 111.984009
+[t-SNE] KL divergence after 1000 iterations: 3.984076
+Execution time: 3147.250070810318
+computing tsne for epoch 1160
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.010s...
+[t-SNE] Computed neighbors for 23880 samples in 3.437s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.400880
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 111.840942
+[t-SNE] KL divergence after 1000 iterations: 3.992031
+Execution time: 3206.9414372444153
+computing tsne for epoch 1180
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.431s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.473835
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 118.113548
+[t-SNE] KL divergence after 1000 iterations: 4.118748
+Execution time: 3259.61874127388
+computing tsne for epoch 1200
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.461s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.020095
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 102.047226
+[t-SNE] KL divergence after 1000 iterations: 3.898884
+Execution time: 3312.8577094078064
+computing tsne for epoch 1220
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.428s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.284486
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 105.103455
+[t-SNE] KL divergence after 1000 iterations: 4.088590
+Execution time: 3368.7456147670746
+computing tsne for epoch 1240
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.451s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.469231
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 120.593658
+[t-SNE] KL divergence after 1000 iterations: 4.257234
+Execution time: 3421.634653568268
+computing tsne for epoch 1260
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.490s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.086244
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 106.394150
+[t-SNE] KL divergence after 1000 iterations: 4.316193
+Execution time: 3477.6521847248077
+computing tsne for epoch 1280
+[t-SNE] Computing 61 nearest neighbors...
+[t-SNE] Indexed 23880 samples in 0.011s...
+[t-SNE] Computed neighbors for 23880 samples in 3.452s...
+[t-SNE] Computed conditional probabilities for sample 1000 / 23880
+[t-SNE] Computed conditional probabilities for sample 2000 / 23880
+[t-SNE] Computed conditional probabilities for sample 3000 / 23880
+[t-SNE] Computed conditional probabilities for sample 4000 / 23880
+[t-SNE] Computed conditional probabilities for sample 5000 / 23880
+[t-SNE] Computed conditional probabilities for sample 6000 / 23880
+[t-SNE] Computed conditional probabilities for sample 7000 / 23880
+[t-SNE] Computed conditional probabilities for sample 8000 / 23880
+[t-SNE] Computed conditional probabilities for sample 9000 / 23880
+[t-SNE] Computed conditional probabilities for sample 10000 / 23880
+[t-SNE] Computed conditional probabilities for sample 11000 / 23880
+[t-SNE] Computed conditional probabilities for sample 12000 / 23880
+[t-SNE] Computed conditional probabilities for sample 13000 / 23880
+[t-SNE] Computed conditional probabilities for sample 14000 / 23880
+[t-SNE] Computed conditional probabilities for sample 15000 / 23880
+[t-SNE] Computed conditional probabilities for sample 16000 / 23880
+[t-SNE] Computed conditional probabilities for sample 17000 / 23880
+[t-SNE] Computed conditional probabilities for sample 18000 / 23880
+[t-SNE] Computed conditional probabilities for sample 19000 / 23880
+[t-SNE] Computed conditional probabilities for sample 20000 / 23880
+[t-SNE] Computed conditional probabilities for sample 21000 / 23880
+[t-SNE] Computed conditional probabilities for sample 22000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23000 / 23880
+[t-SNE] Computed conditional probabilities for sample 23880 / 23880
+[t-SNE] Mean sigma: 0.343360
+[t-SNE] KL divergence after 250 iterations with early exaggeration: 109.064720
+[t-SNE] KL divergence after 1000 iterations: 4.295325
+Execution time: 3533.4448087215424

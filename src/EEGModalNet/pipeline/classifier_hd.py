@@ -62,7 +62,7 @@ def load_data(eeg_data_path,
                                                                         'cluster_small']].set_index('bids_id')
         X_input_hyp = np.zeros([52, 2, len(channels), X_input.shape[-1]])
         for i in range(X_input.shape[0]):
-            ses = session_data.loc[i+1, 'session'].values - 1
+            ses = session_data.loc[i + 1, 'session'].values - 1
             X_input_hyp[i] = X_input[i, ses, :, :]
         X_input = X_input_hyp
         del X_input_hyp

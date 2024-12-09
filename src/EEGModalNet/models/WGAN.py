@@ -177,7 +177,7 @@ class WGAN_GP(keras.Model):
         #         gradient_norms.append(p.grad.norm().item())
 
         # Train the critic more frequently than the generator
-        critic_updates = 5  # Set the number of critic updates per generator update
+        critic_updates = 3  # Set the number of critic updates per generator update
 
         for _ in range(critic_updates):
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)

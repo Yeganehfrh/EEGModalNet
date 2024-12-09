@@ -41,3 +41,13 @@ class ProgressBarCallback(keras.callbacks.Callback):
 
     def on_train_end(self, logs=None):
         self.pbar.reset()
+
+
+class StepLossHistory(keras.callbacks.Callback):
+    def on_train_begin(self, logs=None):
+        self.step_losses = {'g_loss': [], 'd_loss': []}
+
+    def on_train_batch_end(self, batch, logs=None):
+        logs = logs or {}
+        self.step_losses['g_loss'].append(logs.get('g_loss'))
+        self.step_losses['d_loss'].append(logs.get('d_loss'))

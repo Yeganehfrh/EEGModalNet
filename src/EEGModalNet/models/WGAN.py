@@ -66,13 +66,14 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=(latent_dim,)),
-            layers.Dense(128 * 1, kernel_initializer=kerner_initializer),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Dense(256 * 1, kernel_initializer=kerner_initializer),
-            layers.LeakyReLU(negative_slope=self.negative_slope),
-            layers.Reshape((256, 1)),
-            *convBlock([1, 1], [3, 5], [1, 1], 1, 'same', interpolation, 0.2, kerner_initializer, True),  # TODO: convert to keyword arguments to aviod any potential bug
+            layers.Dense(128 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
+            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
+            layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
+            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
+            layers.Reshape((256, 1), name='gen_layer5'),
+            *convBlock([1, 1, 1], [3, 3, 5], [1, 0, 1], 1, 'same', interpolation, 0.2, kerner_initializer, True),  # TODO: convert to keyword arguments to aviod any potential bug
             layers.Conv1D(feature_dim, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
+            # layers.LeakyReLU(negative_slope=0.2, name='last_act_lyr'),
             layers.Reshape(self.input_shape)
         ], name='generator')
 
@@ -108,7 +109,7 @@ class WGAN_GP(keras.Model):
         self.seed_generator = keras.random.SeedGenerator(42)
         # self.critic_updates = critic_updates
 
-        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,
+        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,  # TODO: use keyword arguments to avoid any potential bug
                                    kerner_initializer, n_subjects, use_channel_merger=use_channel_merger,
                                    interpolation=interpolation)
         self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer_critic,)

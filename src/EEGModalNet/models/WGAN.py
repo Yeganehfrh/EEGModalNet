@@ -94,6 +94,7 @@ class WGAN_GP(keras.Model):
                  emb_dim=20, kerner_initializer='glorot_uniform',
                  use_channel_merger=False,
                  interpolation='bilinear',
+                 critic_updates=3,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
@@ -104,6 +105,7 @@ class WGAN_GP(keras.Model):
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
+        self.critic_updates = critic_updates
 
         self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,
                                    kerner_initializer, n_subjects, use_channel_merger=use_channel_merger,
@@ -156,30 +158,8 @@ class WGAN_GP(keras.Model):
         mean = real_data.mean()
         std = real_data.std()
 
-        # # train critic
-        # noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-        # fake_data = self.generator(noise, sub, pos).detach()  # TODO: consider using random labels
-        # real_pred = self.critic(real_data, sub)
-        # fake_pred = self.critic(fake_data, sub)
-        # gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
-        # self.zero_grad()
-        # d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        # d_loss.backward()
-
-        # grads = [v.value.grad for v in self.critic.trainable_weights]
-        # with torch.no_grad():
-        #     self.d_optimizer.apply(grads, self.critic.trainable_weights)
-
-        # # monitor gradient norms to ensure a stable training
-        # gradient_norms = []
-        # for p in self.critic.parameters():
-        #     if p.grad is not None:
-        #         gradient_norms.append(p.grad.norm().item())
-
-        # Train the critic more frequently than the generator
-        critic_updates = 3  # Set the number of critic updates per generator update
-
-        for _ in range(critic_updates):
+        # train critic
+        for _ in range(self.critic_updates):  # how many times to update critic per generator update
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
             fake_data = self.generator(noise, sub, pos).detach()
             real_pred = self.critic(real_data, sub)
@@ -193,11 +173,11 @@ class WGAN_GP(keras.Model):
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
-            # Monitor gradient norms
-            gradient_norms = []
-            for p in self.critic.parameters():
-                if p.grad is not None:
-                    gradient_norms.append(p.grad.norm().item())
+        # Monitor gradient norms
+        gradient_norms = []
+        for p in self.critic.parameters():
+            if p.grad is not None:
+                gradient_norms.append(p.grad.norm().item())
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
@@ -219,4 +199,6 @@ class WGAN_GP(keras.Model):
             'd_loss': self.d_loss_tracker.result(),
             'g_loss': self.g_loss_tracker.result(),
             'critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
+            '_real_pred': real_pred.mean().item(),
+            '_fake_pred': fake_pred.mean().item()
         }

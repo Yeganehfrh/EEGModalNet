@@ -2,6 +2,7 @@ import torch
 from keras import layers
 import keras
 from .common import SubjectLayers_v2, SubjectLayers, convBlock, ChannelMerger, ResidualBlock
+from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
 class Critic(keras.Model):
@@ -94,7 +95,7 @@ class WGAN_GP(keras.Model):
                  emb_dim=20, kerner_initializer='glorot_uniform',
                  use_channel_merger=False,
                  interpolation='bilinear',
-                 critic_updates=3,
+                #  critic_updates=3,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
@@ -105,7 +106,7 @@ class WGAN_GP(keras.Model):
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
-        self.critic_updates = critic_updates
+        # self.critic_updates = critic_updates
 
         self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,
                                    kerner_initializer, n_subjects, use_channel_merger=use_channel_merger,
@@ -159,7 +160,7 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        for _ in range(self.critic_updates):  # how many times to update critic per generator update
+        for _ in range(1):  # how many times to update critic per generator update
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
             fake_data = self.generator(noise, sub, pos).detach()
             real_pred = self.critic(real_data, sub)
@@ -186,7 +187,8 @@ class WGAN_GP(keras.Model):
         random_sub = torch.randint(0, sub.max().item(), (batch_size, 1)).to(real_data.device)  # TODO: change it back to real labels if necessary
         x_gen = self.generator(noise, random_sub, pos)  # TODO: consider using random positions
         fake_pred = self.critic(x_gen, random_sub)
-        g_loss = -fake_pred.mean()
+        spectral_regularization_loss_value = spectral_regularization_loss(real_data, x_gen)
+        g_loss = -fake_pred.mean() + spectral_regularization_loss_value
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():

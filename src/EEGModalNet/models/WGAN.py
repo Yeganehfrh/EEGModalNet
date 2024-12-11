@@ -11,6 +11,7 @@ class Critic(keras.Model):
 
         self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
+        dropout_rate = 0.2
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
@@ -23,16 +24,16 @@ class Critic(keras.Model):
             layers.Flatten(name='dis_flatten'),
             layers.Dense(512, name='dis_dense1'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(0.2),
+            layers.Dropout(dropout_rate),
             layers.Dense(128, name='dis_dense2'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(0.2),
+            layers.Dropout(dropout_rate),
             layers.Dense(32, name='dis_dense3'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(0.2),
+            layers.Dropout(dropout_rate),
             layers.Dense(8, name='dis_dense4'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(0.2),
+            layers.Dropout(dropout_rate),
             layers.Dense(1, name='dis_dense5')
         ], name='critic')
 
@@ -65,16 +66,22 @@ class Generator(keras.Model):
             )
 
         self.model = keras.Sequential([
-            keras.Input(shape=(latent_dim,)),
+            keras.Input(shape=((latent_dim,))),
             layers.Dense(128 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
-            layers.Reshape((256, 1), name='gen_layer5'),
-            *convBlock([1, 1, 1], [3, 3, 5], [1, 0, 1], 1, 'same', interpolation, 0.2, kerner_initializer, True),  # TODO: convert to keyword arguments to aviod any potential bug
-            layers.Conv1D(feature_dim, 7, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer),
-            # layers.LeakyReLU(negative_slope=0.2, name='last_act_lyr'),
-            layers.Reshape(self.input_shape)
+            layers.Reshape((32, 8), name='gen_layer9'),
+            *convBlock(filters=4*[8],
+                       kernel_sizes=[15, 9, 7, 5],
+                       upsampling=4*[1],
+                       stride=1,
+                       padding='same',
+                       interpolation=interpolation,
+                       negative_slope=0.2,
+                       kernel_initializer=kerner_initializer,
+                       batch_norm=True),
+            layers.Conv1D(feature_dim, 3, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer)
         ], name='generator')
 
         self.built = True

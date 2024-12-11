@@ -93,7 +93,7 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/O1_11.12.2024/'
+    output_path = 'logs/outputs/O1_11.12.2024'
 
     model, _ = run(data,
                    n_subjects=n_subs,

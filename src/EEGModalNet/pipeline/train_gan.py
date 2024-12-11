@@ -90,7 +90,7 @@ def run(data,
 
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
-                             n_subjects=202, channels=['O1'], highpass_filter=1,
+                             n_subjects=202, channels=['O1'], highpass_filter=1, time_dim=512,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
     output_path = 'logs/outputs/O1_11.12.2024'

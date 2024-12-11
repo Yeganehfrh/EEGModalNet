@@ -99,7 +99,7 @@ if __name__ == '__main__':
                    n_subjects=n_subs,
                    max_epochs=2000,
                    latent_dim=64,
-                   cvloger_path=f'history_{output_path}.csv',
+                   cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=False,
                    reuse_model_path=None)

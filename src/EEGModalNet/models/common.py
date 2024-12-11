@@ -11,9 +11,9 @@ from keras import layers, Layer, regularizers, ops
 class ResidualBlock(layers.Layer):
     def __init__(self, filters, kernel_size, activation='relu', **kwargs):
         super(ResidualBlock, self).__init__(**kwargs)
-        self.conv1 = layers.Conv1D(filters, kernel_size, padding='same', activation=activation)
-        self.conv2 = layers.Conv1D(filters // 2, kernel_size, padding='same', activation=activation,)
-        self.conv3 = layers.Conv1D(filters // 4, kernel_size, padding='same')
+        self.conv1 = layers.Conv1D(filters, 3, padding='same', activation=activation)
+        self.conv2 = layers.Conv1D(filters, 5, padding='same', activation=activation, dilation_rate=2)
+        self.conv3 = layers.Conv1D(filters, 7, padding='same')
         self.activation = layers.Activation(activation)
 
     def call(self, inputs):

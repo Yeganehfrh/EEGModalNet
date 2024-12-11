@@ -58,7 +58,7 @@ def run(data,
 
     # reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
 
-    model = WGAN_GP(time_dim=1024, feature_dim=1,
+    model = WGAN_GP(time_dim=512, feature_dim=1,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
@@ -70,9 +70,9 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    model.compile(d_optimizer=keras.optimizers.Adam(0.0001, beta_1=0.5, beta_2=0.9),
-                  g_optimizer=keras.optimizers.Adam(0.001, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=1.0)
+    model.compile(d_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
+                  g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
+                  gradient_penalty_weight=5.0)
 
     history = model.fit(data,
                         batch_size=64,
@@ -93,13 +93,13 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/O1/O1_09.10.2024'
+    output_path = 'logs/outputs/O1/O1_11.12.2024'
 
     model, _ = run(data,
                    n_subjects=n_subs,
                    max_epochs=2000,
                    latent_dim=64,
-                   cvloger_path=f'{output_path}.csv',
+                   cvloger_path=f'history_{output_path}.csv',
                    model_path=output_path,
                    reuse_model=False,
                    reuse_model_path=None)

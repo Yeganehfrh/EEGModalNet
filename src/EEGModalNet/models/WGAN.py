@@ -18,7 +18,7 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(8, 5, activation='relu'),
+            ResidualBlock(8, 5, activation='relu'),  # TODO: update kernel size argument
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
@@ -103,7 +103,6 @@ class WGAN_GP(keras.Model):
                  emb_dim=20, kerner_initializer='glorot_uniform',
                  use_channel_merger=False,
                  interpolation='bilinear',
-                #  critic_updates=3,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time = time_dim
@@ -168,7 +167,7 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        for _ in range(1):  # how many times to update critic per generator update
+        for _ in range(2):  # how many times to update critic per generator update
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
             fake_data = self.generator(noise, sub, pos).detach()
             real_pred = self.critic(real_data, sub)
@@ -195,7 +194,7 @@ class WGAN_GP(keras.Model):
         random_sub = torch.randint(0, sub.max().item(), (batch_size, 1)).to(real_data.device)  # TODO: change it back to real labels if necessary
         x_gen = self.generator(noise, random_sub, pos)  # TODO: consider using random positions
         fake_pred = self.critic(x_gen, random_sub)
-        spectral_regularization_loss_value = spectral_regularization_loss(real_data, x_gen)
+        spectral_regularization_loss_value = spectral_regularization_loss(real_data, x_gen, include_smooth=False)
         g_loss = -fake_pred.mean() + spectral_regularization_loss_value
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]

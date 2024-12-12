@@ -45,7 +45,7 @@ def load_data(data_path: str,
     ch_ind = find_channel_ids(xarray, channels)
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
 
-    return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
+    return {'x': x[:16384], 'sub': sub[:16384], 'pos': pos[:16384]}, n_subjects  # TODO: remove the limit, it's for testing
 
 
 def run(data,
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
     output_path = 'logs/outputs/multiprocessing_test'
 
-    n_cpus = 128
+    n_cpus = 256
     mp.spawn(train_worker,
              args=(data, n_subs, 2000, 64, f'{output_path}.csv', output_path, False, None),
              nprocs=n_cpus,

@@ -3,7 +3,7 @@
 #SBATCH --job-name=train_classifier
 #SBATCH --chdir=//work/projects/acnets/EEGModalNet/
 #SBATCH --partition=batch
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --ntasks=1
 #SBATCH --mem=16GB
 #SBATCH --time=12:00:00

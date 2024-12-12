@@ -3,6 +3,7 @@ os.environ['KERAS_BACKEND'] = 'torch'
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
+import torch.multiprocessing as mp
 import keras
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import ProgressBarCallback, CustomModelCheckpoint
@@ -56,8 +57,6 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    # reusable_pbar = tqdm(total=max_epochs, unit='epoch', leave=False, dynamic_ncols=True)
-
     model = WGAN_GP(time_dim=512, feature_dim=1,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
@@ -83,9 +82,13 @@ def run(data,
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
-                            # ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
     return model, history
+
+
+def train_worker(rank, data, n_subjects, max_epochs, latent_dim, cvloger_path, model_path, reuse_model, reuse_model_path):
+    torch.set_num_threads(1)  # Limit each worker to a single thread
+    run(data, n_subjects, max_epochs, latent_dim, cvloger_path, model_path, reuse_model, reuse_model_path)
 
 
 if __name__ == '__main__':
@@ -93,16 +96,10 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1, time_dim=512,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    output_path = 'logs/outputs/O1_11.12.2024'
+    output_path = 'logs/outputs/multiprocessing_test'
 
-    model, _ = run(data,
-                   n_subjects=n_subs,
-                   max_epochs=2000,
-                   latent_dim=64,
-                   cvloger_path=f'{output_path}.csv',
-                   model_path=output_path,
-                   reuse_model=False,
-                   reuse_model_path=None)
-
-    # backup
-    model.save(f'{output_path}_final.keras')
+    n_cpus = 128
+    mp.spawn(train_worker,
+             args=(data, n_subs, 2000, 64, f'{output_path}.csv', output_path, False, None),
+             nprocs=n_cpus,
+             join=True)

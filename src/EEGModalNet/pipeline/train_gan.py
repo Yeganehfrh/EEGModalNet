@@ -45,7 +45,7 @@ def load_data(data_path: str,
     ch_ind = find_channel_ids(xarray, channels)
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
 
-    return {'x': x[:16384], 'sub': sub[:16384], 'pos': pos[:16384]}, n_subjects  # TODO: remove the limit, it's for testing
+    return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
 
 
 def run(data,

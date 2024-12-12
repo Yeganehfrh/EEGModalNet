@@ -5,3 +5,5 @@ __pycache__/
 lightning_logs/
 tmp/
 src/archived/
+logs/outputs/O1_11.12.2024/
+logs/label_classifier_old_doc/

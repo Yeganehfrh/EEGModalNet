@@ -1,9 +1,0 @@
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/mnt/aiongpfs/projects/acnets/EEGModalNet/src/EEGModalNet/pipeline/tsne.py", line 83, in <module>
-    x_gen = wgan_gp.generator(keras.random.normal((len(x), 64), mean_x, std_x), torch.tensor(sub).to('cuda'),
-                                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/mnt/aiongpfs/users/mansarinia/micromamba/envs/EEGModalNet/lib/python3.12/site-packages/torch/cuda/__init__.py", line 314, in _lazy_init
-    torch._C._cuda_init()
-RuntimeError: Found no NVIDIA driver on your system. Please check that you have an NVIDIA GPU and installed a driver from http://www.nvidia.com/Download/index.aspx

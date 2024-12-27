@@ -66,12 +66,14 @@ def run(rank,
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
 
-    device = torch.device("cuda:{}".format(rank) if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:{}".format(rank))
+    print(torch.cuda.is_available())
 
     # Initialize the process group
     dist.init_process_group(rank=rank, world_size=world_size)
-
+    print('initializing...')
     torch.cuda.set_device(device)
+    print('set the device')
 
     model = WGAN_GP(time_dim=512, feature_dim=1,
                     latent_dim=latent_dim, n_subjects=n_subjects,
@@ -116,7 +118,8 @@ if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                              n_subjects=34, channels=['O1'], highpass_filter=1, time_dim=512,  # TODO: n_subjects=202
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
-
+    num_gpu = torch.cuda.device_count()
+    print(f'Running on {num_gpu} GPUs')
     dataset = TensorDataset(data['x'], data['sub'], data['pos'])
 
     output_path = 'logs/outputs/multiprocessing_test'

@@ -2,11 +2,11 @@
 
 #SBATCH --job-name=train_gan
 #SBATCH --chdir=//work/projects/acnets/EEGModalNet/
-#SBATCH --partition=batch
+#SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem=16GB
-#SBATCH --time=12:00:00
+#SBATCH --time=1:00:00
+#SBATCH --gres=gpu:1
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --mail-type=ALL

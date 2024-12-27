@@ -27,14 +27,16 @@ def run(rank, world_size, data, max_epochs):
     # Initialize the process group
     dist.init_process_group("gloo", rank=rank, world_size=world_size)
 
+    torch.device('cpu')
+
     # Create the model and move it to the appropriate device
-    model = SimpleModel()
-    model = DDP(model)
+    model = SimpleModel()  # SimpleModel().to(rank)
+    model = DDP(model)  # device_ids=[rank]
 
     # Create the dataset and dataloader
     dataset = TensorDataset(*data)
     sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank)
-    dataloader = DataLoader(dataset, batch_size=256, sampler=sampler, num_workers=4)
+    dataloader = DataLoader(dataset, batch_size=128, sampler=sampler, num_workers=4)
 
     # Training loop
     for epoch in range(max_epochs):
@@ -58,19 +60,20 @@ def train_worker(rank, world_size, data, max_epochs):
 
 
 def main():
-    data = (torch.randn(1024*4, 10), torch.randn(1024*4, 1))
+    data = (torch.randn(1024*8, 10), torch.randn(1024*8, 1))
 
-    n_cpus = 4
-    world_size = n_cpus
+    world_size = int(os.environ['SLURM_NTASKS'])
+    max_epochs = 16
+    # rank = int(os.environ['SLURM_PROCID'])
 
     start_time = time.time()
     mp.spawn(train_worker,
-             args=(world_size, data, 10),
-             nprocs=n_cpus,
+             args=(world_size, data, max_epochs),
+             nprocs=world_size,
              join=True)
 
     end_time = time.time()
-    print(f"Training time with {n_cpus} CPUs: {end_time - start_time} seconds")
+    print(f"Training time with {world_size} CPUs: {end_time - start_time} seconds")
 
 
 if __name__ == '__main__':

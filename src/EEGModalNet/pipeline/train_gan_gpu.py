@@ -45,9 +45,9 @@ def load_data(data_path: str,
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
-    data['x'] = data['x'].to(device)
-    data['sub'] = data['sub'].to(device)
-    data['pos'] = data['pos'].to(device)
+    x = x.to(device)
+    sub = torch.tensor(sub).to(device)
+    pos = torch.tensor(pos).to(device)
 
     return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
 
@@ -81,8 +81,9 @@ def run(data,
                   g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
+    print(next(model.parameters()).device)
     history = model.fit(data,
-                        batch_size=64,
+                        batch_size=128,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
@@ -92,13 +93,14 @@ def run(data,
                             keras.callbacks.CSVLogger(cvloger_path),
                             # ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
+    print(next(model.parameters()).device)
     return model, history
 
 
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                              n_subjects=202, channels=['O1'], highpass_filter=1, time_dim=512,
-                             exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
+                             exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])  #TODO: subject=202
 
     print(torch.cuda.is_available())
     print(torch.cuda.current_device())
@@ -107,7 +109,7 @@ if __name__ == '__main__':
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=2000,
+                   max_epochs=2,
                    latent_dim=64,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,

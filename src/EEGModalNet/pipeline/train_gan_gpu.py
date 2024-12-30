@@ -4,9 +4,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
+keras.mixed_precision.set_global_policy('mixed_float16')
 from ...EEGModalNet import WGAN_GP
-from ...EEGModalNet import ProgressBarCallback, CustomModelCheckpoint
-from tqdm.auto import tqdm
+from ...EEGModalNet import CustomModelCheckpoint
 from typing import List
 import numpy as np
 import xarray as xr
@@ -44,7 +44,7 @@ def load_data(data_path: str,
     ch_ind = find_channel_ids(xarray, channels)
     pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)
+    print(f'>>>> Data is on {device}')
     x = x.to(device)
     sub = torch.tensor(sub).to(device)
     pos = torch.tensor(pos).to(device)
@@ -56,6 +56,7 @@ def run(data,
         n_subjects,
         max_epochs=100_000,
         latent_dim=64,
+        batch_size=64,
         cvloger_path='tmp/tmp/simple_gan_v1.csv',
         model_path='tmp/tmp/wgan_v2.model.keras',
         reuse_model=False,
@@ -68,10 +69,15 @@ def run(data,
                     use_channel_merger=False,
                     kerner_initializer='random_normal',
                     interpolation='bilinear')
-    
+
+    print(f'Critics first layer input dtype {model.critic.model.layers[0].input.dtype}')
+    print(f'Generator first layer input dtype {model.generator.model.layers[0].input.dtype}')
+    print(f'Critics last layer output dtype {model.critic.model.layers[-1].output.dtype}')
+    print(f'Generator last layer output dtype {model.generator.model.layers[-1].output.dtype}')
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(device)
     model.to(device)
+    print(f'>>>> Model is on {device}')
 
     if reuse_model:
         print(reuse_model_path)
@@ -81,9 +87,9 @@ def run(data,
                   g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
-    print(next(model.parameters()).device)
+    print(f'>>>> Model parameters: {next(model.parameters()).device}')
     history = model.fit(data,
-                        batch_size=128,
+                        batch_size=batch_size,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
@@ -91,8 +97,13 @@ def run(data,
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
-                            # ProgressBarCallback(n_epochs=max_epochs, n_runs=1, run_index=0, reusable_pbar=reusable_pbar),
                         ])
+    print('>>>>>>>>>>. Model is trained')
+    print(f'Critics first layer input dtype {model.critic.model.layers[0].input.dtype}')
+    print(f'Generator first layer input dtype {model.generator.model.layers[0].input.dtype}')
+    print(f'Critics last layer output dtype {model.critic.model.layers[-1].output.dtype}')
+    print(f'Generator last layer output dtype {model.generator.model.layers[-1].output.dtype}')
+
     print(next(model.parameters()).device)
     return model, history
 
@@ -100,17 +111,18 @@ def run(data,
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                              n_subjects=202, channels=['O1'], highpass_filter=1, time_dim=512,
-                             exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])  #TODO: subject=202
+                             exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    print(torch.cuda.is_available())
-    print(torch.cuda.current_device())
+    print('GPU is available') if torch.cuda.is_available() else print('GPU is NOT available')
+    print(f'Running on {torch.cuda.device_count()} GPUs')
 
     output_path = 'logs/test_30.12.2024'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=2,
+                   max_epochs=10,
                    latent_dim=64,
+                   batch_size=256,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=False,

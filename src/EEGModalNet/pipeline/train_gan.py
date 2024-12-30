@@ -1,6 +1,6 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import torch.multiprocessing as mp

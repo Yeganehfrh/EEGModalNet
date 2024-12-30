@@ -94,8 +94,8 @@ def run(data,
                         shuffle=True,
                         callbacks=[
                             CustomModelCheckpoint(model_path, save_freq=20),
-                            keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.keras', monitor='g_loss', save_best_only=True),
-                            keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.keras', monitor='d_loss', save_best_only=True),
+                            keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
+                            keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
                         ])
     print('>>>>>>>>>>. Model is trained')
@@ -122,11 +122,11 @@ if __name__ == '__main__':
                    n_subjects=n_subs,
                    max_epochs=10,
                    latent_dim=64,
-                   batch_size=256,
+                   batch_size=128,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=False,
                    reuse_model_path=None)
 
     # backup
-    model.save(f'{output_path}_final.keras')
+    model.save(f'{output_path}_final.keras')  # TODO: FIX. for text to see if .keras or .model.keras has to be used

@@ -73,11 +73,6 @@ def run(data,
                     kerner_initializer='random_normal',
                     interpolation='bilinear')
 
-    print(f'Critics first layer input dtype {model.critic.model.layers[0].input.dtype}')
-    print(f'Generator first layer input dtype {model.generator.model.layers[0].input.dtype}')
-    print(f'Critics last layer output dtype {model.critic.model.layers[-1].output.dtype}')
-    print(f'Generator last layer output dtype {model.generator.model.layers[-1].output.dtype}')
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print(f'>>>> Model is on {device}')
@@ -90,7 +85,6 @@ def run(data,
                   g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
-    print(f'>>>> Model parameters: {next(model.parameters()).device}')
     history = model.fit(data,
                         batch_size=batch_size,
                         epochs=max_epochs,
@@ -101,13 +95,7 @@ def run(data,
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
                         ])
-    print('>>>>>>>>>>. Model is trained')
-    print(f'Critics first layer input dtype {model.critic.model.layers[0].input.dtype}')
-    print(f'Generator first layer input dtype {model.generator.model.layers[0].input.dtype}')
-    print(f'Critics last layer output dtype {model.critic.model.layers[-1].output.dtype}')
-    print(f'Generator last layer output dtype {model.generator.model.layers[-1].output.dtype}')
 
-    print(next(model.parameters()).device)
     return model, history
 
 
@@ -116,8 +104,18 @@ if __name__ == '__main__':
                              n_subjects=202, channels=['O1'], highpass_filter=1, time_dim=512,
                              exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
 
-    print('GPU is available') if torch.cuda.is_available() else print('GPU is NOT available')
+    if torch.cuda.is_available():
+        print('GPU is available')
+        torch.cuda.current_device()
+    else:
+        print('GPU is not available!!')
+        exit()
+
     print(f'Running on {torch.cuda.device_count()} GPUs')
+    print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
+
+    # preload CUDA libraries with a dummy tensor
+    _ = torch.randn(1, device="cuda")
 
     output_path = 'logs/test_30.12.2024'
 

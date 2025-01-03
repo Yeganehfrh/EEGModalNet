@@ -130,4 +130,4 @@ if __name__ == '__main__':
                    reuse_model_path=None)
 
     # backup
-    model.save(f'{output_path}_final.keras')  # TODO: FIX. for text to see if .keras or .model.keras has to be used
+    model.save(f'{output_path}_final.model.keras')

@@ -142,7 +142,7 @@ class WGAN_GP(keras.Model):
 
     def gradient_penalty(self, real_data, fake_data, sub):
         batch_size = real_data.size(0)
-        epsilon = torch.rand(batch_size, 1, 1)
+        epsilon = torch.rand(batch_size, 1, 1, device=real_data.device)
         interpolated = epsilon * real_data + (1 - epsilon) * fake_data
         interpolated.requires_grad_(True)
 
@@ -151,7 +151,7 @@ class WGAN_GP(keras.Model):
         gradients = torch.autograd.grad(
             outputs=prob_interpolated,
             inputs=interpolated,
-            grad_outputs=torch.ones(prob_interpolated.size()),
+            grad_outputs=torch.ones(prob_interpolated.size(), device=real_data.device),
             create_graph=True,
             retain_graph=True,
         )[0]

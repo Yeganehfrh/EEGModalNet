@@ -37,11 +37,12 @@ def load_data(data_path: str,
         sos = butter(4, highpass_filter, btype='high', fs=128, output='sos')
         x = sosfilt(sos, x, axis=-1)
 
-    x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis])
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    x = torch.tensor(x, device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
     ch_ind = find_channel_ids(xarray, channels)
-    pos = torch.tensor(xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0))
+    pos = torch.tensor(xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0), device=device)
 
     # Custom collate_fn to transfer tensors to the GPU
     def collate_fn(batch):
@@ -50,7 +51,9 @@ def load_data(data_path: str,
         return x.to(device), sub.to(device), pos.to(device)
 
     data = TensorDataset(x, sub, pos)
-    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0, pin_memory=True, collate_fn=collate_fn)
+    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0,
+                      # pin_memory=True, collate_fn=collate_fn
+                      )
 
     return data, n_subjects
 

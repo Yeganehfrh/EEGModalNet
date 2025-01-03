@@ -4,6 +4,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
+from torch.utils.data import DataLoader, TensorDataset
 keras.mixed_precision.set_global_policy('mixed_float16')
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import CustomModelCheckpoint
@@ -48,8 +49,10 @@ def load_data(data_path: str,
     x = x.to(device)
     sub = torch.tensor(sub).to(device)
     pos = torch.tensor(pos).to(device)
+    data = TensorDataset(x, sub, pos)
+    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0, pin_memory=True)
 
-    return {'x': x, 'sub': sub, 'pos': pos}, n_subjects
+    return data, n_subjects
 
 
 def run(data,

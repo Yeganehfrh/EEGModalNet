@@ -5,7 +5,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import torch
 import keras
 from torch.utils.data import DataLoader, TensorDataset
-keras.mixed_precision.set_global_policy('mixed_float16')
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import CustomModelCheckpoint
 from typing import List
@@ -39,18 +38,19 @@ def load_data(data_path: str,
         x = sosfilt(sos, x, axis=-1)
 
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
-
-    sub = np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis]
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis])
 
     ch_ind = find_channel_ids(xarray, channels)
-    pos = xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f'>>>> Data is on {device}')
-    x = x.to(device)
-    sub = torch.tensor(sub).to(device)
-    pos = torch.tensor(pos).to(device)
+    pos = torch.tensor(xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0))
+
+    # Custom collate_fn to transfer tensors to the GPU
+    def collate_fn(batch):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        x, sub, pos = batch
+        return x.to(device), sub.to(device), pos.to(device)
+
     data = TensorDataset(x, sub, pos)
-    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0, pin_memory=False)
+    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0, pin_memory=True, collate_fn=collate_fn)
 
     return data, n_subjects
 
@@ -85,6 +85,8 @@ def run(data,
                   g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
+    torch.cuda.synchronize()  # wait for model to be loaded
+
     history = model.fit(data,
                         batch_size=batch_size,
                         epochs=max_epochs,
@@ -114,8 +116,14 @@ if __name__ == '__main__':
     print(f'Running on {torch.cuda.device_count()} GPUs')
     print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
 
+    # Explicitly set the CUDA device
+    torch.cuda.set_device(0)
+
     # preload CUDA libraries with a dummy tensor
     _ = torch.randn(1, device="cuda")
+
+    # Apply mixed precision policy
+    keras.mixed_precision.set_global_policy('mixed_float16')
 
     output_path = 'logs/test_30.12.2024'
 

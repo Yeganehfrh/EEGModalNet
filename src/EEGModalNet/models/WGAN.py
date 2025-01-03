@@ -195,9 +195,9 @@ class WGAN_GP(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
 
         self.zero_grad()
-        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1)).to(real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator(noise, random_sub, pos)  # TODO: consider using random positions
-        fake_pred = self.critic(x_gen, random_sub)
+        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1)).to(real_data.device)  # TODO: change it back to real labels if necessary
+        x_gen = self.generator(noise, sub, pos)  # TODO: consider using random positions
+        fake_pred = self.critic(x_gen, sub)
         spectral_regularization_loss_value = spectral_regularization_loss(real_data, x_gen, include_smooth=True)
         g_loss = -fake_pred.mean() + spectral_regularization_loss_value
         g_loss.backward()

@@ -72,9 +72,9 @@ class Generator(keras.Model):
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
             layers.Reshape((32, 8), name='gen_layer9'),
-            *convBlock(filters=4*[8],
+            *convBlock(filters=4 * [8],
                        kernel_sizes=[15, 9, 7, 5],
-                       upsampling=4*[1],
+                       upsampling=4 * [1],
                        stride=1,
                        padding='same',
                        interpolation=interpolation,
@@ -91,6 +91,8 @@ class Generator(keras.Model):
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
+            if x.device != sub_labels.device:
+                sub_labels = sub_labels.to(x.device)
             x = self.sub_layer(x.permute(0, 2, 1), sub_labels)  # TODO: this layer can be used before or after data generation
         return x.permute(0, 2, 1)
 
@@ -155,31 +157,33 @@ class WGAN_GP(keras.Model):
             create_graph=True,
             retain_graph=True,
         )[0]
-        gradients = gradients.reshape(batch_size, -1)  # TODO: it was view before changed to reshape because of error
+        gradients = gradients.reshape(batch_size, -1)  # TODO: it was view before changed to reshape because of an error
         gradient_norm = gradients.norm(2, dim=1)
         gradient_penalty = ((gradient_norm - 1) ** 2).mean()
         return gradient_penalty
 
     def train_step(self, data):
-        real_data, sub, pos = data['x'], data['sub'], data['pos']
+        real_data, sub, pos = data[0], data[1], data[2]  # TODO: find a better way to handle the subject device
+        # real_data, sub, pos = data['x'], data['sub'], data['pos']
         batch_size = real_data.size(0)
         mean = real_data.mean()
         std = real_data.std()
 
         # train critic
-        for _ in range(2):  # how many times to update critic per generator update
-            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-            fake_data = self.generator(noise, sub, pos).detach()
-            real_pred = self.critic(real_data, sub)
-            fake_pred = self.critic(fake_data, sub)
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
-            self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-            d_loss.backward()
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
+        fake_data = self.generator(noise, sub, pos).detach()
+        real_pred = self.critic(real_data, sub)
+        fake_pred = self.critic(fake_data, sub)
+        if real_data.device != fake_data.device:
+            real_data = real_data.float().to(fake_data.device)   # TODO: temporary solution
+        gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
+        self.zero_grad()
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight  # TODO: add the spectral regularization loss + other features (hjorth parameters)
+        d_loss.backward()
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

@@ -50,7 +50,7 @@ def load_data(data_path: str,
     sub = torch.tensor(sub).to(device)
     pos = torch.tensor(pos).to(device)
     data = TensorDataset(x, sub, pos)
-    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0, pin_memory=True)
+    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0, pin_memory=False)
 
     return data, n_subjects
 

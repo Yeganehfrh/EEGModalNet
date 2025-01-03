@@ -91,8 +91,6 @@ class Generator(keras.Model):
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
-            if x.device != sub_labels.device:
-                sub_labels = sub_labels.to(x.device)
             x = self.sub_layer(x.permute(0, 2, 1), sub_labels)  # TODO: this layer can be used before or after data generation
         return x.permute(0, 2, 1)
 
@@ -144,7 +142,7 @@ class WGAN_GP(keras.Model):
 
     def gradient_penalty(self, real_data, fake_data, sub):
         batch_size = real_data.size(0)
-        epsilon = torch.rand(batch_size, 1, 1).to(real_data.device)
+        epsilon = torch.rand(batch_size, 1, 1)
         interpolated = epsilon * real_data + (1 - epsilon) * fake_data
         interpolated.requires_grad_(True)
 
@@ -153,7 +151,7 @@ class WGAN_GP(keras.Model):
         gradients = torch.autograd.grad(
             outputs=prob_interpolated,
             inputs=interpolated,
-            grad_outputs=torch.ones(prob_interpolated.size()).to(real_data.device),
+            grad_outputs=torch.ones(prob_interpolated.size()),
             create_graph=True,
             retain_graph=True,
         )[0]
@@ -174,8 +172,6 @@ class WGAN_GP(keras.Model):
         fake_data = self.generator(noise, sub, pos).detach()
         real_pred = self.critic(real_data, sub)
         fake_pred = self.critic(fake_data, sub)
-        if real_data.device != fake_data.device:
-            real_data = real_data.float().to(fake_data.device)   # TODO: temporary solution
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight  # TODO: add the spectral regularization loss + other features (hjorth parameters)

@@ -6,7 +6,7 @@ from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
 class Critic(keras.Model):
-    def __init__(self, time_dim, feature_dim, num_classes, emb_dim, use_sublayer, *args, **kwargs):
+    def __init__(self, time_dim, feature_dim, n_subjects, use_sublayer, use_channel_merger, *args, **kwargs):
         super(Critic, self).__init__()
 
         self.input_shape = (time_dim, feature_dim)
@@ -14,7 +14,12 @@ class Critic(keras.Model):
         dropout_rate = 0.2
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
+            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)  # TODO: check out the input and output channels when we include more channels
+
+        if use_channel_merger:
+            self.pos_emb = ChannelMerger(
+                chout=feature_dim, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
+            )
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
@@ -39,10 +44,12 @@ class Critic(keras.Model):
 
         self.built = True
 
-    def call(self, x, labels):
+    def call(self, x, sub_labels, positions):
+        if hasattr(self, 'pos_emb'):
+            x = self.pos_emb(x, positions)
         if hasattr(self, 'sub_layer'):
             print('using sublayer in critic')
-            x = self.sub_layer(x, labels)
+            x = self.sub_layer(x, sub_labels)
         out = self.model(x)
         return out
 
@@ -57,12 +64,12 @@ class Generator(keras.Model):
         self.latent_dim = latent_dim
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers(feature_dim, feature_dim, num_classes, init_id=True)
+            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
             # self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=288, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
+                chout=feature_dim, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
             )
 
         self.model = keras.Sequential([
@@ -101,7 +108,8 @@ class WGAN_GP(keras.Model):
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
                  emb_dim=20, kerner_initializer='glorot_uniform',
-                 use_channel_merger=False,
+                 use_channel_merger_g=False,
+                 use_channel_merger_c=False,
                  interpolation='bilinear',
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,18 +127,19 @@ class WGAN_GP(keras.Model):
                                    feature_dim=feature_dim,
                                    latent_dim=latent_dim,
                                    use_sublayer=use_sublayer_generator,
-                                   n_classes=n_subjects,
+                                   num_classes=n_subjects,
                                    emb_dim=emb_dim,
                                    kerner_initializer=kerner_initializer,
                                    n_subjects=n_subjects,
-                                   use_channel_merger=use_channel_merger,
+                                   use_channel_merger=use_channel_merger_g,
                                    interpolation=interpolation)
-    
+
         self.critic = Critic(time_dim=time_dim,
                              feature_dim=feature_dim,
-                             num_classes=n_subjects,
+                             n_subjects=n_subjects,
                              emb_dim=emb_dim,
-                             use_sublayer=use_sublayer_critic,)
+                             use_sublayer=use_sublayer_critic,
+                             use_channel_merger=use_channel_merger_c,)
 
         self.built = True
 
@@ -182,8 +191,8 @@ class WGAN_GP(keras.Model):
         # train critic
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
         fake_data = self.generator(noise, sub, pos).detach()
-        real_pred = self.critic(real_data, sub)
-        fake_pred = self.critic(fake_data, sub)
+        real_pred = self.critic(real_data, sub, pos)
+        fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight  # TODO: add the spectral regularization loss + other features (hjorth parameters)
@@ -203,9 +212,9 @@ class WGAN_GP(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
 
         self.zero_grad()
-        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1)).to(real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator(noise, sub, pos)  # TODO: consider using random positions
-        fake_pred = self.critic(x_gen, sub)
+        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
+        x_gen = self.generator(noise, random_sub, pos)  # TODO: consider using random positions
+        fake_pred = self.critic(x_gen, sub, pos)
         spectral_regularization_loss_value = spectral_regularization_loss(real_data, x_gen, include_smooth=True)
         g_loss = -fake_pred.mean() + spectral_regularization_loss_value
         g_loss.backward()

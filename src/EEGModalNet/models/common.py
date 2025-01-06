@@ -59,6 +59,8 @@ class TransformerEncoder(layers.Layer):
 
 
 class PositionGetter:
+    """PositionGetter class is from Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick)"""
+
     INVALID = -0.1
 
     def __init__(self) -> None:
@@ -93,6 +95,7 @@ class PositionGetter:
 
 class FourierEmb(nn.Module):
     """
+    This class is taken from Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick):
     Fourier positional embedding.
     Unlike trad. embedding this is not using exponential periods
     for cosines and sinuses, but typical `2 pi k` which can represent
@@ -109,9 +112,8 @@ class FourierEmb(nn.Module):
     def forward(self, positions):
         *O, D = positions.shape
         assert D == 2
-        *O, D = positions.shape
         n_freqs = (self.dimension // 2)**0.5
-        freqs_y = torch.arange(n_freqs).to(positions)
+        freqs_y = torch.arange(n_freqs, device=positions.device)
         freqs_x = freqs_y[:, None]
         width = 1 + 2 * self.margin
         positions = positions + self.margin
@@ -127,6 +129,7 @@ class FourierEmb(nn.Module):
 
 
 class ChannelMerger(nn.Module):
+    """ChannelMerger class is from Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick)"""
     def __init__(self, chout: int, pos_dim: int = 256,
                  dropout: float = 0, usage_penalty: float = 0.,
                  n_subjects: int = 200, per_subject: bool = False):
@@ -181,7 +184,7 @@ class ChannelMerger(nn.Module):
 
 
 class SubjectLayers(nn.Module):
-    """subject layer from Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick)"""
+    """subject layer is based on Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick)"""
     def __init__(self, in_channels: int, out_channels: int, n_subjects: int, init_id: bool = False):
         super().__init__()
         self.weights = nn.Parameter(torch.randn(n_subjects, in_channels, out_channels))

@@ -18,7 +18,7 @@ class Critic(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim * 8, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
+                chout=feature_dim * 8, pos_dim=288, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
@@ -70,7 +70,7 @@ class Generator(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value + chout might need to be updated
+                chout=feature_dim, pos_dim=288, n_subjects=n_subjects  # TODO: pos_dim has a temporary value + chout might need to be updated
             )
 
         self.model = keras.Sequential([
@@ -162,13 +162,13 @@ class WGAN_GP(keras.Model):
         self.g_optimizer = g_optimizer
         self.gradient_penalty_weight = gradient_penalty_weight
 
-    def gradient_penalty(self, real_data, fake_data, sub):
+    def gradient_penalty(self, real_data, fake_data, sub, pos):
         batch_size = real_data.size(0)
         epsilon = torch.rand(batch_size, 1, 1, device=real_data.device)
         interpolated = epsilon * real_data + (1 - epsilon) * fake_data
         interpolated.requires_grad_(True)
 
-        prob_interpolated = self.critic(interpolated, sub)
+        prob_interpolated = self.critic(interpolated, sub, pos)
 
         gradients = torch.autograd.grad(
             outputs=prob_interpolated,
@@ -183,8 +183,8 @@ class WGAN_GP(keras.Model):
         return gradient_penalty
 
     def train_step(self, data):
-        real_data, sub, pos = data[0], data[1], data[2]  # TODO: find a better way to handle the subject device
-        # real_data, sub, pos = data['x'], data['sub'], data['pos']
+        # real_data, sub, pos = data[0], data[1], data[2]  # TODO: find a better way to handle the subject device
+        real_data, sub, pos = data['x'], data['sub'], data['pos']
         batch_size = real_data.size(0)
         mean = real_data.mean()
         std = real_data.std()
@@ -194,10 +194,10 @@ class WGAN_GP(keras.Model):
         fake_data = self.generator(noise, sub, pos).detach()
         real_pred = self.critic(real_data, sub, pos)
         fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
+        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
         self.zero_grad()
-        spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=True)
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_regularization_loss_value
+        # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=True)
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
 
         grads = [v.value.grad for v in self.critic.trainable_weights]

@@ -50,10 +50,11 @@ def load_data(data_path: str,
         x, sub, pos = batch
         return x.to(device), sub.to(device), pos.to(device)
 
-    data = TensorDataset(x, sub, pos)
-    data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0,
-                      # pin_memory=True, collate_fn=collate_fn
-                      )
+    # data = TensorDataset(x, sub, pos)
+    # data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0,
+    #                   # pin_memory=True, collate_fn=collate_fn
+    #                   )
+    data = {'x': x, 'sub': sub, 'pos': pos}
 
     return data, n_subjects
 
@@ -68,12 +69,13 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    model = WGAN_GP(time_dim=512, feature_dim=1,
+    model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger=False,
-                    kerner_initializer='random_normal',
+                    use_channel_merger_g=True,
+                    use_channel_merger_c=True,
+                    kerner_initializer=keras.initializers.HeNormal(),
                     interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -84,7 +86,7 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    model.compile(d_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
+    model.compile(d_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
@@ -106,8 +108,8 @@ def run(data,
 
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
-                             n_subjects=202, channels=['O1'], highpass_filter=1, time_dim=512,
-                             exclude_sub_ids=['sub-010257', 'sub-010044', 'sub-010266'])
+                             n_subjects=202, channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2'], highpass_filter=1, time_dim=512,
+                             exclude_sub_ids=None)
 
     if torch.cuda.is_available():
         print('GPU is available')
@@ -128,11 +130,11 @@ if __name__ == '__main__':
     # Apply mixed precision policy
     keras.mixed_precision.set_global_policy('mixed_float16')
 
-    output_path = 'logs/test_30.12.2024'
+    output_path = 'logs/test_06.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=10,
+                   max_epochs=100,
                    latent_dim=64,
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',

@@ -195,7 +195,8 @@ class WGAN_GP(keras.Model):
         fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub)
         self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight  # TODO: add the spectral regularization loss + other features (hjorth parameters)
+        spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=True)
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_regularization_loss_value
         d_loss.backward()
 
         grads = [v.value.grad for v in self.critic.trainable_weights]
@@ -215,8 +216,7 @@ class WGAN_GP(keras.Model):
         random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
         x_gen = self.generator(noise, random_sub, pos)  # TODO: consider using random positions
         fake_pred = self.critic(x_gen, sub, pos)
-        spectral_regularization_loss_value = spectral_regularization_loss(real_data, x_gen, include_smooth=True)
-        g_loss = -fake_pred.mean() + spectral_regularization_loss_value
+        g_loss = -fake_pred.mean()
         g_loss.backward()
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():

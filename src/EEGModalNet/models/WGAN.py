@@ -115,10 +115,22 @@ class WGAN_GP(keras.Model):
         self.seed_generator = keras.random.SeedGenerator(42)
         # self.critic_updates = critic_updates
 
-        self.generator = Generator(time_dim, feature_dim, latent_dim, use_sublayer_generator, n_subjects, emb_dim,  # TODO: use keyword arguments to avoid any potential bug
-                                   kerner_initializer, n_subjects, use_channel_merger=use_channel_merger,
+        self.generator = Generator(time_dim=time_dim,
+                                   feature_dim=feature_dim,
+                                   latent_dim=latent_dim,
+                                   use_sublayer=use_sublayer_generator,
+                                   n_classes=n_subjects,
+                                   emb_dim=emb_dim,
+                                   kerner_initializer=kerner_initializer,
+                                   n_subjects=n_subjects,
+                                   use_channel_merger=use_channel_merger,
                                    interpolation=interpolation)
-        self.critic = Critic(self.time, self.feature, n_subjects, emb_dim=emb_dim, use_sublayer=use_sublayer_critic,)
+    
+        self.critic = Critic(time_dim=time_dim,
+                             feature_dim=feature_dim,
+                             num_classes=n_subjects,
+                             emb_dim=emb_dim,
+                             use_sublayer=use_sublayer_critic,)
 
         self.built = True
 

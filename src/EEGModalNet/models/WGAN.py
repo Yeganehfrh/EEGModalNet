@@ -18,12 +18,13 @@ class Critic(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
+                chout=feature_dim * 8, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
             )
+            self.input_shape = (time_dim, feature_dim * 8)
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(8, 5, activation='relu'),  # TODO: update kernel size argument
+            ResidualBlock(8 * feature_dim, 5, activation='relu'),  # TODO: update kernel size argument
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),
@@ -46,10 +47,10 @@ class Critic(keras.Model):
 
     def call(self, x, sub_labels, positions):
         if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x, positions)
+            x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
             print('using sublayer in critic')
-            x = self.sub_layer(x, sub_labels)
+            x = self.sub_layer(x, sub_labels.permute(0, 2, 1)).permute(0, 2, 1)
         out = self.model(x)
         return out
 
@@ -69,7 +70,7 @@ class Generator(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
+                chout=feature_dim, pos_dim=256, n_subjects=n_subjects  # TODO: pos_dim has a temporary value + chout might need to be updated
             )
 
         self.model = keras.Sequential([
@@ -79,7 +80,7 @@ class Generator(keras.Model):
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
             layers.Reshape((32, 8), name='gen_layer9'),
-            *convBlock(filters=4 * [8],
+            *convBlock(filters=4 * [8 * feature_dim],
                        kernel_sizes=[15, 9, 7, 5],
                        upsampling=4 * [1],
                        stride=1,
@@ -98,8 +99,8 @@ class Generator(keras.Model):
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x.permute(0, 2, 1), sub_labels)  # TODO: this layer can be used before or after data generation
-        return x.permute(0, 2, 1)
+            x = self.sub_layer(x.permute(0, 2, 1), sub_labels).permute(0, 2, 1)  # TODO: this layer can be used before or after data generation
+        return x
 
 
 @keras.saving.register_keras_serializable()

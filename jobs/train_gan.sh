@@ -7,7 +7,6 @@
 #SBATCH --ntasks=1
 #SBATCH --time=1:00:00
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=4
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --mail-type=ALL

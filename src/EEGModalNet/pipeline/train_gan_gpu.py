@@ -75,7 +75,7 @@ def run(data,
                     use_sublayer_critic=False,
                     use_channel_merger_g=True,
                     use_channel_merger_c=True,
-                    kerner_initializer=keras.initializers.HeNormal(),
+                    kerner_initializer='random_normal',
                     interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -97,7 +97,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=20),
+                            CustomModelCheckpoint(model_path, save_freq=10),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),

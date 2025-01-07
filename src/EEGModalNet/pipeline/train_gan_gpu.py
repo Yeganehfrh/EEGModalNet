@@ -86,8 +86,8 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    model.compile(d_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
-                  g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
+    model.compile(d_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
+                  g_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded
@@ -108,7 +108,7 @@ def run(data,
 
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
-                             n_subjects=202, channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2'], highpass_filter=1, time_dim=512,
+                             n_subjects=202, channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'], highpass_filter=1, time_dim=512,
                              exclude_sub_ids=None)
 
     if torch.cuda.is_available():
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=100,
+                   max_epochs=125,
                    latent_dim=64,
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',

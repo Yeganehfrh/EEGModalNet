@@ -175,8 +175,7 @@ class ChannelMerger(nn.Module):
 
         scores = torch.einsum("bcd,bod->boc", embedding, heads)
         scores += score_offset[:, None]
-        weights = torch.softmax(scores, dim=2)  # dtype=torch.float16
-        print(eeg.dtype, weights.dtype)
+        weights = torch.softmax(scores, dim=2, dtype=torch.float16)
         out = torch.einsum("bct,boc->bot", eeg, weights)
         if self.training and self.usage_penalty > 0.:
             usage = weights.mean(dim=(0, 1)).sum()
@@ -196,7 +195,7 @@ class SubjectLayers(nn.Module):
 
     def forward(self, x, subjects):
         _, C, D = self.weights.shape
-        weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D))
+        weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D)).half()
         x_ = torch.einsum("bct,bcd->bdt", x, weights)
         return x_
 

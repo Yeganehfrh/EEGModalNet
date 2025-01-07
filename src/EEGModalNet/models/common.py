@@ -1,11 +1,11 @@
 import math
 import typing as tp
 from typing import List, Union
-#import mne
+# import mne
 import torch
 from torch import nn
 import keras
-from keras import layers, Layer, regularizers, ops
+from keras import layers, regularizers, ops
 
 
 class ResidualBlock(layers.Layer):
@@ -175,7 +175,8 @@ class ChannelMerger(nn.Module):
 
         scores = torch.einsum("bcd,bod->boc", embedding, heads)
         scores += score_offset[:, None]
-        weights = torch.softmax(scores, dim=2)
+        weights = torch.softmax(scores, dim=2)  # dtype=torch.float16
+        print(eeg.dtype, weights.dtype)
         out = torch.einsum("bct,boc->bot", eeg, weights)
         if self.training and self.usage_penalty > 0.:
             usage = weights.mean(dim=(0, 1)).sum()
@@ -296,7 +297,7 @@ def build_eeg_transformer(sequence_length, embed_dim, num_heads, ff_dim, num_lay
     return model
 
 
-class CustomUpSampling1D(Layer):
+class CustomUpSampling1D(layers.Layer):
     def __init__(self, size=2, method='bilinear'):
         super(CustomUpSampling1D, self).__init__()
         self.size = size

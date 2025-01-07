@@ -40,7 +40,8 @@ class Critic(keras.Model):
             layers.Dense(8, name='dis_dense4'),
             layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(dropout_rate),
-            layers.Dense(1, name='dis_dense5')
+            layers.Dense(1, name='dis_dense5'),
+            layers.Activation('linear', name='dis_output', dtype='float32')
         ], name='critic')
 
         self.built = True
@@ -49,7 +50,6 @@ class Critic(keras.Model):
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
-            print('using sublayer in critic')
             x = self.sub_layer(x, sub_labels.permute(0, 2, 1)).permute(0, 2, 1)
         out = self.model(x)
         return out
@@ -89,7 +89,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kerner_initializer,
                        batch_norm=True),
-            layers.Conv1D(feature_dim, 3, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer)
+            layers.Conv1D(feature_dim, 3, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer, dtype='float32')
         ], name='generator')
 
         self.built = True
@@ -185,6 +185,7 @@ class WGAN_GP(keras.Model):
     def train_step(self, data):
         # real_data, sub, pos = data[0], data[1], data[2]  # TODO: find a better way to handle the subject device
         real_data, sub, pos = data['x'], data['sub'], data['pos']
+
         batch_size = real_data.size(0)
         mean = real_data.mean()
         std = real_data.std()
@@ -211,7 +212,7 @@ class WGAN_GP(keras.Model):
                 gradient_norms.append(p.grad.norm().item())
 
         # train generator
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
 
         self.zero_grad()
         random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary

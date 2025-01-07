@@ -87,8 +87,8 @@ def run(data,
         model.load_weights(reuse_model_path)
 
     model.compile(d_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
-                  g_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=1.0)
+                  g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
+                  gradient_penalty_weight=5.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=100,
+                   max_epochs=80,
                    latent_dim=64,
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',

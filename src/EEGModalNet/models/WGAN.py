@@ -191,25 +191,26 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-        fake_data = self.generator(noise, sub, pos).detach()
-        real_pred = self.critic(real_data, sub, pos)
-        fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-        self.zero_grad()
-        # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=True)
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()
+        for _ in range(2):
+            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
+            fake_data = self.generator(noise, sub, pos).detach()
+            real_pred = self.critic(real_data, sub, pos)
+            fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.zero_grad()
+            # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=True)
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss.backward()
 
-        grads = [v.value.grad for v in self.critic.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.critic.trainable_weights)
+            grads = [v.value.grad for v in self.critic.trainable_weights]
+            with torch.no_grad():
+                self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
-        # Monitor gradient norms
-        gradient_norms = []
-        for p in self.critic.parameters():
-            if p.grad is not None:
-                gradient_norms.append(p.grad.norm().item())
+            # Monitor gradient norms
+            gradient_norms = []
+            for p in self.critic.parameters():
+                if p.grad is not None:
+                    gradient_norms.append(p.grad.norm().item())
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
@@ -232,5 +233,6 @@ class WGAN_GP(keras.Model):
             'g_loss': self.g_loss_tracker.result(),
             'critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
             '_real_pred': real_pred.mean().item(),
-            '_fake_pred': fake_pred.mean().item()
+            '_fake_pred': fake_pred.mean().item(),
+            '_gp': gp.item(),
         }

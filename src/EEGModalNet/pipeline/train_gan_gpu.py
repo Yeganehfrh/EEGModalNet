@@ -97,7 +97,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=10),
+                            CustomModelCheckpoint(model_path, save_freq=20),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
@@ -108,7 +108,10 @@ def run(data,
 
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
-                             n_subjects=202, channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'], highpass_filter=1, time_dim=512,
+                             n_subjects=202,
+                             channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'],
+                             bandpass_filter=[1, 42],
+                             time_dim=512,
                              exclude_sub_ids=None)
 
     if torch.cuda.is_available():
@@ -130,11 +133,11 @@ if __name__ == '__main__':
     # Apply mixed precision policy
     keras.mixed_precision.set_global_policy('mixed_float16')
 
-    output_path = 'logs/test_06.01.2025'
+    output_path = 'logs/test_08.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=80,
+                   max_epochs=160,
                    latent_dim=64,
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',
@@ -142,5 +145,5 @@ if __name__ == '__main__':
                    reuse_model=False,
                    reuse_model_path=None)
 
-    # backup
-    model.save(f'{output_path}_final.model.keras')
+    # # backup
+    # model.save(f'{output_path}_final.model.keras')

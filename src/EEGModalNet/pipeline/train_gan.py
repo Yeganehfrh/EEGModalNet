@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, DistributedSampler, TensorDataset
 from typing import List
 import numpy as np
 import xarray as xr
-from scipy.signal import butter, sosfilt
+from scipy.signal import butter, sosfiltfilt
 
 
 def find_channel_ids(dataarray, ch_names):
@@ -24,7 +24,7 @@ def find_channel_ids(dataarray, ch_names):
 def load_data(data_path: str,
               n_subjects: int = 202,
               channels: List[str] = ['all'],
-              highpass_filter: float = 1,
+              bandpass_filter: List[int] = [1, 42],
               time_dim: int = 1024,
               exclude_sub_ids=None) -> tuple:
 
@@ -37,9 +37,9 @@ def load_data(data_path: str,
     x = x.to_numpy()
     n_subjects = x.shape[0]
 
-    if highpass_filter is not None:
-        sos = butter(4, highpass_filter, btype='high', fs=128, output='sos')
-        x = sosfilt(sos, x, axis=-1)
+    if bandpass_filter is not None:
+        sos = butter(4, bandpass_filter, btype='high', fs=128, output='sos')
+        x = sosfiltfilt(sos, x, axis=-1)
 
     x = torch.tensor(x).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
 

@@ -183,7 +183,7 @@ class ChannelMerger(nn.Module):
         if self.training and self.usage_penalty > 0.:
             usage = weights.mean(dim=(0, 1)).sum()
             self._penalty = self.usage_penalty * usage
-        return out
+        return out.permute(0, 2, 1)
 
 
 class SubjectLayers(nn.Module):
@@ -202,8 +202,8 @@ class SubjectLayers(nn.Module):
         # if keras.mixed_precision.global_policy().name == 'mixed_float16':
         #     print('Using mixed precision in SubjectLayers')
         #     weights.half()
-        x_ = torch.einsum("bct,bcd->bdt", x, weights)
-        return x_
+        x = torch.einsum("bct,bcd->bdt", x.permute(0, 2, 1), weights)
+        return x.permute(0, 2, 1)
 
     def __repr__(self):
         S, C, D = self.weights.shape

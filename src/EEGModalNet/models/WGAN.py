@@ -47,10 +47,10 @@ class Critic(keras.Model):
         self.built = True
 
     def call(self, x, sub_labels, positions):
-        if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x.permute(0, 2, 1), sub_labels).permute(0, 2, 1)
+            x = self.sub_layer(x, sub_labels)
+        if hasattr(self, 'pos_emb'):
+            x = self.pos_emb(x, positions)
         out = self.model(x)
         return out
 
@@ -97,9 +97,9 @@ class Generator(keras.Model):
     def call(self, noise, sub_labels, positions):
         x = self.model(noise)
         if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x, positions).permute(0, 2, 1)
+            x = self.pos_emb(x, positions)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x.permute(0, 2, 1), sub_labels).permute(0, 2, 1)  # TODO: this layer can be used before or after data generation
+            x = self.sub_layer(x, sub_labels)  # TODO: this layer can be used before or after data generation
             if keras.mixed_precision.global_policy().name == 'mixed_float16':
                 x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x

@@ -200,8 +200,8 @@ class WGAN_GP(keras.Model):
             fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
-            spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=False)
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_regularization_loss_value
+            # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=False)
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]

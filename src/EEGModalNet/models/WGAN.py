@@ -89,7 +89,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kerner_initializer,
                        batch_norm=True),
-            layers.Conv1D(feature_dim, 3, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer, dtype='float32')
+            layers.Conv1D(feature_dim, 3, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer)
         ], name='generator')
 
         self.built = True
@@ -100,6 +100,8 @@ class Generator(keras.Model):
             x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x.permute(0, 2, 1), sub_labels).permute(0, 2, 1)  # TODO: this layer can be used before or after data generation
+            if keras.mixed_precision.global_policy().name == 'mixed_float16':
+                x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
 
 

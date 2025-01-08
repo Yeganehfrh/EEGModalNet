@@ -129,7 +129,7 @@ class FourierEmb(nn.Module):
 
 
 class ChannelMerger(nn.Module):
-    """ChannelMerger class is from Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick)"""
+    """ChannelMerger class is based from Défossez et al. 2022 (https://github.com/facebookresearch/brainmagick)"""
     def __init__(self, chout: int, pos_dim: int = 256,
                  dropout: float = 0, usage_penalty: float = 0.,
                  n_subjects: int = 200, per_subject: bool = False):
@@ -175,7 +175,10 @@ class ChannelMerger(nn.Module):
 
         scores = torch.einsum("bcd,bod->boc", embedding, heads)
         scores += score_offset[:, None]
-        weights = torch.softmax(scores, dim=2, dtype=torch.float16)
+        if keras.mixed_precision.global_policy().name == 'mixed_float16':
+            weights = torch.softmax(scores, dim=2, dtype=torch.float16)
+        else:
+            weights = torch.softmax(scores, dim=2)
         out = torch.einsum("bct,boc->bot", eeg, weights)
         if self.training and self.usage_penalty > 0.:
             usage = weights.mean(dim=(0, 1)).sum()
@@ -196,8 +199,8 @@ class SubjectLayers(nn.Module):
     def forward(self, x, subjects):
         _, C, D = self.weights.shape
         weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D))
-        # if keras.mixed_precision.global_policy().name == 'mixed_float16':
-        weights.half()  # TODO: temp fix for mixed precision
+        if keras.mixed_precision.global_policy().name == 'mixed_float16':
+            weights.half()
         x_ = torch.einsum("bct,bcd->bdt", x, weights)
         return x_
 

@@ -198,19 +198,19 @@ class WGAN_GP(keras.Model):
             fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
-            # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=True)
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=True)
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + 0.7 * spectral_regularization_loss_value
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
-            # Monitor gradient norms
-            gradient_norms = []
-            for p in self.critic.parameters():
-                if p.grad is not None:
-                    gradient_norms.append(p.grad.norm().item())
+        # Monitor gradient norms
+        gradient_norms = []
+        for p in self.critic.parameters():
+            if p.grad is not None:
+                gradient_norms.append(p.grad.norm().item())
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)

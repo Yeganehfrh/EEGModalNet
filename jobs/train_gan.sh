@@ -2,10 +2,11 @@
 
 #SBATCH --job-name=train_gan
 #SBATCH --chdir=//work/projects/acnets/EEGModalNet/
-#SBATCH --partition=batch
+#SBATCH --partition=gpu
 #SBATCH --nodes=1
-#SBATCH --ntasks=2
-#SBATCH --time=4:00:00
+#SBATCH --ntasks=1
+#SBATCH --time=1:00:00
+#SBATCH --gres=gpu:1
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --mail-type=ALL
@@ -14,4 +15,4 @@
 alias micromamba=~/.local/bin/micromamba
 
 # SECTION Run pipeline
-micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan_gpu

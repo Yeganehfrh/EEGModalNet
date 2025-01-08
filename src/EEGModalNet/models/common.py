@@ -176,7 +176,6 @@ class ChannelMerger(nn.Module):
         scores = torch.einsum("bcd,bod->boc", embedding, heads)
         scores += score_offset[:, None]
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
-            print('Using mixed precision in ChannelMerger')
             weights = torch.softmax(scores, dim=2, dtype=torch.float16)
         else:
             weights = torch.softmax(scores, dim=2)
@@ -200,7 +199,6 @@ class SubjectLayers(nn.Module):
     def forward(self, x, subjects):
         _, C, D = self.weights.shape
         weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D)).half()  # TODO: remove .half()
-        print(x.dtype, weights.dtype)
         # if keras.mixed_precision.global_policy().name == 'mixed_float16':
         #     print('Using mixed precision in SubjectLayers')
         #     weights.half()

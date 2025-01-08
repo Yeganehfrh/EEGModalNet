@@ -50,7 +50,7 @@ class Critic(keras.Model):
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, positions).permute(0, 2, 1)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, sub_labels.permute(0, 2, 1)).permute(0, 2, 1)
+            x = self.sub_layer(x.permute(0, 2, 1), sub_labels).permute(0, 2, 1)
         out = self.model(x)
         return out
 
@@ -201,7 +201,7 @@ class WGAN_GP(keras.Model):
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
             spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, include_smooth=False)
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + 0.01 * spectral_regularization_loss_value
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_regularization_loss_value
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]

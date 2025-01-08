@@ -133,7 +133,7 @@ if __name__ == '__main__':
     # Apply mixed precision policy
     keras.mixed_precision.set_global_policy('mixed_float16')
 
-    output_path = 'logs/test_08.01.2025'
+    output_path = 'logs/08.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,

@@ -38,7 +38,7 @@ def load_data(data_path: str,
         x = sosfiltfilt(sos, x, axis=-1)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    x = torch.tensor(x, device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
+    x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
     ch_ind = find_channel_ids(xarray, channels)

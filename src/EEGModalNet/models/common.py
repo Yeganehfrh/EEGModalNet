@@ -196,8 +196,8 @@ class SubjectLayers(nn.Module):
     def forward(self, x, subjects):
         _, C, D = self.weights.shape
         weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D))
-        if keras.mixed_precision.global_policy().name == 'mixed_float16':
-            weights.half()
+        # if keras.mixed_precision.global_policy().name == 'mixed_float16':
+        weights.half()  # TODO: temp fix for mixed precision
         x_ = torch.einsum("bct,bcd->bdt", x, weights)
         return x_
 

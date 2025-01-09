@@ -4,6 +4,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
+from keras.optimizers.schedules import ExponentialDecay
 from torch.utils.data import DataLoader, TensorDataset
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import CustomModelCheckpoint
@@ -86,8 +87,11 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    model.compile(d_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
-                  g_optimizer=keras.optimizers.Adam(0.0005, beta_1=0.5, beta_2=0.9),
+    lr_schedule_g = ExponentialDecay(0.0005, decay_steps=1000, decay_rate=0.96, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.00005, decay_steps=1000, decay_rate=0.96, staircase=True)
+
+    model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
+                  g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded

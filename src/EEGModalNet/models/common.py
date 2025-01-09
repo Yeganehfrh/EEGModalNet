@@ -151,13 +151,13 @@ class ChannelMerger(nn.Module):
     def training_penalty(self):
         return self._penalty.to(next(self.parameters()).device)
 
-    def forward(self, eeg, positions):
+    def forward(self, eeg, sub, positions):
         eeg = eeg.permute(0, 2, 1)
         B, C, T = eeg.shape
         eeg = eeg.clone()
         # positions = self.position_getter.get_positions(batch)
         embedding = self.embedding(positions)
-        score_offset = torch.zeros(B, C, device=eeg.device)
+        # score_offset = torch.zeros(B, C, device=eeg.device)
         # score_offset[self.position_getter.is_invalid(positions)] = float('-inf')
 
         if self.training and self.dropout:
@@ -168,13 +168,13 @@ class ChannelMerger(nn.Module):
 
         if self.per_subject:
             _, cout, pos_dim = self.heads.shape
-            subject = batch.subject_index
+            subject = sub
             heads = self.heads.gather(0, subject.view(-1, 1, 1).expand(-1, cout, pos_dim))
         else:
             heads = self.heads.unsqueeze(0).repeat(B, 1, 1)
 
         scores = torch.einsum("bcd,bod->boc", embedding, heads)
-        scores += score_offset[:, None]
+        # scores += score_offset[:, None]
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             weights = torch.softmax(scores, dim=2, dtype=torch.float16)
         else:

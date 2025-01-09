@@ -18,7 +18,7 @@ class Critic(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim * 8, pos_dim=288, n_subjects=n_subjects  # TODO: pos_dim has a temporary value
+                chout=feature_dim * 8, pos_dim=32, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
@@ -50,7 +50,7 @@ class Critic(keras.Model):
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, sub_labels)
         if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x, positions)
+            x = self.pos_emb(x, sub_labels, positions)
         out = self.model(x)
         return out
 
@@ -70,7 +70,7 @@ class Generator(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=288, n_subjects=n_subjects  # TODO: pos_dim has a temporary value + chout might need to be updated
+                chout=feature_dim, pos_dim=32, n_subjects=n_subjects  # TODO: pos_dim has a temporary value + chout might need to be updated
             )
 
         self.model = keras.Sequential([
@@ -97,7 +97,7 @@ class Generator(keras.Model):
     def call(self, noise, sub_labels, positions):
         x = self.model(noise)
         if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x, positions)
+            x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, sub_labels)  # TODO: this layer can be used before or after data generation
             if keras.mixed_precision.global_policy().name == 'mixed_float16':

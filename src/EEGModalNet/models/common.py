@@ -198,7 +198,7 @@ class SubjectLayers(nn.Module):
 
     def forward(self, x, subjects):
         _, C, D = self.weights.shape
-        weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D))  # TODO: remove .half()
+        weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D)).half()  # TODO: remove .half()
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             print('Using mixed precision in SubjectLayers')
             weights.half()

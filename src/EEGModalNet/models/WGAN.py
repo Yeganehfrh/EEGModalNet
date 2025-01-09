@@ -18,13 +18,13 @@ class Critic(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim * 8, pos_dim=32, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value
+                chout=feature_dim * 4, pos_dim=32, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value
             )
-            self.input_shape = (time_dim, feature_dim * 8)
+            self.input_shape = (time_dim, feature_dim * 4)
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(8 * feature_dim, 5, activation='relu'),  # TODO: update kernel size argument
+            ResidualBlock(4 * feature_dim, 5, activation='relu'),  # TODO: update kernel size argument
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
             layers.Flatten(name='dis_flatten'),

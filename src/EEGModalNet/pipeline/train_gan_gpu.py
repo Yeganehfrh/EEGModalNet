@@ -45,16 +45,6 @@ def load_data(data_path: str,
     ch_ind = find_channel_ids(xarray, channels)
     pos = torch.tensor(xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0), device=device)
 
-    # Custom collate_fn to transfer tensors to the GPU
-    def collate_fn(batch):
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        x, sub, pos = batch
-        return x.to(device), sub.to(device), pos.to(device)
-
-    # data = TensorDataset(x, sub, pos)
-    # data = DataLoader(data, batch_size=64, shuffle=True, num_workers=0,
-    #                   # pin_memory=True, collate_fn=collate_fn
-    #                   )
     data = {'x': x, 'sub': sub, 'pos': pos}
 
     return data, n_subjects

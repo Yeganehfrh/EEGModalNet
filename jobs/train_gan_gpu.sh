@@ -5,7 +5,7 @@
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --time=2:00:00
+#SBATCH --time=1:30:00
 #SBATCH --gres=gpu:1
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
@@ -15,4 +15,4 @@
 alias micromamba=~/.local/bin/micromamba
 
 # SECTION Run pipeline
-micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan_gpu

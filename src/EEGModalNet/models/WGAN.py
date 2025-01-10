@@ -11,36 +11,36 @@ class Critic(keras.Model):
 
         self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
-        dropout_rate = 0.2
+        negative_slope = 0.1
 
         if use_sublayer:
             self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)  # TODO: check out the input and output channels when we include more channels
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim * 4, pos_dim=32, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value
+                chout=feature_dim * 8, pos_dim=128, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value
             )
-            self.input_shape = (time_dim, feature_dim * 4)
+            self.input_shape = (time_dim, feature_dim * 8)
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(4 * feature_dim, 5, activation='relu'),  # TODO: update kernel size argument
+            ResidualBlock(8 * feature_dim, 5, activation='relu'),  # TODO: update kernel size argument
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
-            layers.Conv1D(1, 5, padding='same', activation='relu', name='conv3'),
+            layers.SpectralNormalization(layers.Conv1D(feature_dim, 5, padding='same', activation='relu', name='conv3')),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(512, name='dis_dense1'),
-            layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(dropout_rate),
-            layers.Dense(128, name='dis_dense2'),
-            layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(dropout_rate),
-            layers.Dense(32, name='dis_dense3'),
-            layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(dropout_rate),
-            layers.Dense(8, name='dis_dense4'),
-            layers.LeakyReLU(negative_slope=0.2),
-            layers.Dropout(dropout_rate),
-            layers.Dense(1, name='dis_dense5', dtype='float32'),
+            layers.SpectralNormalization(layers.Dense(512, name='dis_dense1')),
+            layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dropout(dropout_rate),
+            layers.SpectralNormalization(layers.Dense(128, name='dis_dense2')),
+            layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dropout(dropout_rate),
+            layers.SpectralNormalization(layers.Dense(32, name='dis_dense3')),
+            layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dropout(dropout_rate),
+            layers.SpectralNormalization(layers.Dense(8, name='dis_dense4')),
+            layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dropout(dropout_rate),
+            layers.SpectralNormalization(layers.Dense(1, name='dis_dense5', dtype='float32')),
         ], name='critic')
 
         self.built = True
@@ -192,20 +192,19 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        for _ in range(2):
-            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-            fake_data = self.generator(noise, sub, pos).detach()
-            real_pred = self.critic(real_data, sub, pos)
-            fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            self.zero_grad()
-            # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, lambda_match=1 / 10e9, include_smooth=False)
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-            d_loss.backward()
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
+        fake_data = self.generator(noise, sub, pos).detach()
+        real_pred = self.critic(real_data, sub, pos)
+        fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
+        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+        self.zero_grad()
+        # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, lambda_match=1 / 10e9, include_smooth=False)
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+        d_loss.backward()
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

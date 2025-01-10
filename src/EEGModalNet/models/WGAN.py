@@ -12,7 +12,7 @@ class Critic(keras.Model):
         self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
         negative_slope = 0.1
-        kernel_initializer = 'glorot_uniform'
+        kernel_initializer = keras.initializers.Orthogonal(gain=1.0)
 
         if use_sublayer:
             self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)  # TODO: check out the input and output channels when we include more channels

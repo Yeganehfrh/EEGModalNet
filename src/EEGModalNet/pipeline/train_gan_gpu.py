@@ -91,7 +91,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=10),
+                            CustomModelCheckpoint(model_path, save_freq=1),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),

@@ -9,11 +9,11 @@ from keras import layers, regularizers, ops
 
 
 class ResidualBlock(layers.Layer):
-    def __init__(self, filters, kernel_size, activation='relu', **kwargs):
+    def __init__(self, filters, kernel_size, kernel_initializer, activation='relu', **kwargs):
         super(ResidualBlock, self).__init__(**kwargs)
-        self.conv1 = layers.SpectralNormalization(layers.Conv1D(filters, 3, padding='same'))
-        self.conv2 = layers.SpectralNormalization(layers.Conv1D(filters, 5, padding='same', dilation_rate=2))
-        self.conv3 = layers.SpectralNormalization(layers.Conv1D(filters, 7, padding='same'))
+        self.conv1 = layers.SpectralNormalization(layers.Conv1D(filters, 3, padding='same', kernel_initializer=kernel_initializer))
+        self.conv2 = layers.SpectralNormalization(layers.Conv1D(filters, 5, padding='same', dilation_rate=2,  kernel_initializer=kernel_initializer))
+        self.conv3 = layers.SpectralNormalization(layers.Conv1D(filters, 7, padding='same', kernel_initializer=kernel_initializer))
         self.activation = layers.Activation(activation)
 
     def call(self, inputs):

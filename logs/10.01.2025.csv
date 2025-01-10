@@ -1,0 +1,3 @@
+epoch,_fake_pred,_gp,_real_pred,critic_grad_norm,d_loss,g_loss,val__fake_pred,val__gp,val__real_pred,val_critic_grad_norm,val_d_loss,val_g_loss
+0,3.3359375,32.48387908935547,73.6875,25.747656696721126,-33.46794891357422,-2.6399083137512207,NA,NA,NA,NA,NA,NA
+1,2.46484375,67.700927734375,162.0,66.08613485960583,-76.24934387207031,-7.8306074142456055,NA,NA,NA,NA,NA,NA

@@ -40,8 +40,7 @@ class Critic(keras.Model):
             layers.Dense(8, name='dis_dense4'),
             layers.LeakyReLU(negative_slope=0.2),
             layers.Dropout(dropout_rate),
-            layers.Dense(1, name='dis_dense5'),
-            layers.Activation('linear', name='dis_output', dtype='float32')
+            layers.Dense(1, name='dis_dense5', dtype='float32'),
         ], name='critic')
 
         self.built = True

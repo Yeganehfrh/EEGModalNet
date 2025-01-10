@@ -66,7 +66,7 @@ def run(data,
                     use_sublayer_critic=False,
                     use_channel_merger_g=True,
                     use_channel_merger_c=True,
-                    kerner_initializer='random_normal',
+                    kerner_initializer='glorot_uniform',
                     interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -77,12 +77,12 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    lr_schedule_g = ExponentialDecay(0.0005, decay_steps=100000, decay_rate=0.96, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.00005, decay_steps=100000, decay_rate=0.96, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.0005, decay_steps=10000, decay_rate=0.96, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.00005, decay_steps=10000, decay_rate=0.96, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=1.0)
+                  gradient_penalty_weight=0.1)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -91,7 +91,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=1),
+                            CustomModelCheckpoint(model_path, save_freq=5),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     model, _ = run(data,
                    n_subjects=n_subs,
                    max_epochs=280,
-                   latent_dim=64,
+                   latent_dim=128,
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,

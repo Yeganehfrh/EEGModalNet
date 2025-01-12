@@ -231,6 +231,10 @@ class WGAN_GP(keras.Model):
         fake_pred = self.critic(x_gen, sub, pos)
         g_loss = -fake_pred.mean()
         g_loss.backward()
+
+        # clip the gradients
+        torch.nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=10.0)
+
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():
             self.g_optimizer.apply(grads, self.generator.trainable_weights)

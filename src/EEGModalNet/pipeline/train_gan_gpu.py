@@ -105,7 +105,7 @@ if __name__ == '__main__':
                              n_subjects=202,
                              channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'],
                              bandpass_filter=[1, 42],
-                             time_dim=512,
+                             time_dim=1024,
                              exclude_sub_ids=None)
 
     if torch.cuda.is_available():

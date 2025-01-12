@@ -62,11 +62,11 @@ def run(data,
 
     model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
-                    use_sublayer_generator=True,
+                    use_sublayer_generator=False,
                     use_sublayer_critic=False,
                     use_channel_merger_g=True,
                     use_channel_merger_c=True,
-                    kerner_initializer='glorot_uniform',
+                    kerner_initializer='random_normal',
                     interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

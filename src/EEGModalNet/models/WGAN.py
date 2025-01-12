@@ -25,7 +25,7 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(8 * feature_dim, kernel_initializer=kernel_initializer, 5, activation='relu'),  # TODO: update kernel size argument
+            ResidualBlock(8 * feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             layers.SpectralNormalization(layers.Conv1D(8, 15, padding='same', activation='relu', name='conv3', kernel_initializer=kernel_initializer)),
             layers.AveragePooling1D(2, name='downsampling1'),

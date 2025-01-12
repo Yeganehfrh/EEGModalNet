@@ -12,7 +12,7 @@ class Critic(keras.Model):
         self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
         negative_slope = 0.1
-        kernel_initializer = keras.initializers.Orthogonal(gain=1.0)
+        kernel_initializer = keras.initializers.Orthogonal(gain=0.9)
 
         if use_sublayer:
             self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)  # TODO: check out the input and output channels when we include more channels
@@ -27,12 +27,10 @@ class Critic(keras.Model):
             keras.Input(shape=self.input_shape),
             ResidualBlock(8 * feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
-            layers.SpectralNormalization(layers.Conv1D(8, 15, padding='same', activation='relu', name='conv3', kernel_initializer=kernel_initializer)),
-            layers.AveragePooling1D(2, name='downsampling1'),
-            layers.SpectralNormalization(layers.Conv1D(8, 9, padding='same', activation='relu', name='conv3', kernel_initializer=kernel_initializer)),
-            layers.AveragePooling1D(2, name='downsampling2'),
-            layers.SpectralNormalization(layers.Conv1D(8, 7, padding='same', activation='relu', name='conv4', kernel_initializer=kernel_initializer)),
-            layers.AveragePooling1D(2, name='downsampling3'),
+            # TODO: consider using pooling (max or average) instead of strides
+            layers.SpectralNormalization(layers.Conv1D(8, 15, strides=2, padding='same', activation='relu', name='conv3', kernel_initializer=kernel_initializer)),
+            layers.SpectralNormalization(layers.Conv1D(8, 9, strides=2, padding='same', activation='relu', name='conv3', kernel_initializer=kernel_initializer)),
+            layers.SpectralNormalization(layers.Conv1D(8, 7, strides=2, padding='same', activation='relu', name='conv4', kernel_initializer=kernel_initializer)),
             # layers.SpectralNormalization(layers.Conv1D(8, 7, padding='same', activation='relu', name='conv4')),
             # layers.AveragePooling1D(2, name='downsampling4'),
             layers.Flatten(name='dis_flatten'),
@@ -77,7 +75,7 @@ class Generator(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=32, n_subjects=n_subjects  # TODO: pos_dim has a temporary value + chout might need to be updated
+                chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value + chout might need to be updated
             )
 
         self.model = keras.Sequential([
@@ -87,9 +85,9 @@ class Generator(keras.Model):
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
             layers.Reshape((8, 32), name='gen_layer9'),
-            *convBlock(filters=6 * [8 * feature_dim],
-                       kernel_sizes=[19, 17, 15, 9, 7, 5],
-                       upsampling=6 * [1],
+            *convBlock(filters=12 * [8 * feature_dim],
+                       kernel_sizes=[31, 27, 25, 23, 21, 19, 17, 15, 9, 7, 5, 3],
+                       upsampling=6 * [0, 1],
                        stride=1,
                        padding='same',
                        interpolation=interpolation,

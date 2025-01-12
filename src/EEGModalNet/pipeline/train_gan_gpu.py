@@ -62,10 +62,10 @@ def run(data,
 
     model = WGAN_GP(time_dim=1024, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
-                    use_sublayer_generator=False,
+                    use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger_g=True,
-                    use_channel_merger_c=True,
+                    use_channel_merger_g=False,
+                    use_channel_merger_c=False,
                     kerner_initializer='random_normal',
                     interpolation='bilinear')
 
@@ -81,8 +81,8 @@ def run(data,
     lr_schedule_d = ExponentialDecay(0.00001, decay_steps=1000, decay_rate=0.96, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
-                  g_optimizer=keras.optimizers.Adam(0.00005, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=0)
+                  g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
+                  gradient_penalty_weight=0.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -103,7 +103,7 @@ def run(data,
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                              n_subjects=202,
-                             channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'],
+                             channels=['O1'],
                              bandpass_filter=[1, 42],
                              time_dim=1024,
                              exclude_sub_ids=None)

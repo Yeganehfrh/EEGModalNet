@@ -60,7 +60,7 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
+    model = WGAN_GP(time_dim=1024, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=False,
                     use_sublayer_critic=False,

@@ -84,17 +84,18 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
-            layers.Reshape((8, 32), name='gen_layer9'),
+            layers.Reshape((32, 8), name='gen_layer9'),
             *convBlock(filters=12 * [8 * feature_dim],
-                       kernel_sizes=[31, 27, 25, 23, 21, 19, 17, 15, 9, 7, 5, 3],
-                       upsampling=6 * [0, 1],
+                       kernel_sizes=[17, 17, 15, 15, 9, 9, 7, 7, 5, 5, 3, 3],
+                       upsampling=5 * [0, 1] + [0, 0],
                        stride=1,
                        padding='same',
                        interpolation=interpolation,
                        negative_slope=0.2,
                        kernel_initializer=kerner_initializer,
                        batch_norm=True),
-            layers.Conv1D(feature_dim, 3, padding='same', name='last_conv_lyr', kernel_initializer=kerner_initializer)
+            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kerner_initializer),
+            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_2', kernel_initializer=kerner_initializer)
         ], name='generator')
 
         self.built = True

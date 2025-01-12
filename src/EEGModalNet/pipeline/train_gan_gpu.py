@@ -91,7 +91,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=5),
+                            CustomModelCheckpoint(model_path, save_freq=10),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
@@ -103,7 +103,7 @@ def run(data,
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                              n_subjects=202,
-                             channels=['O1'],
+                             channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'],
                              bandpass_filter=[1, 42],
                              time_dim=1024,
                              exclude_sub_ids=None)

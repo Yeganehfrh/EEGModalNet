@@ -75,14 +75,18 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
-            layers.Dense(128 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
+            layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
-            layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
+            layers.Dense(512 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
-            layers.Reshape((32, 8), name='gen_layer9'),
-            *convBlock(filters=12 * [8 * feature_dim],
-                       kernel_sizes=[17, 17, 15, 15, 9, 9, 7, 7, 5, 5, 3, 3],
-                       upsampling=5 * [0, 1] + [0, 0],
+            layers.Dense(2048 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
+            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
+            # layers.Dense(1024 * 1, kernel_initializer=kerner_initializer, name='gen_layer7'),
+            # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer8'),
+            layers.Reshape((256, 8), name='gen_layer9'),
+            *convBlock(filters=4 * [8 * feature_dim],
+                       kernel_sizes=[15, 9, 7, 5],
+                       upsampling=[1, 0, 1, 0],
                        stride=1,
                        padding='same',
                        interpolation=interpolation,
@@ -90,7 +94,6 @@ class Generator(keras.Model):
                        kernel_initializer=kerner_initializer,
                        batch_norm=True),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kerner_initializer),
-            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_2', kernel_initializer=kerner_initializer)
         ], name='generator')
 
         self.built = True

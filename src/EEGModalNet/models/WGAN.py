@@ -34,15 +34,23 @@ class Critic(keras.Model):
             # layers.SpectralNormalization(layers.Conv1D(8, 7, padding='same', activation='relu', name='conv4')),
             # layers.AveragePooling1D(2, name='downsampling4'),
             layers.Flatten(name='dis_flatten'),
+<<<<<<< HEAD
             layers.Dense(512, name='dis_dense1', kernel_initializer=kernel_initializer),
             layers.LayerNormalization(),
+=======
+            layers.LayerNormalization(layers.Dense(512, name='dis_dense1', kernel_initializer=kernel_initializer)),
+>>>>>>> 84db3c06afd72daa4a71a9f72ab671de81662147
             layers.LeakyReLU(negative_slope=negative_slope),
             # layers.Dropout(dropout_rate),
             layers.SpectralNormalization(layers.Dense(128, name='dis_dense2', kernel_initializer=kernel_initializer)),
             layers.LeakyReLU(negative_slope=negative_slope),
             # layers.Dropout(dropout_rate),
+<<<<<<< HEAD
             layers.Dense(32, name='dis_dense3', kernel_initializer=kernel_initializer),
             layers.LayerNormalization(),
+=======
+            layers.LayerNormalization(layers.Dense(32, name='dis_dense3', kernel_initializer=kernel_initializer)),
+>>>>>>> 84db3c06afd72daa4a71a9f72ab671de81662147
             layers.LeakyReLU(negative_slope=negative_slope),
             # layers.Dropout(dropout_rate),
             layers.SpectralNormalization(layers.Dense(8, name='dis_dense4', kernel_initializer=kernel_initializer)),

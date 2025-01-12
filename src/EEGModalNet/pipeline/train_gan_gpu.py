@@ -77,12 +77,12 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    lr_schedule_g = ExponentialDecay(0.00005, decay_steps=10000, decay_rate=0.96, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.00005, decay_steps=10000, decay_rate=0.96, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.00002, decay_steps=10000, decay_rate=0.96, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.00001, decay_steps=10000, decay_rate=0.96, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=0.0)
+                  gradient_penalty_weight=1.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 

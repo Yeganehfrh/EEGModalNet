@@ -112,8 +112,8 @@ class Generator(keras.Model):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, sub_labels)  # TODO: this layer can be used before or after data generation
-            if keras.mixed_precision.global_policy().name == 'mixed_float16':
-                x = x.float()  # make sure the output is in float32 in mixed precision mode
+        if keras.mixed_precision.global_policy().name == 'mixed_float16':
+            x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
 
 

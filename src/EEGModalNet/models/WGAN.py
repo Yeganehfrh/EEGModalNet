@@ -9,7 +9,7 @@ class Critic(keras.Model):
     def __init__(self, time_dim, feature_dim, n_subjects, use_sublayer, use_channel_merger, *args, **kwargs):
         super(Critic, self).__init__()
 
-        self.input_shape = (time_dim, feature_dim)
+        self.input_shape = (time_dim, feature_dim * 8)
         self.use_sublayer = use_sublayer
         negative_slope = 0.1
         kernel_initializer = keras.initializers.Orthogonal(gain=0.9)

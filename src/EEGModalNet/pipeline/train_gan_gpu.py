@@ -64,7 +64,7 @@ def run(data,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger_g=False,
+                    use_channel_merger_g=True,
                     use_channel_merger_c=False,
                     kerner_initializer='random_normal',
                     interpolation='bilinear')
@@ -128,11 +128,11 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/continuation_13.01.2025'
+    output_path = 'logs/with_posEmbed_13.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=280,
+                   max_epochs=400,
                    latent_dim=128,
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',

@@ -78,7 +78,7 @@ class Generator(keras.Model):
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value + chout might need to be updated
+                chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=False,  # TODO: pos_dim has a temporary value + chout might need to be updated
             )
 
         self.model = keras.Sequential([

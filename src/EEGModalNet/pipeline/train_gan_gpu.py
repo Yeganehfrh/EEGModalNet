@@ -137,8 +137,8 @@ if __name__ == '__main__':
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
-                   reuse_model=True,
-                   reuse_model_path='logs/13.01.2025_epoch_180.model.keras')
+                   reuse_model=False,
+                   reuse_model_path=None)
 
     # # backup
     # model.save(f'{output_path}_final.model.keras')

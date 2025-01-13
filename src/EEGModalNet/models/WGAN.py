@@ -9,7 +9,7 @@ class Critic(keras.Model):
     def __init__(self, time_dim, feature_dim, n_subjects, use_sublayer, use_channel_merger, *args, **kwargs):
         super(Critic, self).__init__()
 
-        self.input_shape = (time_dim, feature_dim * 8)
+        self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
         negative_slope = 0.1
         kernel_initializer = keras.initializers.Orthogonal(gain=0.9)
@@ -25,7 +25,7 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(8 * feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
+            ResidualBlock(feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
             # TransformerEncoder(feature_dim, 4, 2, 8, 0.2),
             # TODO: consider using pooling (max or average) instead of strides
             layers.Conv1D(8 * feature_dim, 9, strides=2, padding='same', activation='relu', name='conv3', kernel_initializer=kernel_initializer),

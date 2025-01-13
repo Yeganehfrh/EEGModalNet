@@ -64,8 +64,8 @@ def run(data,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger_g=True,
-                    use_channel_merger_c=True,
+                    use_channel_merger_g=False,
+                    use_channel_merger_c=False,
                     kerner_initializer='random_normal',
                     interpolation='bilinear')
 

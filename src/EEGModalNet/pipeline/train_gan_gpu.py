@@ -64,7 +64,7 @@ def run(data,
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=False,
-                    use_channel_merger_g=True,
+                    use_channel_merger_g=False,
                     use_channel_merger_c=False,
                     kerner_initializer='random_normal',
                     interpolation='bilinear')
@@ -77,8 +77,8 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    lr_schedule_g = ExponentialDecay(0.00001, decay_steps=10000, decay_rate=0.96, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.00001, decay_steps=10000, decay_rate=0.96, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.00001, decay_steps=100000, decay_rate=0.96, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.00001, decay_steps=100000, decay_rate=0.96, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/with_posEmbed_13.01.2025'
+    output_path = 'logs/without_pos_continuation-13.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,
@@ -137,8 +137,8 @@ if __name__ == '__main__':
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
-                   reuse_model=False,
-                   reuse_model_path=None)
+                   reuse_model=True,
+                   reuse_model_path='continuation_13.01.2025_epoch_280.model.keras')
 
     # # backup
     # model.save(f'{output_path}_final.model.keras')

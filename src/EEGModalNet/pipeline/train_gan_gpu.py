@@ -35,7 +35,7 @@ def load_data(data_path: str,
     n_subjects = x.shape[0]
 
     if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='band', fs=128, output='sos')
+        sos = butter(4, bandpass_filter, btype='high', fs=128, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
                              n_subjects=202,
                              channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'],
-                             bandpass_filter=[1, 42],
+                             bandpass_filter=1,
                              time_dim=1024,
                              exclude_sub_ids=None)
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/without_pos_continuation-13.01.2025'
+    output_path = 'logs/without_pos_continuation-14.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,
@@ -138,7 +138,7 @@ if __name__ == '__main__':
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=True,
-                   reuse_model_path='logs/continuation_13.01.2025_epoch_280.model.keras')
+                   reuse_model_path='logs/without_pos_continuation-13.01.2025_epoch_380.model')
 
     # # backup
     # model.save(f'{output_path}_final.model.keras')

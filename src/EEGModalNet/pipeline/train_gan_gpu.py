@@ -138,7 +138,7 @@ if __name__ == '__main__':
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=True,
-                   reuse_model_path='continuation_13.01.2025_epoch_280.model.keras')
+                   reuse_model_path='logs/continuation_13.01.2025_epoch_280.model.keras')
 
     # # backup
     # model.save(f'{output_path}_final.model.keras')

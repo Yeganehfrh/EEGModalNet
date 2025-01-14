@@ -91,7 +91,7 @@ def run(data,
                         epochs=max_epochs,
                         shuffle=True,
                         callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=10),
+                            CustomModelCheckpoint(model_path, save_freq=20),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                             keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                             keras.callbacks.CSVLogger(cvloger_path),
@@ -138,7 +138,7 @@ if __name__ == '__main__':
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=True,
-                   reuse_model_path='logs/without_pos_continuation-13.01.2025_epoch_380.model')
+                   reuse_model_path='logs/without_pos_continuation-13.01.2025_epoch_380.model.keras')
 
     # # backup
     # model.save(f'{output_path}_final.model.keras')

@@ -18,8 +18,10 @@ class ResidualBlock(layers.Layer):
 
     def call(self, inputs):
         x = self.conv1(inputs)
+        x = layers.LayerNormalization()(x)
         x = self.activation(x)
         x = self.conv2(x)
+        x = layers.LayerNormalization()(x)
         x = self.activation(x)
         x = self.conv3(x)
         x = layers.add([x, inputs])  # shortcut connection

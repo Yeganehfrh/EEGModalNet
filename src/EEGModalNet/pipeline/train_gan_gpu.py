@@ -5,7 +5,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
-from torch.utils.data import DataLoader, TensorDataset
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import CustomModelCheckpoint
 from typing import List
@@ -14,19 +13,15 @@ import xarray as xr
 from scipy.signal import butter, sosfiltfilt
 
 
-def find_channel_ids(dataarray, ch_names):
-    return [i for i, ch in enumerate(dataarray.channel.to_numpy()) if ch in ch_names]
-
-
 def load_data(data_path: str,
               n_subjects: int = 202,
               channels: List[str] = ['all'],
-              bandpass_filter: List[int] = [1, 42],
+              bandpass_filter: float = 1.0,
               time_dim: int = 1024,
               exclude_sub_ids=None) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
+    x = xarray.sel(subject=xarray.subject[:n_subjects])
 
     if exclude_sub_ids is not None:
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
@@ -42,8 +37,7 @@ def load_data(data_path: str,
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
-    ch_ind = find_channel_ids(xarray, channels)
-    pos = torch.tensor(xarray.ch_positions[ch_ind][None].repeat(x.shape[0], 0), device=device)
+    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
@@ -77,8 +71,8 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    lr_schedule_g = ExponentialDecay(0.00001, decay_steps=100000, decay_rate=0.96, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.00001, decay_steps=100000, decay_rate=0.96, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.96, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.96, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -101,10 +95,10 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5',
+    data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed.nc5',
                              n_subjects=202,
-                             channels=['O1', 'O2', 'Fp1', 'Fp2', 'C1', 'C2', 'P1', 'P2'],
-                             bandpass_filter=1,
+                             channels=['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2'],
+                             bandpass_filter=0.5,
                              time_dim=1024,
                              exclude_sub_ids=None)
 
@@ -128,7 +122,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/without_pos_continuation-14.01.2025'
+    output_path = 'logs/15.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,
@@ -137,8 +131,8 @@ if __name__ == '__main__':
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
-                   reuse_model=True,
-                   reuse_model_path='logs/without_pos_continuation-13.01.2025_epoch_380.model.keras')
+                   reuse_model=False,
+                   reuse_model_path=None)
 
     # # backup
     # model.save(f'{output_path}_final.model.keras')

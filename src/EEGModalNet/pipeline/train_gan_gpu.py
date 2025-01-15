@@ -122,17 +122,17 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/round2_15.01.2025'
+    output_path = 'logs/round3_15.01.2025'
 
     model, _ = run(data,
                    n_subjects=n_subs,
-                   max_epochs=800,
+                   max_epochs=3200,
                    latent_dim=128,
                    batch_size=128,
                    cvloger_path=f'{output_path}.csv',
                    model_path=output_path,
                    reuse_model=True,
-                   reuse_model_path='logs/15.01.2025_epoch_200.model.keras')
+                   reuse_model_path='logs/round2_15.01.2025_epoch_800.model.keras')
 
     # # backup
     # model.save(f'{output_path}_final.model.keras')

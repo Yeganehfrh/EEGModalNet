@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers_v2, SubjectLayers, convBlock, ChannelMerger, ResidualBlock
+from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, SinePositionalEncoding
 from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
@@ -83,7 +83,7 @@ class Generator(keras.Model):
                 chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=False,  # TODO: pos_dim has a temporary value + chout might need to be updated
             )
 
-        self.model = keras.Sequential([
+        self.dense_layers = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
@@ -94,6 +94,16 @@ class Generator(keras.Model):
             # layers.Dense(1024 * 1, kernel_initializer=kerner_initializer, name='gen_layer7'),
             # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer8'),
             layers.Reshape((256, 8), name='gen_layer9'),
+        ], name='generator_dense')
+
+        self.transformer = keras.Sequential([
+            keras.Input(shape=(256, 8)),
+            SinePositionalEncoding(256, 8),
+            SelfAttention1D(num_heads=2, key_dim=4),
+        ], name='transformer')
+
+        self.model = keras.Sequential([
+            keras.Input(shape=(256, 8)),
             *convBlock(filters=4 * [8 * feature_dim],
                        kernel_sizes=[15, 9, 7, 5],
                        upsampling=[1, 0, 1, 0],
@@ -109,7 +119,12 @@ class Generator(keras.Model):
         self.built = True
 
     def call(self, noise, sub_labels, positions):
-        x = self.model(noise)
+        x = self.dense_layers(noise)
+        print(x.shape)
+        x = self.transformer(x)
+        print(x.shape)
+        x = self.model(x)
+        print(x.shape)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
@@ -217,8 +232,8 @@ class WGAN_GP(keras.Model):
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
 
-        # clip the gradients
-        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
+        # # clip the gradients
+        # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
         grads = [v.value.grad for v in self.critic.trainable_weights]
         with torch.no_grad():
@@ -240,8 +255,8 @@ class WGAN_GP(keras.Model):
         g_loss = -fake_pred.mean()
         g_loss.backward()
 
-        # clip the gradients
-        torch.nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=10.0)
+        # # clip the gradients
+        # torch.nn.utils.clip_grad_norm_(self.generator.parameters(), max_norm=10.0)
 
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():

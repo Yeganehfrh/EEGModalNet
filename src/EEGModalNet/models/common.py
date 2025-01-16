@@ -1,3 +1,4 @@
+import numpy as np
 import math
 import typing as tp
 from typing import List, Union
@@ -356,3 +357,77 @@ class Classifier(keras.Model):
         x = self.dense4(x)
         x = self.dropout4(x)
         return self.output_layer(x)
+
+
+class SinePositionalEncoding(layers.Layer):
+    """
+    A sinusoidal positional encoding as introduced in the original Transformer paper.
+    This is non-trainable and encodes positions using sines and cosines of different frequencies.
+    """
+    def __init__(self, max_len: int = 1024, embedding_dim: int = 512, **kwargs):
+        super().__init__(**kwargs)
+        self.max_len = max_len
+        self.embedding_dim = embedding_dim
+
+        # Precompute the positional encodings in a [max_len, embedding_dim] array
+        pe = np.zeros((max_len, embedding_dim))
+        position = np.arange(0, max_len)[:, np.newaxis]  # shape (max_len, 1)
+        div_term = np.exp(
+            -math.log(10000.0) * (np.arange(0, embedding_dim, 2) / embedding_dim)
+        )
+        # Apply sin to even indices, cos to odd indices
+        pe[:, 0::2] = np.sin(position * div_term)
+        pe[:, 1::2] = np.cos(position * div_term)
+
+        # Convert to constant so we don't recalc every call
+        self.register_buffer('pe', torch.from_numpy(pe))   # shape (max_len, embedding_dim)
+
+    def call(self, inputs):
+        """
+        inputs: (batch, time, embedding_dim)
+        """
+        seq_len = inputs.shape[1]  # actual time dimension
+        # slice the first 'seq_len' positions: shape (seq_len, embedding_dim)
+        pos_slice = self.pe[:seq_len, :]
+        if inputs.device != pos_slice.device:
+            pos_slice = pos_slice.float().to(inputs.device)
+        # broadcast-add to (batch, seq_len, embedding_dim)
+        return inputs + pos_slice[None, :, :]
+
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            "max_len": self.max_len,
+            "embedding_dim": self.embedding_dim,
+        })
+        return config
+
+
+class SelfAttention1D(layers.Layer):
+    def __init__(self,
+                 num_heads: int = 4,
+                 key_dim: int = 8,
+                 **kwargs):
+        """
+        num_heads: number of attention heads
+        key_dim: size of each attention head for query, key, value
+        """
+        super().__init__(**kwargs)
+        self.mha = layers.MultiHeadAttention(
+            num_heads=num_heads,
+            key_dim=key_dim,
+            # optionally set value_dim, dropout, etc.
+        )
+        self.norm = layers.LayerNormalization()
+
+    def call(self, x):
+        """
+        x shape: (batch, time, features)
+        """
+        # Self-attention over x
+        attn_output = self.mha(x, x)  # (query=x, value=x)
+        # Skip connection
+        x = x + attn_output
+        # Layer norm
+        x = self.norm(x)
+        return x

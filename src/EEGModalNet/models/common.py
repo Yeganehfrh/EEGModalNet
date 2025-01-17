@@ -394,40 +394,16 @@ class SinePositionalEncoding(layers.Layer):
         # broadcast-add to (batch, seq_len, embedding_dim)
         return inputs + pos_slice[None, :, :]
 
-    def get_config(self):
-        config = super().get_config().copy()
-        config.update({
-            "max_len": self.max_len,
-            "embedding_dim": self.embedding_dim,
-        })
-        return config
-
 
 class SelfAttention1D(layers.Layer):
-    def __init__(self,
-                 num_heads: int = 4,
-                 key_dim: int = 8,
-                 **kwargs):
-        """
-        num_heads: number of attention heads
-        key_dim: size of each attention head for query, key, value
-        """
-        super().__init__(**kwargs)
-        self.mha = layers.MultiHeadAttention(
-            num_heads=num_heads,
-            key_dim=key_dim,
-            # optionally set value_dim, dropout, etc.
-        )
-        self.norm = layers.LayerNormalization()
+    def __init__(self, num_heads, key_dim):
+        super(SelfAttention1D, self).__init__()
 
-    def call(self, x):
-        """
-        x shape: (batch, time, features)
-        """
-        # Self-attention over x
-        attn_output = self.mha(x, x)  # (query=x, value=x)
-        # Skip connection
-        x = x + attn_output
-        # Layer norm
-        x = self.norm(x)
+        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim, dropout=0.0)
+        self.layer_norm = layers.LayerNormalization()
+
+    def call(self, inputs):
+        x = self.attention(inputs, inputs)  # (query=x, value=x)
+        x = x + inputs
+        x = self.layer_norm(x)
         return x

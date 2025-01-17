@@ -231,8 +231,8 @@ class WGAN_GP(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
 
         self.zero_grad()
-        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator((noise, random_sub, pos))  # TODO: consider using random positions
+        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
+        x_gen = self.generator((noise, sub, pos))  # TODO: consider using random positions
         fake_pred = self.critic({'x': x_gen, 'sub': sub, 'pos': pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()

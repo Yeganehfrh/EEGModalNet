@@ -399,7 +399,7 @@ class SelfAttention1D(layers.Layer):
     def __init__(self, num_heads, key_dim):
         super(SelfAttention1D, self).__init__()
 
-        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim, dropout=0.0)
+        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
         self.layer_norm = layers.LayerNormalization()
 
     def call(self, inputs):

@@ -56,7 +56,8 @@ class Critic(keras.Model):
 
         self.built = True
 
-    def call(self, x, sub_labels, positions):
+    def call(self, inputs):
+        x, sub_labels, positions = inputs['x'], inputs['sub'], inputs['pos']
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, sub_labels)
         if hasattr(self, 'pos_emb'):
@@ -83,7 +84,7 @@ class Generator(keras.Model):
                 chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=False,  # TODO: pos_dim has a temporary value + chout might need to be updated
             )
 
-        self.dense_layers = keras.Sequential([
+        self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
             layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
@@ -91,19 +92,9 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
             layers.Dense(2048 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
-            # layers.Dense(1024 * 1, kernel_initializer=kerner_initializer, name='gen_layer7'),
-            # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer8'),
             layers.Reshape((256, 8), name='gen_layer9'),
-        ], name='generator_dense')
-
-        self.transformer = keras.Sequential([
-            keras.Input(shape=(256, 8)),
             SinePositionalEncoding(256, 8),
-            SelfAttention1D(num_heads=2, key_dim=4),
-        ], name='transformer')
-
-        self.model = keras.Sequential([
-            keras.Input(shape=(256, 8)),
+            SelfAttention1D(2, 4),
             *convBlock(filters=4 * [8 * feature_dim],
                        kernel_sizes=[15, 9, 7, 5],
                        upsampling=[1, 0, 1, 0],
@@ -118,13 +109,9 @@ class Generator(keras.Model):
 
         self.built = True
 
-    def call(self, noise, sub_labels, positions):
-        x = self.dense_layers(noise)
-        print(x.shape)
-        x = self.transformer(x)
-        print(x.shape)
-        x = self.model(x)
-        print(x.shape)
+    def call(self, inputs):
+        noise, sub_labels, positions = inputs
+        x = self.model(noise)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
@@ -199,7 +186,7 @@ class WGAN_GP(keras.Model):
         interpolated = epsilon * real_data + (1 - epsilon) * fake_data
         interpolated.requires_grad_(True)
 
-        prob_interpolated = self.critic(interpolated, sub, pos)
+        prob_interpolated = self.critic({'x': interpolated, 'sub': sub, 'pos': pos})
 
         gradients = torch.autograd.grad(
             outputs=prob_interpolated,
@@ -214,7 +201,6 @@ class WGAN_GP(keras.Model):
         return gradient_penalty
 
     def train_step(self, data):
-        # real_data, sub, pos = data[0], data[1], data[2]  # TODO: find a better way to handle the subject device
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
         batch_size = real_data.size(0)
@@ -222,13 +208,12 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std)
-        fake_data = self.generator(noise, sub, pos).detach()
-        real_pred = self.critic(real_data, sub, pos)
-        fake_pred = self.critic(fake_data, sub, pos)  # TODO: should we use the same sub and pos for fake data?
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+        fake_data = self.generator((noise, sub, pos)).detach()
+        real_pred = self.critic(data)
+        fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
         self.zero_grad()
-        # spectral_regularization_loss_value = spectral_regularization_loss(real_data, fake_data, lambda_match=1 / 10e9, include_smooth=False)
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
 
@@ -250,8 +235,8 @@ class WGAN_GP(keras.Model):
 
         self.zero_grad()
         random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator(noise, random_sub, pos)  # TODO: consider using random positions
-        fake_pred = self.critic(x_gen, sub, pos)
+        x_gen = self.generator((noise, random_sub, pos))  # TODO: consider using random positions
+        fake_pred = self.critic({'x': x_gen, 'sub': sub, 'pos': pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()
 

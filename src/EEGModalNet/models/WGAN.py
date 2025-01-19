@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, SinePositionalEncoding
+from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, SinePositionalEncoding, PositionalEmbedding
 from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
@@ -93,7 +93,7 @@ class Generator(keras.Model):
             layers.Dense(2048 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((256, 8), name='gen_layer9'),
-            SinePositionalEncoding(256, 8),
+            LearnablePositionalEmbedding(256, 8),
             SelfAttention1D(2, 4),
             *convBlock(filters=4 * [8 * feature_dim],
                        kernel_sizes=[15, 9, 7, 5],
@@ -209,7 +209,7 @@ class WGAN_GP(keras.Model):
 
         # train critic
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-        fake_data = self.generator((noise, sub, pos)).detach()
+        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
         real_pred = self.critic(data)
         fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
@@ -231,8 +231,8 @@ class WGAN_GP(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
 
         self.zero_grad()
-        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator((noise, sub, pos))  # TODO: consider using random positions
+        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
+        x_gen = self.generator((noise, random_sub, pos))  # TODO: consider using random positions
         fake_pred = self.critic({'x': x_gen, 'sub': sub, 'pos': pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()

@@ -180,7 +180,7 @@ class ChannelMerger(nn.Module):
             weights = torch.softmax(scores, dim=2, dtype=torch.float16)
         else:
             weights = torch.softmax(scores, dim=2)
-        out = torch.einsum("bct,boc->bot", eeg, weights)
+        out = torch.einsum("bct,boc->bot", eeg, weights)  # It's in fact "bct,bcc->bct" that's why it doesn't raise an error
         if self.training and self.usage_penalty > 0.:
             usage = weights.mean(dim=(0, 1)).sum()
             self._penalty = self.usage_penalty * usage
@@ -198,8 +198,8 @@ class SubjectLayers(nn.Module):
         self.weights.data *= 1 / in_channels**0.5
 
     def forward(self, x, subjects):
-        _, C, D = self.weights.shape
-        weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D))
+        _, C, D = self.weights.shape  # n_subjects, channels_in, channels_out
+        weights = self.weights.gather(0, subjects.view(-1, 1, 1).expand(-1, C, D))  # batch size, channels_in, channels_out
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             weights = weights.half()
         x = torch.einsum("bct,bcd->bdt", x.permute(0, 2, 1), weights)
@@ -240,19 +240,6 @@ def convBlock(filters: List[int],
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
         lyrs.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))
     return lyrs
-
-
-# Custom Positional Embedding Layer
-class PositionalEmbedding(layers.Layer):
-    def __init__(self, sequence_length, embed_dim):
-        super(PositionalEmbedding, self).__init__()
-        self.position_embeddings = layers.Embedding(input_dim=sequence_length, output_dim=embed_dim)
-        self.sequence_length = sequence_length
-
-    def call(self, inputs):
-        positions = torch.arange(start=0, end=self.sequence_length, step=1)
-        position_embeddings = self.position_embeddings(positions)
-        return inputs + position_embeddings
 
 
 # Transformer Encoder Block
@@ -353,6 +340,44 @@ class Classifier(keras.Model):
         x = self.dense4(x)
         x = self.dropout4(x)
         return self.output_layer(x)
+
+
+class LearnablePositionalEmbedding(layers.Layer):
+    """
+    A simple trainable positional embedding layer.
+    Each position 'i' in the sequence has a learned embedding of dimension 'embedding_dim'.
+    """
+    def __init__(self, sequence_length: int, embedding_dim: int, **kwargs):
+        super().__init__(**kwargs)
+        self.pos_emb = self.add_weight(
+            name="pos_emb",
+            shape=(sequence_length, embedding_dim),
+            initializer="uniform",
+            trainable=True,
+        )
+
+    def call(self, inputs):
+        """
+        inputs: (batch_size, time, embedding_dim)
+        We'll add the positional embeddings up to 'time' steps.
+        """
+        seq_len = inputs.shape[1]
+        # slice the first 'seq_len' embeddings (if seq_len < sequence_length)
+        pos_slice = self.pos_emb[None, :seq_len, :]
+        return inputs + pos_slice
+
+
+# Custom Positional Embedding Layer
+class PositionalEmbedding(layers.Layer):
+    def __init__(self, sequence_length, embed_dim):
+        super(PositionalEmbedding, self).__init__()
+        self.position_embeddings = layers.Embedding(input_dim=sequence_length, output_dim=embed_dim)
+        self.sequence_length = sequence_length
+
+    def call(self, inputs):
+        positions = torch.arange(start=0, end=self.sequence_length, step=1)
+        position_embeddings = self.position_embeddings(positions)
+        return inputs + position_embeddings
 
 
 class SinePositionalEncoding(layers.Layer):

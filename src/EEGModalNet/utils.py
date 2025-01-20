@@ -45,9 +45,11 @@ class ProgressBarCallback(keras.callbacks.Callback):
 
 class StepLossHistory(keras.callbacks.Callback):
     def on_train_begin(self, logs=None):
-        self.step_losses = {'g_loss': [], 'd_loss': []}
+        self.step_stats = {'g_loss': [], 'd_loss': [], 'critic_grad_norm': [], 'gp': []}
 
     def on_train_batch_end(self, batch, logs=None):
         logs = logs or {}
-        self.step_losses['g_loss'].append(logs.get('g_loss'))
-        self.step_losses['d_loss'].append(logs.get('d_loss'))
+        self.step_stats['g_loss'].append(logs.get('g_loss'))
+        self.step_stats['d_loss'].append(logs.get('d_loss'))
+        self.step_stats['critic_grad_norm'].append(logs.get('critic_grad_norm'))
+        self.step_stats['gp'].append(logs.get('_gp'))

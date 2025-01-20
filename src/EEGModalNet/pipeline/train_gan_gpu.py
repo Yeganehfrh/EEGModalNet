@@ -6,9 +6,10 @@ import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
 from ...EEGModalNet import WGAN_GP
-from ...EEGModalNet import CustomModelCheckpoint
+from ...EEGModalNet import CustomModelCheckpoint, StepLossHistory
 from typing import List
 import numpy as np
+import pandas as pd
 import xarray as xr
 from scipy.signal import butter, sosfiltfilt
 
@@ -80,18 +81,21 @@ def run(data,
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
-    history = model.fit(data,
-                        batch_size=batch_size,
-                        epochs=max_epochs,
-                        shuffle=True,
-                        callbacks=[
-                            CustomModelCheckpoint(model_path, save_freq=50),
-                            keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
-                            keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
-                            keras.callbacks.CSVLogger(cvloger_path),
-                        ])
+    step_loss_history = StepLossHistory()
 
-    return model, history
+    _ = model.fit(data,
+                  batch_size=batch_size,
+                  epochs=max_epochs,
+                  shuffle=True,
+                  callbacks=[
+                      CustomModelCheckpoint(model_path, save_freq=50),
+                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
+                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
+                      keras.callbacks.CSVLogger(cvloger_path),
+                      step_loss_history
+                  ])
+
+    return model, step_loss_history
 
 
 if __name__ == '__main__':
@@ -122,17 +126,16 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/19.01.2025'
+    output_path = 'logs/20.01.2025'
 
-    model, _ = run(data,
-                   n_subjects=n_subs,
-                   max_epochs=3200,
-                   latent_dim=128,
-                   batch_size=128,
-                   cvloger_path=f'{output_path}.csv',
-                   model_path=output_path,
-                   reuse_model=False,
-                   reuse_model_path=None)
+    model, step_loss_history = run(data,
+                                   n_subjects=n_subs,
+                                   max_epochs=20,
+                                   latent_dim=128,
+                                   batch_size=128,
+                                   cvloger_path=f'{output_path}.csv',
+                                   model_path=output_path,
+                                   reuse_model=True,
+                                   reuse_model_path='logs/19012025/19.01.2025_epoch_200.model.keras')
 
-    # # backup
-    # model.save(f'{output_path}_final.model.keras')
+    pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')

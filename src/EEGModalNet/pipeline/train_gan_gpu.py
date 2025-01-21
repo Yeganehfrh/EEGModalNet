@@ -81,7 +81,7 @@ def run(data,
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
-    step_loss_history = StepLossHistory()
+    # step_loss_history = StepLossHistory()
 
     _ = model.fit(data,
                   batch_size=batch_size,
@@ -92,10 +92,10 @@ def run(data,
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
-                      step_loss_history
+                      # step_loss_history
                   ])
 
-    return model, step_loss_history
+    return model
 
 
 if __name__ == '__main__':
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/20.01.2025'
+    output_path = 'logs/21.01.2025'
 
     model, step_loss_history = run(data,
                                    n_subjects=n_subs,
@@ -138,4 +138,4 @@ if __name__ == '__main__':
                                    reuse_model=False,
                                    reuse_model_path=None)
 
-    pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')
+    # pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')

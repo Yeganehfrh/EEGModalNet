@@ -126,7 +126,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/21.01.2025'
+    output_path = 'logs/v2_21.01.2025'
 
     model, step_loss_history = run(data,
                                    n_subjects=n_subs,

@@ -27,34 +27,33 @@ class Critic(keras.Model):
             keras.Input(shape=self.input_shape),
             ResidualBlock(feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
             # TODO: consider using pooling (max or average) instead of strides
-            layers.Conv1D(feature_dim, 5, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            layers.Conv1D(1 * feature_dim, 5, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, 5, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, 5, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(256, 32),  # TODO: Make this more dynamic so the model can be used with different time dimensions according to the input
-            SelfAttention1D(2, 4),
+            SelfAttention1D(4, 8),
             layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv7', kernel_initializer=kernel_initializer),
+            layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv7', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv8', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv9', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv10', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(8, 64),  # TODO: consider adding a positional embedding here before collapsing the time dimensions
-            SelfAttention1D(2, 4),
+            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv8', kernel_initializer=kernel_initializer),
+            # layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv9', kernel_initializer=kernel_initializer),
+            # layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv10', kernel_initializer=kernel_initializer),
+            # layers.LeakyReLU(negative_slope=negative_slope),
+            # LearnablePositionalEmbedding(8, 64),  # TODO: consider adding a positional embedding here before collapsing the time dimensions
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(256, name='dis_dense0', kernel_initializer=kernel_initializer),
-            layers.LayerNormalization(),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Dense(128, name='dis_dense1', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Dense(64, name='dis_dense2', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dense(256, name='dis_dense0', kernel_initializer=kernel_initializer),
+            # layers.LayerNormalization(),
+            # layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dense(128, name='dis_dense1', kernel_initializer=kernel_initializer),
+            # layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dense(64, name='dis_dense2', kernel_initializer=kernel_initializer),
+            # layers.LeakyReLU(negative_slope=negative_slope),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
 
@@ -212,7 +211,7 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        for _ in range(2):
+        for _ in range(3):
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
             fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
             real_pred = self.critic(data)

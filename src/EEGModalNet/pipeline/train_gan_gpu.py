@@ -58,7 +58,7 @@ def run(data,
     model = WGAN_GP(time_dim=1024, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
-                    use_sublayer_critic=False,
+                    use_sublayer_critic=True,
                     use_channel_merger_g=False,
                     use_channel_merger_c=False,
                     kerner_initializer='random_normal',
@@ -77,7 +77,7 @@ def run(data,
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=5.0)
+                  gradient_penalty_weight=10.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/v2_21.01.2025'
+    output_path = 'logs/22.01.2025'
 
     model, step_loss_history = run(data,
                                    n_subjects=n_subs,

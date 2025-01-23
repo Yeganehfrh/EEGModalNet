@@ -72,8 +72,8 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    lr_schedule_g = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.96, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.96, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.0000966, decay_steps=100000, decay_rate=0.96, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0000966, decay_steps=100000, decay_rate=0.96, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -136,6 +136,6 @@ if __name__ == '__main__':
                                    cvloger_path=f'{output_path}.csv',
                                    model_path=output_path,
                                    reuse_model=True,
-                                   reuse_model_path='logs/22.01.2025_epoch_1000.model.keras')
+                                   reuse_model_path='logs/round2_22.01.2025_epoch_1000.model.keras')
 
     # pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')

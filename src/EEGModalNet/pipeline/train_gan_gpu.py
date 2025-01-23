@@ -88,7 +88,7 @@ def run(data,
                   epochs=max_epochs,
                   shuffle=True,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=20),
+                      CustomModelCheckpoint(model_path, save_freq=50),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -126,16 +126,16 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/round2_22.01.2025'
+    output_path = 'logs/23.01.2025'
 
     model, step_loss_history = run(data,
                                    n_subjects=n_subs,
-                                   max_epochs=1000,
+                                   max_epochs=3000,
                                    latent_dim=128,
                                    batch_size=128,
                                    cvloger_path=f'{output_path}.csv',
                                    model_path=output_path,
                                    reuse_model=True,
-                                   reuse_model_path='logs/22.01.2025_epoch_50.model.keras')
+                                   reuse_model_path='logs/22.01.2025_epoch_1000.model.keras')
 
     # pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')

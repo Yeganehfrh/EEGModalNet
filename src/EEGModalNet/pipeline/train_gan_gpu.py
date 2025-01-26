@@ -127,17 +127,18 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/26.01.2025'
+    output_path = 'logs/27.01.2025'
 
-    model, step_loss_history = run(data,
-                                   n_subjects=n_subs,
-                                   max_epochs=275,
-                                   latent_dim=128,
-                                   batch_size=128,
-                                   cvloger_path=f'{output_path}.csv',
-                                   model_path=output_path,
-                                   reuse_model=True,
-                                   reuse_model_path='logs/23.01.2025_epoch_800.model.keras')
+    model = run(data,
+                n_subjects=n_subs,
+                max_epochs=1000,
+                latent_dim=128,
+                batch_size=128,
+                cvloger_path=f'{output_path}.csv',
+                model_path=output_path,
+                reuse_model=False,
+                reuse_model_path=None)
+
     model.save('logs/final_model.model.keras')
 
     # pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')

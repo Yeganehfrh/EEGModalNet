@@ -89,10 +89,10 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
-            layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
-            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
-            layers.Dense(512 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
-            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
+            # layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
+            # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
+            # layers.Dense(512 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
+            # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
             layers.Dense(2048 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((256, 8), name='gen_layer9'),
@@ -211,7 +211,7 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        for _ in range(3):
+        for _ in range(2):
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
             fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
             real_pred = self.critic(data)

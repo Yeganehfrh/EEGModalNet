@@ -131,12 +131,13 @@ if __name__ == '__main__':
 
     model, step_loss_history = run(data,
                                    n_subjects=n_subs,
-                                   max_epochs=3000,
+                                   max_epochs=275,
                                    latent_dim=128,
                                    batch_size=128,
                                    cvloger_path=f'{output_path}.csv',
                                    model_path=output_path,
                                    reuse_model=True,
                                    reuse_model_path='logs/23.01.2025_epoch_800.model.keras')
+    model.save('logs/final_model.model.keras')
 
     # pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')

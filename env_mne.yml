@@ -1,0 +1,17 @@
+name: MNE
+
+channels:
+  - pytorch
+  - conda-forge
+  - default
+
+dependencies:
+  - python
+  - pip
+  - pandas
+  - ipykernel
+  - xarray
+  - h5netcdf
+  - scipy
+  - keras>3
+  - mne

@@ -23,7 +23,7 @@ dependencies:
   - xarray
   - h5netcdf
   # - tensorboard
-  # - dvc>3
+  - dvc>3
   # - dvc-gdrive
   # - dvc-ssh
   - openai

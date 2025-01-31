@@ -255,9 +255,9 @@ class WGAN_GP(keras.Model):
             'd_loss': self.d_loss_tracker.result(),
             'g_loss': self.g_loss_tracker.result(),
             'critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
+            'gp': gp.item(),
             '_real_pred': real_pred.mean().item(),
             '_fake_pred': fake_pred.mean().item(),
             '_real_pred_std': real_pred.std().item(),
             '_fake_pred_std': fake_pred.std().item(),
-            '_gp': gp.item(),
         }

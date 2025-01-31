@@ -12,6 +12,10 @@ from keras import layers, regularizers, ops
 class ResidualBlock(layers.Layer):
     def __init__(self, filters, kernel_size, kernel_initializer, activation='relu', **kwargs):
         super(ResidualBlock, self).__init__(**kwargs)
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.kernel_initializer = kernel_initializer
+        self.activation_f = activation
         self.conv1 = layers.Conv1D(filters, 3, padding='same', kernel_initializer=kernel_initializer, activation=activation)
         self.conv2 = layers.Conv1D(filters, 5, padding='same', dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
         self.conv3 = layers.Conv1D(filters, 7, padding='same', kernel_initializer=kernel_initializer)
@@ -24,6 +28,16 @@ class ResidualBlock(layers.Layer):
         x = layers.add([x, inputs])  # shortcut connection
         x = self.activation(x)
         return x
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "filters": self.filters,
+            "kernel_size": self.kernel_size,
+            "kernel_initializer": self.kernel_initializer,
+            "activation": self.activation_f,
+        })
+        return config
 
 
 # transformer encoder based on example on https://keras.io/examples/timeseries/timeseries_classification_transformer/

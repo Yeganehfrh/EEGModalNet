@@ -35,25 +35,11 @@ class Critic(keras.Model):
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(256, 32),  # TODO: Make this more dynamic so the model can be used with different time dimensions according to the input
             SelfAttention1D(4, 8),
-            layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+            layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv7', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv8', kernel_initializer=kernel_initializer),
+            # layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv7', kernel_initializer=kernel_initializer),
             # layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv9', kernel_initializer=kernel_initializer),
-            # layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv10', kernel_initializer=kernel_initializer),
-            # layers.LeakyReLU(negative_slope=negative_slope),
-            # LearnablePositionalEmbedding(8, 64),  # TODO: consider adding a positional embedding here before collapsing the time dimensions
             layers.Flatten(name='dis_flatten'),
-            # layers.Dense(256, name='dis_dense0', kernel_initializer=kernel_initializer),
-            # layers.LayerNormalization(),
-            # layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Dense(128, name='dis_dense1', kernel_initializer=kernel_initializer),
-            # layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Dense(64, name='dis_dense2', kernel_initializer=kernel_initializer),
-            # layers.LeakyReLU(negative_slope=negative_slope),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
 
@@ -93,14 +79,14 @@ class Generator(keras.Model):
             # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
             # layers.Dense(512 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
             # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
-            layers.Dense(2048 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
+            layers.Dense(4096 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
-            layers.Reshape((256, 8), name='gen_layer9'),
-            LearnablePositionalEmbedding(256, 8),
-            SelfAttention1D(2, 4),
-            *convBlock(filters=4 * [8 * feature_dim],
-                       kernel_sizes=[15, 9, 7, 5],
-                       upsampling=[1, 0, 1, 0],
+            layers.Reshape((256, 16), name='gen_layer9'),
+            # LearnablePositionalEmbedding(256, 16),
+            # SelfAttention1D(4, 4),
+            *convBlock(filters=[8 * feature_dim, 8 * feature_dim],
+                       kernel_sizes=[5, 5],
+                       upsampling=[0, 1],
                        stride=1,
                        padding='same',
                        interpolation=interpolation,
@@ -211,22 +197,22 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        for _ in range(2):
-            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-            fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
-            real_pred = self.critic(data)
-            fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-            d_loss.backward()
+        # for _ in range(2):
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
+        real_pred = self.critic(data)
+        fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
+        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+        self.zero_grad()
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+        d_loss.backward()
 
-            # clip gradients
-            # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
+        # clip gradients
+        # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

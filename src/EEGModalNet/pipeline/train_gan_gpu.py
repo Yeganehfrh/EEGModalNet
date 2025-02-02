@@ -88,7 +88,7 @@ def run(data,
                   epochs=max_epochs,
                   shuffle=True,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=50),
+                      CustomModelCheckpoint(model_path, save_freq=20),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -104,7 +104,7 @@ if __name__ == '__main__':
                              n_subjects=202,
                              channels=['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2'],
                              bandpass_filter=0.5,
-                             time_dim=1024,
+                             time_dim=512,
                              exclude_sub_ids=None)
 
     if torch.cuda.is_available():
@@ -127,11 +127,11 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/31.01.2025'
+    output_path = 'logs/01.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,
-                max_epochs=5000,
+                max_epochs=2000,
                 latent_dim=128,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
@@ -139,6 +139,6 @@ if __name__ == '__main__':
                 reuse_model=False,
                 reuse_model_path=None)
 
-    model.save('logs/final_model.model.keras')
+    model.save(f'{output_path}-final_model.model.keras')
 
     # pd.DataFrame.from_dict(step_loss_history.step_stats).to_csv(f'{output_path}_step_loss_history.csv')

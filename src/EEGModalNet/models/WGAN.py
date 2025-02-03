@@ -24,24 +24,22 @@ class Critic(keras.Model):
             self.input_shape = (time_dim, feature_dim * 8)
 
         self.model = keras.Sequential([
-            keras.Input(shape=self.input_shape),
-            ResidualBlock(feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
-            # TODO: consider using pooling (max or average) instead of strides
-            layers.Conv1D(2 * feature_dim, 5, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, 5, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
-            # layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(128, 32),  # TODO: Make this more dynamic so the model can be used with different time dimensions according to the input
-            SelfAttention1D(4, 8),
-            layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv7', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Flatten(name='dis_flatten'),
-            layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
-        ], name='critic')
+            keras.Input(shape=(512, 8)),
+            layers.Conv1D(filters=32, kernel_size=3, strides=1, padding='same', kernel_initializer=kernel_initializer, name='critic_conv1'),
+            layers.LeakyReLU(alpha=negative_slope, name='critic_act1'),
+            layers.Conv1D(filters=64, kernel_size=3, strides=2, padding='same', kernel_initializer=kernel_initializer, name='critic_conv2'),
+            layers.LeakyReLU(alpha=negative_slope, name='critic_act2'),
+            layers.Conv1D(filters=128, kernel_size=3, strides=2, padding='same', kernel_initializer=kernel_initializer, name='critic_conv3'),
+            layers.LeakyReLU(alpha=negative_slope, name='critic_act3'),
+            layers.Conv1D(filters=32, kernel_size=1, strides=1, padding='same', kernel_initializer=kernel_initializer, name='critic_conv4'),
+            layers.LeakyReLU(alpha=negative_slope, name='critic_act4'),
+            # --- Positional Embedding and Self-Attention ---
+            LearnablePositionalEmbedding(128, 32),
+            SelfAttention1D(num_heads=4, key_dim=8),
+            # --- Final Layers ---
+            layers.Flatten(name='critic_flatten'),
+            layers.Dense(1, kernel_initializer=kernel_initializer, name='critic_output')
+        ])
 
         self.built = True
 

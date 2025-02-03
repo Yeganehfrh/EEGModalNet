@@ -56,7 +56,7 @@ class Critic(keras.Model):
 
 
 class Generator(keras.Model):
-    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim
+    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim,
                  n_subjects, use_channel_merger, interpolation, *args, **kwargs):
         super(Generator, self).__init__()
         self.negative_slope = 0.2
@@ -126,7 +126,6 @@ class WGAN_GP(keras.Model):
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
-        # self.critic_updates = critic_updates
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,

@@ -227,16 +227,19 @@ class WGAN_GP(keras.Model):
         with torch.no_grad():
             self.g_optimizer.apply(grads, self.generator.trainable_weights)
 
+        total_loss = g_loss + d_loss
+
         # Update metrics and return their value.
         self.d_loss_tracker.update_state(d_loss)
         self.g_loss_tracker.update_state(g_loss)
         return {
-            'd_loss': self.d_loss_tracker.result(),
-            'g_loss': self.g_loss_tracker.result(),
-            'critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
-            'gp': gp.item(),
-            '_real_pred': real_pred.mean().item(),
-            '_fake_pred': fake_pred.mean().item(),
-            '_real_pred_std': real_pred.std().item(),
-            '_fake_pred_std': fake_pred.std().item(),
+            '1 d_loss': self.d_loss_tracker.result(),
+            '2 g_loss': self.g_loss_tracker.result(),
+            '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
+            '4 gp': gp.item(),
+            '5 real_pred': real_pred.mean().item(),
+            '6 fake_pred': fake_pred.mean().item(),
+            '7 real_pred_std': real_pred.std().item(),
+            '8 fake_pred_std': fake_pred.std().item(),
+            'loss': total_loss,
         }

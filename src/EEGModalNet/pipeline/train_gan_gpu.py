@@ -88,8 +88,8 @@ def run(data,
                   shuffle=True,
                   callbacks=[
                       CustomModelCheckpoint(model_path, save_freq=50),
-                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='g_loss', save_best_only=True),
-                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='d_loss', save_best_only=True),
+                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
+                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
                       keras.callbacks.TerminateOnNaN()
                       # step_loss_history

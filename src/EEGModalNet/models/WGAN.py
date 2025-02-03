@@ -27,18 +27,18 @@ class Critic(keras.Model):
             keras.Input(shape=self.input_shape),
             ResidualBlock(feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
             # TODO: consider using pooling (max or average) instead of strides
-            layers.Conv1D(1 * feature_dim, 5, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            layers.Conv1D(2 * feature_dim, 5, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, 5, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(4 * feature_dim, 5, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, 5, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(256, 32),  # TODO: Make this more dynamic so the model can be used with different time dimensions according to the input
-            SelfAttention1D(4, 8),
-            layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv7', kernel_initializer=kernel_initializer),
+            # layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             # layers.LeakyReLU(negative_slope=negative_slope),
+            LearnablePositionalEmbedding(128, 32),  # TODO: Make this more dynamic so the model can be used with different time dimensions according to the input
+            SelfAttention1D(4, 8),
+            layers.Conv1D(8 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+            layers.LeakyReLU(negative_slope=negative_slope),
+            layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv7', kernel_initializer=kernel_initializer),
+            layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
@@ -75,17 +75,13 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
-            # layers.Dense(256 * 1, kernel_initializer=kerner_initializer, name='gen_layer1'),
-            # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer2'),
-            # layers.Dense(512 * 1, kernel_initializer=kerner_initializer, name='gen_layer3'),
-            # layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer4'),
             layers.Dense(4096 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8),
-            *convBlock(filters=[8 * feature_dim, 8 * feature_dim],
-                       kernel_sizes=[5, 5],
+            *convBlock(filters=[8 * feature_dim, 4 * feature_dim],
+                       kernel_sizes=[3, 3],
                        upsampling=[1, 1],
                        stride=1,
                        padding='same',

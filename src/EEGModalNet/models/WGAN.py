@@ -12,7 +12,7 @@ class Critic(keras.Model):
         self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
         negative_slope = 0.1
-        kernel_initializer = keras.initializers.Orthogonal(gain=0.9)
+        kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
         if use_sublayer:
             self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)  # TODO: check out the input and output channels when we include more channels
@@ -56,13 +56,14 @@ class Critic(keras.Model):
 
 
 class Generator(keras.Model):
-    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim, kerner_initializer,
+    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim
                  n_subjects, use_channel_merger, interpolation, *args, **kwargs):
         super(Generator, self).__init__()
         self.negative_slope = 0.2
         self.input_shape = (time_dim, feature_dim)
         self.use_sublayer = use_sublayer
         self.latent_dim = latent_dim
+        kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
         if use_sublayer:
             self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
@@ -75,7 +76,7 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
-            layers.Dense(4096 * 1, kernel_initializer=kerner_initializer, name='gen_layer5'),
+            layers.Dense(4096 * 1, kernel_initializer=kernel_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
@@ -87,9 +88,9 @@ class Generator(keras.Model):
                        padding='same',
                        interpolation=interpolation,
                        negative_slope=0.2,
-                       kernel_initializer=kerner_initializer,
+                       kernel_initializer=kernel_initializer,
                        batch_norm=True),
-            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kerner_initializer),
+            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
         self.built = True
@@ -111,7 +112,7 @@ class WGAN_GP(keras.Model):
     def __init__(self,
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
-                 emb_dim=20, kerner_initializer='glorot_uniform',
+                 emb_dim=20,
                  use_channel_merger_g=False,
                  use_channel_merger_c=False,
                  interpolation='bilinear',
@@ -133,7 +134,6 @@ class WGAN_GP(keras.Model):
                                    use_sublayer=use_sublayer_generator,
                                    num_classes=n_subjects,
                                    emb_dim=emb_dim,
-                                   kerner_initializer=kerner_initializer,
                                    n_subjects=n_subjects,
                                    use_channel_merger=use_channel_merger_g,
                                    interpolation=interpolation)

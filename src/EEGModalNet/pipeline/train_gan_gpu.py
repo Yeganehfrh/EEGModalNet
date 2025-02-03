@@ -61,7 +61,6 @@ def run(data,
                     use_sublayer_critic=True,
                     use_channel_merger_g=False,
                     use_channel_merger_c=False,
-                    kerner_initializer='random_normal',
                     interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

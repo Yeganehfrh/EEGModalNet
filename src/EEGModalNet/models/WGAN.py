@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, SkipBlock
+from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding
 
 
 class Critic(keras.Model):
@@ -77,8 +77,16 @@ class Generator(keras.Model):
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8),
-            SkipBlock(64, 3, kernel_initializer),
-            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
+            *convBlock(filters=2 * [16 * feature_dim],
+                       kernel_sizes=[3, 3],
+                       upsampling=[1, 1],
+                       stride=1,
+                       padding='same',
+                       interpolation=interpolation,
+                       negative_slope=0.2,
+                       kernel_initializer=kernel_initializer,
+                       batch_norm=True),
+            layers.Conv1D(feature_dim, 1, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
         self.built = True
@@ -180,15 +188,15 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        # for _ in range(2):
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
-        real_pred = self.critic(data)
-        fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-        self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()
+        for _ in range(2):
+            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+            fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
+            real_pred = self.critic(data)
+            fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.zero_grad()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss.backward()
 
         # clip gradients
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)

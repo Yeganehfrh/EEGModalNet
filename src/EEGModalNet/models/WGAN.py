@@ -32,7 +32,7 @@ class Critic(keras.Model):
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, 5, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(256, 32),  # TODO: Make this more dynamic so the model can be used with different time dimensions according to the input
+            LearnablePositionalEmbedding(256, 32),
             SelfAttention1D(4, 8),
             layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
@@ -78,7 +78,7 @@ class Generator(keras.Model):
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8),
-            *convBlock(filters=[8 * feature_dim, 4 * feature_dim],
+            *convBlock(filters=[8 * feature_dim, 8 * feature_dim],
                        kernel_sizes=[3, 3],
                        upsampling=[1, 1],
                        stride=1,

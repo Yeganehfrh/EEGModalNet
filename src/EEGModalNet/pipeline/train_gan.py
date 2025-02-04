@@ -63,7 +63,6 @@ def run(data,
                     use_sublayer_critic=True,
                     use_channel_merger_c=False,
                     use_channel_merger_g=False,
-                    kerner_initializer='random_normal',
                     interpolation='bilinear')
 
     model.compile(d_optimizer=keras.optimizers.Adam(0.0000940, beta_1=0.5, beta_2=0.9),

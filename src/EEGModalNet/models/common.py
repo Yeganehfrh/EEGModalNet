@@ -442,3 +442,49 @@ class SelfAttention1D(layers.Layer):
         x = x + inputs
         x = self.layer_norm(x)
         return x
+
+
+def SingleConvBlock(filter: int,
+                    kernel_size: Union[int, tuple],
+                    upsampling: Union[bool, int],
+                    stride: int = 1,
+                    padding: str = 'same',
+                    negative_slope: float = 0.2,
+                    kernel_initializer: str = 'glorot_uniform',
+                    batch_norm: bool = True,
+                    activation: bool = True) -> List[layers.Layer]:
+    lyrs = []
+    if upsampling:
+        lyrs.append(layers.UpSampling1D(2))
+    lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer))
+    if batch_norm:
+        lyrs.append(layers.BatchNormalization())
+    if activation:
+        lyrs.append(layers.LeakyReLU(negative_slope=negative_slope))
+    return lyrs
+
+
+class SkipBlock(layers.Layer):
+    def __init__(self, filter, kernel_size, kernel_initializer, **kwargs) -> None:
+        super(SkipBlock, self).__init__(**kwargs)
+        # First residual sub-block: block1 and block2
+        self.block1 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=True, kernel_initializer=kernel_initializer))
+        self.block2 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=False, kernel_initializer=kernel_initializer))
+
+        # Second residual sub-block: block3 and block4
+        self.block3 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=True, kernel_initializer=kernel_initializer))
+        self.block4 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=False, kernel_initializer=kernel_initializer))
+
+        self.activation = layers.LeakyReLU(negative_slope=0.2)
+
+    def call(self, inputs):
+        # First residual connection
+        residual1 = self.block1(inputs)
+        out1 = self.block2(residual1)
+        out1 = self.activation(layers.add([out1, residual1]))
+
+        # Second residual connection
+        residual2 = self.block3(out1)
+        out2 = self.block4(residual2)
+        out2 = self.activation(layers.add([out2, residual2]))
+        return out2

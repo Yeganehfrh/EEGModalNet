@@ -1,8 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, SinePositionalEncoding, PositionalEmbedding
-from ..preprocessing.spectral_regularization import spectral_regularization_loss
+from .common import SubjectLayers, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, SkipBlock
 
 
 class Critic(keras.Model):
@@ -78,16 +77,8 @@ class Generator(keras.Model):
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8),
-            *convBlock(filters=4 * [8 * feature_dim],
-                       kernel_sizes=[3, 3, 3, 3],
-                       upsampling=[0, 1, 0, 1],
-                       stride=1,
-                       padding='same',
-                       interpolation=interpolation,
-                       negative_slope=0.2,
-                       kernel_initializer=kernel_initializer,
-                       batch_norm=True),
-            layers.Conv1D(feature_dim, 1, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
+            SkipBlock(64, 3, kernel_initializer),
+            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
         self.built = True

@@ -87,7 +87,7 @@ def run(data,
                   epochs=max_epochs,
                   shuffle=True,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=20),
+                      CustomModelCheckpoint(model_path, save_freq=50),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -99,7 +99,7 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed.nc5',
+    data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed_downsampled.nc5',
                              n_subjects=202,
                              channels=['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2'],
                              bandpass_filter=0.5,
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/05022025/05.02.2025_filter128-ks3'
+    output_path = 'logs/06.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,

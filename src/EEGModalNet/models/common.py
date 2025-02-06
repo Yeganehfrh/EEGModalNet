@@ -363,6 +363,8 @@ class LearnablePositionalEmbedding(layers.Layer):
     """
     def __init__(self, sequence_length: int, embedding_dim: int, **kwargs):
         super().__init__(**kwargs)
+        self.sequence_length = sequence_length
+        self.embedding_dim = embedding_dim
         self.pos_emb = self.add_weight(
             name="pos_emb",
             shape=(sequence_length, embedding_dim),
@@ -379,6 +381,14 @@ class LearnablePositionalEmbedding(layers.Layer):
         # slice the first 'seq_len' embeddings (if seq_len < sequence_length)
         pos_slice = self.pos_emb[None, :seq_len, :]
         return inputs + pos_slice
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "max_length": self.sequence_length,
+            "embedding_dim": self.embedding_dim,
+        })
+        return config
 
 
 # Custom Positional Embedding Layer

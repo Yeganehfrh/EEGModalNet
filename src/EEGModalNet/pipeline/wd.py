@@ -99,7 +99,7 @@ if __name__ == '__main__':
     print('>>> opening data')
     channels = ['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2']
     data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed_downsampled.nc5',
-                             n_subjects=100,
+                             n_subjects=50,
                              channels=channels,
                              bandpass_filter=0.5,
                              time_dim=512,
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     print('>>> uploading model')
 
     model = WGAN_GP(time_dim=512, feature_dim=len(channels),
-                    latent_dim=latent_dim, n_subjects=202,
+                    latent_dim=latent_dim, n_subjects=n_subs,
                     use_sublayer_generator=True,
                     use_sublayer_critic=True,
                     use_channel_merger_g=False,
@@ -124,7 +124,7 @@ if __name__ == '__main__':
                     interpolation='bilinear')
     all_wd = {}
 
-    for path in sorted(Path('logs/').glob('06*.model.keras'))[:2]:
+    for path in sorted(Path('logs/').glob('06.02.2025_epoch*.model.keras')):
         model_name = path.stem.split('.')[2][11:]
         model.load_weights(path)
         print(f'Calculating WD for {model_name}...')

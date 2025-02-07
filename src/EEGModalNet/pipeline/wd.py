@@ -116,7 +116,7 @@ if __name__ == '__main__':
     print('>>> uploading model')
 
     model = WGAN_GP(time_dim=512, feature_dim=len(channels),
-                    latent_dim=latent_dim, n_subjects=50,
+                    latent_dim=latent_dim, n_subjects=202,
                     use_sublayer_generator=True,
                     use_sublayer_critic=True,
                     use_channel_merger_g=False,

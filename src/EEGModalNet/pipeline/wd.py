@@ -96,9 +96,10 @@ def load_data(data_path: str,
 
 if __name__ == '__main__':
     latent_dim = 128
+    print('>>> opening data')
     channels = ['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2']
     data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed_downsampled.nc5',
-                             n_subjects=202,
+                             n_subjects=100,
                              channels=channels,
                              bandpass_filter=0.5,
                              time_dim=512,
@@ -111,6 +112,8 @@ if __name__ == '__main__':
     x_std = x.std()
     f_names = f_names = ['skewness', 'kurtosis', 'activity', 'mobility', 'complexity',
                          'delta', 'theta', 'alpha', 'beta', 'gamma', 'entropy']
+
+    print('>>> uploading model')
 
     model = WGAN_GP(time_dim=512, feature_dim=len(channels),
                     latent_dim=latent_dim, n_subjects=202,
@@ -126,8 +129,8 @@ if __name__ == '__main__':
         model.load_weights(path)
         print(f'Calculating WD for {model_name}...')
         # generated data
-        x_gen = model.generator((keras.random.normal((l, latent_dim), mean=x_mean, stddev=x_std), sub[:l].to('mps'), pos[:l].to('mps'))).cpu().detach()
-        real_f, fake_f = aggregate_features(x.permute(0, 2, 1).cpu().detach().numpy(), x_gen.permute(0, 2, 1).cpu().detach().numpy())
+        x_gen = model.generator((keras.random.normal((l, latent_dim), mean=x_mean, stddev=x_std), sub[:l], pos[:l]))
+        real_f, fake_f = aggregate_features(x.permute(0, 2, 1).detach().numpy(), x_gen.permute(0, 2, 1).detach().numpy())
 
         for ch in range(len(channels)):
             for fn in range(len(f_names)):

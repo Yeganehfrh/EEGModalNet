@@ -36,6 +36,10 @@ def load_data(data_path: str,
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
+    # reorder the channels from frontal to occipital
+    new_order = [2, 3, 4, 5, 6, 7, 0, 1]
+    x = x[:, :, new_order]
+
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
     pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)

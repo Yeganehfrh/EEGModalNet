@@ -15,18 +15,18 @@ class ResidualBlock(layers.Layer):
         self.filters = filters
         self.kernel_size = kernel_size
         self.kernel_initializer = kernel_initializer
-        self.activation_f = activation
+        self.activation = activation
         self.conv1 = layers.Conv1D(filters, 3, padding='same', kernel_initializer=kernel_initializer, activation=activation)
         self.conv2 = layers.Conv1D(filters, 5, padding='same', dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
         self.conv3 = layers.Conv1D(filters, 7, padding='same', kernel_initializer=kernel_initializer)
-        self.activation = layers.Activation(activation)
+        self.activation_layer = layers.Activation(activation)
 
     def call(self, inputs):
         x = self.conv1(inputs)
         x = self.conv2(x)
         x = self.conv3(x)
         x = layers.add([x, inputs])  # shortcut connection
-        x = self.activation(x)
+        x = self.activation_layer(x)
         return x
 
     def get_config(self):
@@ -35,7 +35,7 @@ class ResidualBlock(layers.Layer):
             "filters": self.filters,
             "kernel_size": self.kernel_size,
             "kernel_initializer": self.kernel_initializer,
-            "activation": self.activation_f,
+            "activation": self.activation,
         })
         return config
 
@@ -361,7 +361,7 @@ class LearnablePositionalEmbedding(layers.Layer):
     A simple trainable positional embedding layer.
     Each position 'i' in the sequence has a learned embedding of dimension 'embedding_dim'.
     """
-    def __init__(self, sequence_length: int, embedding_dim: int, **kwargs):
+    def __init__(self, sequence_length: int = 128, embedding_dim: int = 32, **kwargs):
         super().__init__(**kwargs)
         self.sequence_length = sequence_length
         self.embedding_dim = embedding_dim
@@ -377,15 +377,15 @@ class LearnablePositionalEmbedding(layers.Layer):
         inputs: (batch_size, time, embedding_dim)
         We'll add the positional embeddings up to 'time' steps.
         """
-        seq_len = inputs.shape[1]
+        # seq_len = inputs.shape[1]
         # slice the first 'seq_len' embeddings (if seq_len < sequence_length)
-        pos_slice = self.pos_emb[None, :seq_len, :]
-        return inputs + pos_slice
+        # pos_slice = self.pos_emb[None, :seq_len, :]
+        return inputs + self.pos_emb
 
     def get_config(self):
         config = super().get_config()
         config.update({
-            "max_length": self.sequence_length,
+            "sequence_length": self.sequence_length,
             "embedding_dim": self.embedding_dim,
         })
         return config
@@ -447,11 +447,24 @@ class SelfAttention1D(layers.Layer):
         self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
         self.layer_norm = layers.LayerNormalization()
 
+    def build(self, input_shape):
+        self.attention.build(input_shape, input_shape)
+        self.layer_norm.build(input_shape)
+        super(SelfAttention1D, self).build(input_shape)
+
     def call(self, inputs):
         x = self.attention(inputs, inputs)  # (query=x, value=x)
         x = x + inputs
         x = self.layer_norm(x)
         return x
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "num_heads": self.num_heads,
+            "key_dim": self.key_dim,
+        })
+        return config
 
 
 def SingleConvBlock(filter: int,

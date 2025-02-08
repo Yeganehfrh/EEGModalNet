@@ -130,11 +130,11 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/06.02.2025'
+    output_path = 'logs/08.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,
-                max_epochs=4000,
+                max_epochs=5000,
                 latent_dim=128,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',

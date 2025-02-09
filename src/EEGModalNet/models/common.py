@@ -377,10 +377,10 @@ class LearnablePositionalEmbedding(layers.Layer):
         inputs: (batch_size, time, embedding_dim)
         We'll add the positional embeddings up to 'time' steps.
         """
-        # seq_len = inputs.shape[1]
+        seq_len = inputs.shape[1]
         # slice the first 'seq_len' embeddings (if seq_len < sequence_length)
-        # pos_slice = self.pos_emb[None, :seq_len, :]
-        return inputs + self.pos_emb
+        pos_slice = self.pos_emb[None, :seq_len, :]
+        return inputs + pos_slice
 
     def get_config(self):
         config = super().get_config()

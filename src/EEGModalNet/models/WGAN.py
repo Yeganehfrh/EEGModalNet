@@ -27,13 +27,13 @@ class Critic(keras.Model):
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             ResidualBlock(feature_dim, ks, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
-            layers.Conv1D(1 * feature_dim, ks, strides=1, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(128, 32),
+            LearnablePositionalEmbedding(256, 32),
             SelfAttention1D(4, 8),
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),

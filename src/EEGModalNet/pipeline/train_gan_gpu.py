@@ -130,7 +130,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/09.02.2025'
+    output_path = 'logs/09.02.2025_2'
 
     model = run(data,
                 n_subjects=n_subs,

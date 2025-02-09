@@ -22,18 +22,20 @@ class Critic(keras.Model):
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
+        ks = 5
+
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
-            layers.Conv1D(1 * feature_dim, 3, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            ResidualBlock(feature_dim, ks, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
+            layers.Conv1D(1 * feature_dim, ks, strides=1, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, 3, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.LeakyReLU(negative_slope=negative_slope),
+            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8),
-            layers.Conv1D(8 * feature_dim, 3, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(16 * feature_dim, 3, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+            layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
@@ -63,7 +65,6 @@ class Generator(keras.Model):
 
         if use_sublayer:
             self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
-            # self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(

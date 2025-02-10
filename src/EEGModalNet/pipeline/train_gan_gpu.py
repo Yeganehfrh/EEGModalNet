@@ -16,7 +16,6 @@ from scipy.signal import butter, sosfiltfilt
 
 def load_data(data_path: str,
               n_subjects: int = 202,
-              channels: List[str] = ['all'],
               bandpass_filter: float = 1.0,
               time_dim: int = 1024,
               exclude_sub_ids=None) -> tuple:
@@ -105,7 +104,6 @@ def run(data,
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed_downsampled.nc5',
                              n_subjects=202,
-                             channels=['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2'],
                              bandpass_filter=0.5,
                              time_dim=512,
                              exclude_sub_ids=None)
@@ -130,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/09.02.2025_2'
+    output_path = 'logs/10.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,

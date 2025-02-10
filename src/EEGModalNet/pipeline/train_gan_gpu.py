@@ -102,7 +102,7 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed_downsampled.nc5',
+    data, n_subs = load_data('data/LEMON_DATA/EC_16_channels_processed_downsampled.nc5',
                              n_subjects=202,
                              bandpass_filter=0.5,
                              time_dim=512,

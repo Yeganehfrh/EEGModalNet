@@ -17,8 +17,8 @@ class ResidualBlock(layers.Layer):
         self.kernel_initializer = kernel_initializer
         self.activation = activation
         self.conv1 = layers.Conv1D(filters, 3, padding='same', kernel_initializer=kernel_initializer, activation=activation)
-        self.conv2 = layers.Conv1D(filters, 5, padding='same', dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
-        self.conv3 = layers.Conv1D(filters, 7, padding='same', kernel_initializer=kernel_initializer)
+        self.conv2 = layers.Conv1D(filters, 3, padding='same', dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv3 = layers.Conv1D(filters, 3, padding='same', dilation_rate=4, kernel_initializer=kernel_initializer)
         self.activation_layer = layers.Activation(activation)
 
     def call(self, inputs):

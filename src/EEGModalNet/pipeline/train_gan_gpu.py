@@ -36,8 +36,8 @@ def load_data(data_path: str,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
     # reorder the channels from frontal to occipital
-    # new_order = [2, 3, 4, 5, 6, 7, 0, 1]
-    # x = x[:, :, new_order]
+    new_order = [0, 1, 4, 5, 6, 7, 2, 3]
+    x = x[:, :, new_order]
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
@@ -102,7 +102,7 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/EC_16_channels_processed_downsampled.nc5',
+    data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed_downsampled.nc5',
                              n_subjects=202,
                              bandpass_filter=0.5,
                              time_dim=512,
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/10.02.2025'
+    output_path = 'logs/13.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,

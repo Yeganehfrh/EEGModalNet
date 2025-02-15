@@ -21,6 +21,17 @@ class ResidualBlock(layers.Layer):
         self.conv3 = layers.Conv1D(filters, 3, padding='same', dilation_rate=4, kernel_initializer=kernel_initializer)
         self.activation_layer = layers.Activation(activation)
 
+    def build(self, input_shape):
+        self.conv1.build(input_shape)
+
+        conv1_output_shape = self.conv1.compute_output_shape(input_shape)
+        self.conv2.build(conv1_output_shape)
+
+        conv2_output_shape = self.conv2.compute_output_shape(conv1_output_shape)
+        self.conv3.build(conv2_output_shape)
+
+        super(ResidualBlock, self).build(input_shape)
+
     def call(self, inputs):
         x = self.conv1(inputs)
         x = self.conv2(x)
@@ -304,8 +315,8 @@ def build_eeg_transformer(sequence_length, embed_dim, num_heads, ff_dim, num_lay
 
 
 class CustomUpSampling1D(layers.Layer):
-    def __init__(self, size=2, method='bilinear'):
-        super(CustomUpSampling1D, self).__init__()
+    def __init__(self, size=2, method='bilinear', **kwargs):
+        super(CustomUpSampling1D, self).__init__(**kwargs)
         self.size = size
         self.method = method
 
@@ -320,6 +331,14 @@ class CustomUpSampling1D(layers.Layer):
 
         # Remove the width dimension and return (batch, time * size, channels)
         return ops.squeeze(upsampled, axis=2)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "size": self.size,
+            "method": self.method,
+        })
+        return config
 
 
 class Classifier(keras.Model):
@@ -441,8 +460,11 @@ class SinePositionalEncoding(layers.Layer):
 
 
 class SelfAttention1D(layers.Layer):
-    def __init__(self, num_heads, key_dim):
-        super(SelfAttention1D, self).__init__()
+    def __init__(self, num_heads, key_dim, **kwargs):
+        super(SelfAttention1D, self).__init__(**kwargs)
+
+        self.num_heads = num_heads
+        self.key_dim = key_dim
 
         self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
         self.layer_norm = layers.LayerNormalization()

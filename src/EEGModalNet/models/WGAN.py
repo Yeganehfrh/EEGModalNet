@@ -4,12 +4,16 @@ import keras
 from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding
 
 
+@keras.saving.register_keras_serializable()
 class Critic(keras.Model):
-    def __init__(self, time_dim, feature_dim, n_subjects, use_sublayer, use_channel_merger, *args, **kwargs):
-        super(Critic, self).__init__()
-
-        self.input_shape = (time_dim, feature_dim)
+    def __init__(self, time_dim, feature_dim, n_subjects, use_sublayer, use_channel_merger, **kwargs):
+        super(Critic, self).__init__(**kwargs)
+        self.time_dim = time_dim
+        self.feature_dim = feature_dim
+        self.n_subjects = n_subjects
         self.use_sublayer = use_sublayer
+        self.use_channel_merger = use_channel_merger
+        self.input_shape = (time_dim, feature_dim)
         negative_slope = 0.1
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
@@ -52,15 +56,31 @@ class Critic(keras.Model):
         out = self.model(x)
         return out
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+                      "time_dim": self.time_dim,
+                      "feature_dim": self.feature_dim, 
+                      "use_sublayer": self.use_sublayer,
+                      "n_subjects": self.n_subjects,
+                      "use_channel_merger": self.use_channel_merger})
+        return config
 
+
+@keras.saving.register_keras_serializable()
 class Generator(keras.Model):
-    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim,
-                 n_subjects, use_channel_merger, interpolation, *args, **kwargs):
-        super(Generator, self).__init__()
+    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer,
+                 n_subjects, use_channel_merger, interpolation, **kwargs):
+        super(Generator, self).__init__(**kwargs)
         self.negative_slope = 0.2
-        self.input_shape = (time_dim, feature_dim)
+        self.time_dim = time_dim
+        self.feature_dim = feature_dim
         self.use_sublayer = use_sublayer
         self.latent_dim = latent_dim
+        self.n_subjects = n_subjects
+        self.use_channel_merger = use_channel_merger
+        self.interpolation = interpolation
+        self.input_shape = (time_dim, feature_dim)
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
         if use_sublayer:
@@ -103,22 +123,39 @@ class Generator(keras.Model):
             x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+                      "time_dim": self.time_dim,
+                      "feature_dim": self.feature_dim, 
+                      "use_sublayer": self.use_sublayer,
+                      "latent_dim": self.latent_dim,
+                      "n_subjects": self.n_subjects,
+                      "use_channel_merger": self.use_channel_merger,
+                      "interpolation": self.interpolation})
+        return config
+
 
 @keras.saving.register_keras_serializable()
 class WGAN_GP(keras.Model):
     def __init__(self,
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
-                 emb_dim=20,
                  use_channel_merger_g=False,
                  use_channel_merger_c=False,
                  interpolation='bilinear',
-                 *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.time = time_dim
-        self.feature = feature_dim
-        self.input_shape = (time_dim, feature_dim)
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.time_dim = time_dim
+        self.feature_dim = feature_dim
         self.latent_dim = latent_dim
+        self.n_subjects = n_subjects
+        self.use_sublayer_generator = use_sublayer_generator
+        self.use_sublayer_critic = use_sublayer_critic
+        self.use_channel_merger_g = use_channel_merger_g
+        self.use_channel_merger_c = use_channel_merger_c
+        self.interpolation = interpolation
+        self.input_shape = (time_dim, feature_dim)
         self.d_loss_tracker = keras.metrics.Mean(name='d_loss')
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
@@ -128,8 +165,6 @@ class WGAN_GP(keras.Model):
                                    feature_dim=feature_dim,
                                    latent_dim=latent_dim,
                                    use_sublayer=use_sublayer_generator,
-                                   num_classes=n_subjects,
-                                   emb_dim=emb_dim,
                                    n_subjects=n_subjects,
                                    use_channel_merger=use_channel_merger_g,
                                    interpolation=interpolation)
@@ -137,7 +172,6 @@ class WGAN_GP(keras.Model):
         self.critic = Critic(time_dim=time_dim,
                              feature_dim=feature_dim,
                              n_subjects=n_subjects,
-                             emb_dim=emb_dim,
                              use_sublayer=use_sublayer_critic,
                              use_channel_merger=use_channel_merger_c,)
 
@@ -150,6 +184,16 @@ class WGAN_GP(keras.Model):
 
     def get_config(self):
         config = super().get_config()
+        config.update({
+                      "time_dim": self.time_dim,
+                      "feature_dim": self.feature_dim, 
+                      "use_sublayer_generator": self.use_sublayer_generator,
+                      "use_sublayer_critic": self.use_sublayer_critic,
+                      "use_channel_merger_g": self.use_channel_merger_g,
+                      "use_channel_merger_c": self.use_channel_merger_c,
+                      "latent_dim": self.latent_dim,
+                      "n_subjects": self.n_subjects,
+                      "interpolation": self.interpolation})
         return config
 
     def call(self, x):

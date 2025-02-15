@@ -74,8 +74,8 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    lr_schedule_g = ExponentialDecay(0.0000940, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0000940, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -90,7 +90,7 @@ def run(data,
                   epochs=max_epochs,
                   shuffle=True,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=20),
+                      CustomModelCheckpoint(model_path, save_freq=50),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/13.02.2025'
+    output_path = 'logs/15.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,
@@ -137,5 +137,5 @@ if __name__ == '__main__':
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
-                reuse_model=False,
-                reuse_model_path=None)
+                reuse_model=True,
+                reuse_model_path='logs/13.02.2025_epoch_5000.model.keras')

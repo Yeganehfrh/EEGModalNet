@@ -27,7 +27,7 @@ class Critic(keras.Model):
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
-        ks = 3
+        ks = 5
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
@@ -241,7 +241,7 @@ class WGAN_GP(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
-            spectral_loss = spectral_regularization_loss(real_data=real_data, fake_data=fake_data)
+            spectral_loss = spectral_regularization_loss(real_data=real_data, fake_data=fake_data, lambda_match=0.5)
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_loss
             d_loss.backward()
 

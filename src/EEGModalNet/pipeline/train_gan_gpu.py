@@ -36,12 +36,13 @@ def load_data(data_path: str,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
     # reorder the channels from frontal to occipital
-    new_order = [0, 1, 4, 5, 6, 7, 2, 3]
+    new_order = [0, 1, 6, 7, 4, 5, 2, 3]
     x = x[:, :, new_order]
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
     pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
+    pos = pos[:, new_order, :]
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
@@ -61,9 +62,9 @@ def run(data,
     model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
-                    use_sublayer_critic=True,
-                    use_channel_merger_g=False,
-                    use_channel_merger_c=False,
+                    use_sublayer_critic=False,
+                    use_channel_merger_g=True,
+                    use_channel_merger_c=True,
                     interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -128,7 +129,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/15.02.2025'
+    output_path = 'logs/16.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,
@@ -137,5 +138,5 @@ if __name__ == '__main__':
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
-                reuse_model=True,
-                reuse_model_path='logs/13.02.2025_epoch_5000.model.keras')
+                reuse_model=False,
+                reuse_model_path=None)

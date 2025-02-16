@@ -2,6 +2,7 @@ import torch
 from keras import layers
 import keras
 from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding
+from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
 @keras.saving.register_keras_serializable()
@@ -30,7 +31,7 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(feature_dim * 8, ks, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
+            ResidualBlock(feature_dim, ks, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
@@ -240,7 +241,8 @@ class WGAN_GP(keras.Model):
         fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
         self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+        spectral_loss = spectral_regularization_loss(real_data=real_data, fake_data=fake_data)
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_loss
         d_loss.backward()
 
         # clip gradients

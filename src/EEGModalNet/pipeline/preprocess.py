@@ -57,6 +57,11 @@ if __name__ == '__main__':
     xarray = xr.DataArray(data, dims=['subject', 'channel', 'time'])
     xarray = xarray.assign_coords(subject=subjects, channel=channels)
 
+    # Assign Attributes to the new xarray
+    xarray_old = xr.open_dataarray('data/LEMON_data/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5', engine='h5netcdf')
+    xarray = xarray.assign_attrs({'gender':xarray_old.attrs['gender'],
+                                'ch_positions':xarray_old.attrs['ch_positions']},)
+
     # save
     data_path_save = 'data/LEMON_data/EC_all_channels_processed_downsampled.nc5'
     xarray.to_netcdf(data_path_save, engine='h5netcdf')

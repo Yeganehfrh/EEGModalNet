@@ -38,7 +38,7 @@ def preprocess_data(data, baseline_duration=0.5, sampling_rate=128):
 if __name__ == '__main__':
     downsample_frq = 98
     sampling_rate = 128
-    data_path = 'data/LEMON_data/eeg_eo_ec.nc5'
+    data_path = 'data/LEMON_DATA/eeg_eo_ec.nc5'
     xarray = xr.open_dataset(data_path, engine='h5netcdf')
 
     subjects = xarray.subject.to_numpy()
@@ -58,10 +58,10 @@ if __name__ == '__main__':
     xarray = xarray.assign_coords(subject=subjects, channel=channels)
 
     # Assign Attributes to the new xarray
-    xarray_old = xr.open_dataarray('data/LEMON_data/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5', engine='h5netcdf')
-    xarray = xarray.assign_attrs({'gender':xarray_old.attrs['gender'],
-                                'ch_positions':xarray_old.attrs['ch_positions']},)
+    xarray_old = xr.open_dataarray('data/LEMON_DATA/eeg_EC_BaseCorr_Norm_Clamp_with_pos.nc5', engine='h5netcdf')
+    xarray = xarray.assign_attrs({'gender': xarray_old.attrs['gender'],
+                                  'ch_positions': xarray_old.attrs['ch_positions']},)
 
     # save
-    data_path_save = 'data/LEMON_data/EC_all_channels_processed_downsampled.nc5'
+    data_path_save = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
     xarray.to_netcdf(data_path_save, engine='h5netcdf')

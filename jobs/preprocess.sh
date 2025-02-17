@@ -6,7 +6,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --time=1:00:00
-#SBATCH --mem=16GB
+#SBATCH --cpus-per-task=128
+#SBATCH --mem=32GB
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/wd_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/wd_%j.log
 #SBATCH --mail-type=ALL
@@ -15,4 +16,4 @@
 alias micromamba=~/.local/bin/micromamba
 
 # SECTION Run pipeline
-micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.wd
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.preprocess

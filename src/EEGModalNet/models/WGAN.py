@@ -31,7 +31,8 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(feature_dim, ks, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),  # TODO: update kernel size argument
+            ResidualBlock(feature_dim, ks, groups=4, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
+            layers.Conv1D(feature_dim, 1, padding='same', kernel_initializer=kernel_initializer, name='pointwise_fusion'),  # TODO.
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),

@@ -10,15 +10,16 @@ from keras import layers, regularizers, ops
 
 
 class ResidualBlock(layers.Layer):
-    def __init__(self, filters, kernel_size, kernel_initializer, activation='relu', **kwargs):
+    def __init__(self, filters, kernel_size, groups, kernel_initializer, activation='relu', **kwargs):
         super(ResidualBlock, self).__init__(**kwargs)
         self.filters = filters
         self.kernel_size = kernel_size
         self.kernel_initializer = kernel_initializer
+        self.groups = groups
         self.activation = activation
-        self.conv1 = layers.Conv1D(filters, 3, padding='same', kernel_initializer=kernel_initializer, activation=activation)
-        self.conv2 = layers.Conv1D(filters, 3, padding='same', dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
-        self.conv3 = layers.Conv1D(filters, 3, padding='same', dilation_rate=4, kernel_initializer=kernel_initializer)
+        self.conv1 = layers.Conv1D(filters, 3, padding='same', groups=groups, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv2 = layers.Conv1D(filters, 3, padding='same', groups=groups, dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv3 = layers.Conv1D(filters, 3, padding='same', groups=groups, dilation_rate=4, kernel_initializer=kernel_initializer)
         self.activation_layer = layers.Activation(activation)
 
     def build(self, input_shape):
@@ -37,8 +38,7 @@ class ResidualBlock(layers.Layer):
         x = self.conv2(x)
         x = self.conv3(x)
         x = layers.add([x, inputs])  # shortcut connection
-        x = self.activation_layer(x)
-        return x
+        return self.activation_layer(x)
 
     def get_config(self):
         config = super().get_config()
@@ -47,6 +47,7 @@ class ResidualBlock(layers.Layer):
             "kernel_size": self.kernel_size,
             "kernel_initializer": self.kernel_initializer,
             "activation": self.activation,
+            "groups": self.groups
         })
         return config
 

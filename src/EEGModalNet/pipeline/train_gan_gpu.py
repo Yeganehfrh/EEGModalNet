@@ -21,7 +21,8 @@ def load_data(data_path: str,
               exclude_sub_ids=None) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = xarray.sel(subject=xarray.subject[:n_subjects])
+    channels = ['O1', 'Oz', 'O2', 'P1', 'Pz', 'P2', 'C1', 'Cz', 'C2', 'F1', 'Fz', 'F2']
+    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
     if exclude_sub_ids is not None:
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
@@ -35,14 +36,10 @@ def load_data(data_path: str,
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
-    # reorder the channels from frontal to occipital
-    new_order = [0, 1, 6, 7, 4, 5, 2, 3]
-    x = x[:, :, new_order]
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
     pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
-    pos = pos[:, new_order, :]
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
@@ -103,7 +100,7 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed_downsampled.nc5',
+    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
                              n_subjects=202,
                              bandpass_filter=0.5,
                              time_dim=512,
@@ -129,7 +126,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/16.02.2025_v2'
+    output_path = 'logs/18.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,

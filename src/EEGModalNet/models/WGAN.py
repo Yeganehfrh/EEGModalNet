@@ -31,8 +31,9 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(feature_dim, ks, groups=4, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
-            layers.Conv1D(feature_dim, 1, padding='same', kernel_initializer=kernel_initializer, name='pointwise_fusion'),  # TODO.
+            layers.Conv1D(feature_dim, ks, groups=4, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
+            # layers.Conv1D(feature_dim, 1, padding='same', kernel_initializer=kernel_initializer, name='pointwise_fusion'),  # TODO.
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
@@ -109,7 +110,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
-            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
+            layers.Conv1D(feature_dim, 3, padding='same', groups=4, name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
         self.built = True
@@ -235,16 +236,16 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        for _ in range(2):
-            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-            fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
-            real_pred = self.critic(data)
-            fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            self.zero_grad()
-            spectral_loss = spectral_regularization_loss(real_data=real_data, fake_data=fake_data, lambda_match=0.1)
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_loss
-            d_loss.backward()
+        # for _ in range(2):
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
+        real_pred = self.critic(data)
+        fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
+        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+        self.zero_grad()
+        spectral_loss = spectral_regularization_loss(real_data=real_data, fake_data=fake_data, lambda_match=0.1)
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_loss
+        d_loss.backward()
 
         # clip gradients
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)

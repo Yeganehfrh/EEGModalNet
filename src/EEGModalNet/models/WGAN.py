@@ -40,7 +40,7 @@ class Critic(keras.Model):
             layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(256, 32),
-            SelfAttention1D(4, 8),
+            SelfAttention1D(4, feature_dim),
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),

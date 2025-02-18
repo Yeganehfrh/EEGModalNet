@@ -21,7 +21,7 @@ def load_data(data_path: str,
               exclude_sub_ids=None) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    channels = ['O1', 'Oz', 'O2', 'P1', 'Pz', 'P2', 'C1', 'Cz', 'C2', 'F1', 'Fz', 'F2']
+    channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
     x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
     if exclude_sub_ids is not None:

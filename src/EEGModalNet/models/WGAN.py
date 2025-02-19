@@ -41,7 +41,7 @@ class Critic(keras.Model):
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
-            ChannelAttention(4, 16, 32, use_norm=True),  # because we transpose inside the ChannelAttention (4 * 16 = 64)
+            # ChannelAttention(4, 16, 32, use_norm=True),  # because we transpose inside the ChannelAttention (4 * 16 = 64)
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
@@ -100,8 +100,9 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
+            layers.Conv1D(filters=32, kernel_size=3, groups=16, padding='same', name='gen_depthwise_conv', kernel_initializer=kernel_initializer),
             SelfAttention1D(4, 8),
-            ChannelAttention(4, 32, 32, use_norm=True),  # 4 * 32 = 128
+            # ChannelAttention(4, 32, 32, use_norm=True),  # 4 * 32 = 128
             *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],

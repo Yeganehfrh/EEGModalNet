@@ -397,10 +397,7 @@ class LearnablePositionalEmbedding(layers.Layer):
         inputs: (batch_size, time, embedding_dim)
         We'll add the positional embeddings up to 'time' steps.
         """
-        seq_len = inputs.shape[1]
-        # slice the first 'seq_len' embeddings (if seq_len < sequence_length)
-        pos_slice = self.pos_emb[None, :seq_len, :]
-        return inputs + pos_slice
+        return inputs + self.pos_emb
 
     def get_config(self):
         config = super().get_config()
@@ -491,7 +488,7 @@ class SelfAttention1D(layers.Layer):
 
 
 class ChannelAttention(layers.Layer):
-    def __init__(self, num_heads, key_dim, use_norm=True, **kwargs):
+    def __init__(self, num_heads, key_dim, num_ch, use_norm=True, **kwargs):
         """
         num_heads: Number of attention heads.
         key_dim: Dimension of each attention head.
@@ -500,13 +497,16 @@ class ChannelAttention(layers.Layer):
         super(ChannelAttention, self).__init__(**kwargs)
         self.num_heads = num_heads
         self.key_dim = key_dim
+        self.num_ch = num_ch
         self.use_norm = use_norm
         self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
+        self.channel_pos_emb = LearnablePositionalEmbedding(num_ch, num_heads * key_dim)
         if self.use_norm:
             self.norm = layers.LayerNormalization(axis=-1)
 
     def call(self, inputs):
         x = inputs.permute(0, 2, 1)  # Transpose to shape (batch, channels, time)
+        x = self.channel_pos_emb(x)
         attn_output = self.attention(x, x)  # Apply multi-head attention over channels (treating channels as tokens)
         attn_output = attn_output.permute(0, 2, 1)
         output = inputs + attn_output
@@ -520,6 +520,7 @@ class ChannelAttention(layers.Layer):
             "num_heads": self.num_heads,
             "key_dim": self.key_dim,
             "use_norm": self.use_norm,
+            "num_ch": self.num_ch
         })
         return config
 

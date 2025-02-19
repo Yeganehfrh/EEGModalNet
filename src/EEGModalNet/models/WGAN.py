@@ -27,7 +27,7 @@ class Critic(keras.Model):
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
-        ks = 5
+        ks = 3
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
@@ -35,9 +35,9 @@ class Critic(keras.Model):
             # ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(2 * feature_dim, ks, strides=2, dilation_rate=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+            layers.Conv1D(4 * feature_dim, ks, strides=2, dilation_rate=4, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),

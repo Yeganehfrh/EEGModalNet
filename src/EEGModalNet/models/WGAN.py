@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding
+from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, ChannelAttention
 from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
@@ -33,15 +33,15 @@ class Critic(keras.Model):
             keras.Input(shape=self.input_shape),
             layers.Conv1D(feature_dim, ks, groups=4, padding='same', name='conv1', kernel_initializer=kernel_initializer),
             ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
-            # layers.Conv1D(feature_dim, 1, padding='same', kernel_initializer=kernel_initializer, name='pointwise_fusion'),  # TODO.
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(256, 32),
+            LearnablePositionalEmbedding(256, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
+            ChannelAttention(4, 16, use_norm=True),  # because we transpose inside the ChannelAttention (4 * 16 = 64)
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
@@ -101,6 +101,7 @@ class Generator(keras.Model):
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8),
+            ChannelAttention(4, 32, use_norm=True),  # 4 * 32 = 128
             *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],

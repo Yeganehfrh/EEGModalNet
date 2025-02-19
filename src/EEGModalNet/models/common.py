@@ -490,6 +490,40 @@ class SelfAttention1D(layers.Layer):
         return config
 
 
+class ChannelAttention(layers.Layer):
+    def __init__(self, num_heads, key_dim, use_norm=True, **kwargs):
+        """
+        num_heads: Number of attention heads.
+        key_dim: Dimension of each attention head.
+        use_norm: If True, apply layer normalization after the residual connection.
+        """
+        super(ChannelAttention, self).__init__(**kwargs)
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+        self.use_norm = use_norm
+        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
+        if self.use_norm:
+            self.norm = layers.LayerNormalization(axis=-1)
+
+    def call(self, inputs):
+        x = inputs.permute(0, 2, 1)  # Transpose to shape (batch, channels, time)
+        attn_output = self.attention(x, x)  # Apply multi-head attention over channels (treating channels as tokens)
+        attn_output = attn_output.permute(0, 2, 1)
+        output = inputs + attn_output
+        if self.use_norm:
+            output = self.norm(output)
+        return output
+
+    def get_config(self):
+        config = super(ChannelAttention, self).get_config()
+        config.update({
+            "num_heads": self.num_heads,
+            "key_dim": self.key_dim,
+            "use_norm": self.use_norm,
+        })
+        return config
+
+
 def SingleConvBlock(filter: int,
                     kernel_size: Union[int, tuple],
                     upsampling: Union[bool, int],

@@ -2,6 +2,7 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
 
+from typing import List
 import torch
 import keras
 import xarray as xr
@@ -10,15 +11,15 @@ from scipy.signal import butter, sosfiltfilt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
+from sklearn.utils import class_weight
 
 
 def load_data(data_path: str,
+              channels: List[str],
               n_subjects: int = 202,
               bandpass_filter: float = 1.0,
               time_dim: int = 1024,
               exclude_sub_ids=None) -> tuple:
-
-    channels = ['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2']
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
@@ -46,7 +47,10 @@ def load_data(data_path: str,
 
 if __name__ == '__main__':
 
+    channels = ['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2']
+
     X_input, y, groups = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
+                                   channels=channels,
                                    n_subjects=202,
                                    bandpass_filter=0.5,
                                    time_dim=512,
@@ -57,11 +61,10 @@ if __name__ == '__main__':
     print('Chance level',
           np.unique(y[train_idx], return_counts=True)[1] / len(y[train_idx]), np.unique(y[val_idx], return_counts=True)[1] / len(y[val_idx]))
 
-    from sklearn.utils import class_weight
     class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y), y=y)
     class_weights = {'0': class_weights[0], '1': class_weights[1]}
 
-    model = WGAN_GP_old(time_dim=512, feature_dim=8,
+    model = WGAN_GP_old(time_dim=512, feature_dim=len(channels),
                         latent_dim=128, n_subjects=202,
                         use_sublayer_generator=True,
                         use_sublayer_critic=True,
@@ -88,10 +91,12 @@ if __name__ == '__main__':
                       metrics=['accuracy'])
 
     history = new_model.fit(X_input[train_idx], y[train_idx],
-                            epochs=1000,
+                            epochs=2,
                             batch_size=128,
                             validation_data=(X_input[val_idx], y[val_idx]),
                             class_weight=class_weights
                             )
 
-    pd.DataFrame(history.history).to_csv('logs/geneder_classification.csv')
+    model_name = '20.02.2025'
+    pd.DataFrame(history.history).to_csv(f'logs/{model_name}_classifier.csv')
+    new_model.save(f'logs/{model_name}_classifier.model.keras')

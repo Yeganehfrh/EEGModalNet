@@ -14,4 +14,4 @@
 alias micromamba=~/.local/bin/micromamba
 
 # SECTION Run pipeline
-micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.gender_classifier
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.gender_classifier_gpu

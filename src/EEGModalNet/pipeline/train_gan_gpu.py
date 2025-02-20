@@ -73,7 +73,7 @@ def run(data,
         model.load_weights(reuse_model_path)
 
     lr_schedule_g = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0003, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/19.02.2025_dial'
+    output_path = 'logs/20.02.2025'
 
     model = run(data,
                 n_subjects=n_subs,

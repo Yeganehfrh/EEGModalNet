@@ -69,7 +69,7 @@ if __name__ == '__main__':
                         use_channel_merger_c=False,
                         interpolation='bilinear')
 
-    model.load_weights('logs/6/06.02.2025_epoch_2500.model.keras')
+    model.load_weights('logs/06022025/06.02.2025_epoch_2500.model.keras')
     critic = model.critic.model
 
     critic_output = critic.get_layer('dis_flatten').output  # the 4096-dim layer

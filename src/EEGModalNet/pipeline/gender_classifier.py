@@ -31,7 +31,7 @@ def load_data(data_path: str,
     n_subjects = x.shape[0]
 
     if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
+        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')  # TODO: fs
         x = sosfiltfilt(sos, x, axis=-1)
 
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -39,7 +39,7 @@ def load_data(data_path: str,
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis])
     labels = xarray.gender - 1
-    y = labels.repeat(x.shape[0]//202)
+    y = labels.repeat(x.shape[0] // 202)
     sub_ids_classifier = sub.squeeze().numpy()
 
     return x, y, sub_ids_classifier
@@ -96,10 +96,10 @@ if __name__ == '__main__':
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
 
-    model_path = 'logs/20.02.2025'
+    model_path = 'logs/20.02.2025_no_LRPlateau'
     # Callbacks for learning rate scheduling and early stopping
     callbacks = [
-        keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),
+        # keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),
         keras.callbacks.ModelCheckpoint(f'{model_path}_best_val_accuracy.model.keras', monitor='val_accuracy', save_best_only=True),
         keras.callbacks.CSVLogger(f'{model_path}.csv'),
         keras.callbacks.TerminateOnNaN()

@@ -75,12 +75,13 @@ if __name__ == '__main__':
                                    exclude_sub_ids=None)
 
     group_shuffle = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=5)  # random state == 9
+    print('>>>>>>>>>>>')
     train_idx, val_idx = next(group_shuffle.split(X_input, y, groups=groups))
-    print('Chance level',
-          np.unique(y[train_idx], return_counts=True)[1] / len(y[train_idx]), np.unique(y[val_idx], return_counts=True)[1] / len(y[val_idx]))
+    # print('Chance level',
+    #       np.unique(y[train_idx], return_counts=True)[1] / len(y[train_idx]), np.unique(y[val_idx], return_counts=True)[1] / len(y[val_idx]))
 
     from sklearn.utils import class_weight
-    class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y), y=y)
+    class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y.cpu().numpy()), y=y)
     class_weights = {'0': class_weights[0], '1': class_weights[1]}
 
     model = WGAN_GP_old(time_dim=512, feature_dim=8,

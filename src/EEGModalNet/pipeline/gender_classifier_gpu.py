@@ -37,7 +37,7 @@ def load_data(data_path: str,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
 
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis])
     labels = xarray.gender - 1
     y = labels.repeat(x.shape[0] // 202)
     y = torch.tensor(y, device=device)
@@ -53,7 +53,7 @@ if __name__ == '__main__':
         torch.cuda.current_device()
     else:
         print('GPU is not available!!')
-        # exit()
+        exit()
 
     print(f'Running on {torch.cuda.device_count()} GPUs')
     print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')

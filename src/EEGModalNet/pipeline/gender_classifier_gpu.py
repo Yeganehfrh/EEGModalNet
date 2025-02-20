@@ -41,7 +41,7 @@ def load_data(data_path: str,
     labels = xarray.gender - 1
     y = labels.repeat(x.shape[0] // 202)
     y = torch.tensor(y, device=device)
-    sub_ids_classifier = sub.squeeze().numpy()
+    sub_ids_classifier = sub.squeeze().cpu().numpy()
 
     return x, y, sub_ids_classifier
 

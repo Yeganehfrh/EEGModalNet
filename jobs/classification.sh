@@ -6,6 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --time=4:00:00
+#SBATCH --gres=gpu:1
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/classifier_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/classifier_%j.log
 #SBATCH --mail-type=ALL

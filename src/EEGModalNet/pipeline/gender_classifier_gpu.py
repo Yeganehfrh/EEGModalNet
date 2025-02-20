@@ -53,7 +53,7 @@ if __name__ == '__main__':
         torch.cuda.current_device()
     else:
         print('GPU is not available!!')
-        exit()
+        # exit()
 
     print(f'Running on {torch.cuda.device_count()} GPUs')
     print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')

@@ -81,8 +81,8 @@ if __name__ == '__main__':
     #       np.unique(y[train_idx], return_counts=True)[1] / len(y[train_idx]), np.unique(y[val_idx], return_counts=True)[1] / len(y[val_idx]))
 
     from sklearn.utils import class_weight
-    class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y.cpu().numpy()), y=y)
-    class_weights = {'0': class_weights[0], '1': class_weights[1]}
+    # class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y.cpu().numpy()), y=y)
+    # class_weights = {'0': class_weights[0], '1': class_weights[1]}
 
     model = WGAN_GP_old(time_dim=512, feature_dim=8,
                         latent_dim=128, n_subjects=202,
@@ -120,7 +120,7 @@ if __name__ == '__main__':
                             epochs=1000,
                             batch_size=128,
                             validation_data=(X_input[val_idx], y[val_idx]),
-                            class_weight=class_weights
+                            # class_weight=class_weights
                             )
 
     pd.DataFrame(history.history).to_csv('logs/geneder_classification_gpu.csv')

@@ -124,3 +124,4 @@ if __name__ == '__main__':
                             )
 
     pd.DataFrame(history.history).to_csv('logs/geneder_classification_gpu.csv')
+    new_model.save('logs/classifier_gpu.model.keras')

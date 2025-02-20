@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.utils import class_weight
-from keras import regularizers
+from keras import regularizers, layers
 
 
 def load_data(data_path: str,
@@ -77,8 +77,8 @@ if __name__ == '__main__':
     critic = model.critic.model
 
     critic_output = critic.get_layer('dis_flatten').output  # the 4096-dim layer
-    # x = layers.BatchNormalization()(critic_output)
-    x = keras.layers.Dropout(0.4)(critic_output)
+    x = layers.BatchNormalization()(critic_output)
+    x = keras.layers.Dropout(0.4)(x)
     new_output = keras.layers.Dense(1,
                                     activation='sigmoid',
                                     name='classification_head',
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     new_model = keras.Model(inputs=critic.layers[0].input, outputs=new_output)
 
     # 4. Freeze the original layers
-    for layer in new_model.layers[:-7]:
+    for layer in new_model.layers[:-8]:
         layer.trainable = False
 
     # 5. Compile and train
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
 
-    model_path = 'logs/20.02.2025_shuffling'
+    model_path = 'logs/20.02.2025_BN'
     # Callbacks for learning rate scheduling and early stopping
     callbacks = [
         # keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),

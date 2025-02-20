@@ -57,7 +57,7 @@ if __name__ == '__main__':
                                    time_dim=512,
                                    exclude_sub_ids=None)
 
-    group_shuffle = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=5)  # random state == 9
+    group_shuffle = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=2)  # random state == 9
     train_idx, val_idx = next(group_shuffle.split(X_input, y, groups=groups))
     print('Chance level',
           np.unique(y[train_idx], return_counts=True)[1] / len(y[train_idx]), np.unique(y[val_idx], return_counts=True)[1] / len(y[val_idx]))
@@ -76,26 +76,59 @@ if __name__ == '__main__':
     model.load_weights('logs/06022025/06.02.2025_epoch_2500.model.keras')
     critic = model.critic.model
 
-    critic_output = critic.get_layer('dis_flatten').output  # the 4096-dim layer
-    # critic_output = layers.BatchNormalization()(critic_output)
-    x = keras.layers.Dropout(0.4)(critic_output)
-    new_output = keras.layers.Dense(1,
-                                    activation='sigmoid',
-                                    name='classification_head',
-                                    kernel_regularizer=regularizers.l2(0.001))(x)
+    # critic_output = critic.get_layer('dis_flatten').output  # the 4096-dim layer
+    # # critic_output = layers.BatchNormalization()(critic_output)
+    # x = keras.layers.Dropout(0.4)(critic_output)
+    # new_output = keras.layers.Dense(1,
+    #                                 activation='sigmoid',
+    #                                 name='classification_head',
+    #                                 kernel_regularizer=regularizers.l2(0.001))(x)
 
-    new_model = keras.Model(inputs=critic.layers[0].input, outputs=new_output)
+    # new_model = keras.Model(inputs=critic.layers[0].input, outputs=new_output)
+
+    critic = model.critic.model
+
+    # 1. Get the input tensor of the Critic
+    critic_input = critic.layers[0].input
+    x = critic.get_layer('residual_block')(critic_input)
+    x = critic.get_layer('conv3')(x)
+    x = critic.get_layer('leaky_re_lu')(x)
+    x = critic.get_layer('conv4')(x)
+    x = critic.get_layer('leaky_re_lu_1')(x)
+
+    x = critic.get_layer('conv5')(x)
+    x = critic.get_layer('leaky_re_lu_2')(x)
+
+    # Now we feed x into the positional embedding
+    x = critic.get_layer('learnable_positional_embedding_1')(x)
+
+    # Next is the self-attention
+    x = critic.get_layer('self_attention1d_1')(x)
+    # x = layers.Dropout(0.2, name='dropout_after_selfattention')(x)
+    x = critic.get_layer('conv6')(x)
+    x = critic.get_layer('leaky_re_lu_3')(x)
+    x = layers.Dropout(0.2, name='dropout_after_conv6')(x)
+
+    # 8. Flatten
+    x = critic.get_layer('dis_flatten')(x)
+    x = layers.Dropout(0.2, name='dropout_after_flatten')(x)
+
+    # 10. Add your new classification head
+    new_output = layers.Dense(1, activation='sigmoid', name='classification_head')(x)
+
+    # 11. Build the new model
+    new_model = keras.Model(inputs=critic_input, outputs=new_output)
 
     # 4. Freeze the original layers
-    for layer in new_model.layers[:-5]:
+    for layer in new_model.layers[:-8]:
         layer.trainable = False
 
     # 5. Compile and train
-    new_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0007),
+    new_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0009),
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
 
-    model_path = 'logs/20.02.2025_freezeMore'
+    model_path = 'logs/20.02.2025_moreDropout'
     # Callbacks for learning rate scheduling and early stopping
     callbacks = [
         # keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),

@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.utils import class_weight
+from keras import regularizers
 
 
 def load_data(data_path: str,
@@ -31,7 +32,7 @@ def load_data(data_path: str,
     n_subjects = x.shape[0]
 
     if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')  # TODO: fs
+        sos = butter(4, bandpass_filter, btype='high', fs=128, output='sos')  # TODO: fs
         x = sosfiltfilt(sos, x, axis=-1)
 
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -75,11 +76,9 @@ if __name__ == '__main__':
     model.load_weights('logs/06022025/06.02.2025_epoch_2500.model.keras')
     critic = model.critic.model
 
-    from keras import regularizers, layers
-
     critic_output = critic.get_layer('dis_flatten').output  # the 4096-dim layer
-    x = layers.BatchNormalization()(critic_output)
-    x = keras.layers.Dropout(0.4)(x)
+    # x = layers.BatchNormalization()(critic_output)
+    x = keras.layers.Dropout(0.4)(critic_output)
     new_output = keras.layers.Dense(1,
                                     activation='sigmoid',
                                     name='classification_head',
@@ -92,11 +91,11 @@ if __name__ == '__main__':
         layer.trainable = False
 
     # 5. Compile and train
-    new_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001),
+    new_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0007),
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
 
-    model_path = 'logs/20.02.2025_no_LRPlateau'
+    model_path = 'logs/20.02.2025_no_BN'
     # Callbacks for learning rate scheduling and early stopping
     callbacks = [
         # keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),
@@ -106,7 +105,7 @@ if __name__ == '__main__':
     ]
 
     history = new_model.fit(X_input[train_idx], y[train_idx],
-                            epochs=2000,
+                            epochs=3000,
                             batch_size=128,
                             validation_data=(X_input[val_idx], y[val_idx]),
                             callbacks=callbacks,

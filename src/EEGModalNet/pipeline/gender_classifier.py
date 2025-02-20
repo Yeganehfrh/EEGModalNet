@@ -30,7 +30,7 @@ def load_data(data_path: str,
     n_subjects = x.shape[0]
 
     if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=128, output='sos')
+        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
 
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # 5. Compile and train
     new_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.001),
                       loss='binary_crossentropy',
-                      metrics=['accuracy', 'AUC'])
+                      metrics=['accuracy'])
 
     history = new_model.fit(X_input[train_idx], y[train_idx],
                             epochs=1000,

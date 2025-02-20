@@ -31,7 +31,7 @@ def load_data(data_path: str,
     n_subjects = x.shape[0]
 
     if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=128, output='sos')
+        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

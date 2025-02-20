@@ -95,7 +95,7 @@ if __name__ == '__main__':
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
 
-    model_path = 'logs/20.02.2025_no_BN'
+    model_path = 'logs/20.02.2025_shuffling'
     # Callbacks for learning rate scheduling and early stopping
     callbacks = [
         # keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),
@@ -109,7 +109,8 @@ if __name__ == '__main__':
                             batch_size=128,
                             validation_data=(X_input[val_idx], y[val_idx]),
                             callbacks=callbacks,
-                            class_weight=class_weights
+                            class_weight=class_weights,
+                            shuffle=True,
                             )
 
     pd.DataFrame(history.history).to_csv(f'{model_path}_classifier_final.csv')

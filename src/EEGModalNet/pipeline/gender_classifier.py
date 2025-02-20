@@ -75,9 +75,15 @@ if __name__ == '__main__':
     model.load_weights('logs/06022025/06.02.2025_epoch_2500.model.keras')
     critic = model.critic.model
 
+    from keras import regularizers, layers
+
     critic_output = critic.get_layer('dis_flatten').output  # the 4096-dim layer
-    critic_output = keras.layers.Dropout(0.2)(critic_output)
-    new_output = keras.layers.Dense(1, activation='sigmoid', name='classification_head')(critic_output)
+    x = layers.BatchNormalization()(critic_output)
+    x = keras.layers.Dropout(0.4)(x)
+    new_output = keras.layers.Dense(1,
+                                    activation='sigmoid',
+                                    name='classification_head',
+                                    kernel_regularizer=regularizers.l2(0.001))(x)
 
     new_model = keras.Model(inputs=critic.layers[0].input, outputs=new_output)
 
@@ -90,13 +96,22 @@ if __name__ == '__main__':
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
 
+    model_path = 'logs/20.02.2025'
+    # Callbacks for learning rate scheduling and early stopping
+    callbacks = [
+        keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),
+        keras.callbacks.ModelCheckpoint(f'{model_path}_best_val_accuracy.model.keras', monitor='val_accuracy', save_best_only=True),
+        keras.callbacks.CSVLogger(f'{model_path}.csv'),
+        keras.callbacks.TerminateOnNaN()
+    ]
+
     history = new_model.fit(X_input[train_idx], y[train_idx],
-                            epochs=2,
+                            epochs=2000,
                             batch_size=128,
                             validation_data=(X_input[val_idx], y[val_idx]),
+                            callbacks=callbacks,
                             class_weight=class_weights
                             )
 
-    model_name = '20.02.2025'
-    pd.DataFrame(history.history).to_csv(f'logs/{model_name}_classifier.csv')
-    new_model.save(f'logs/{model_name}_classifier.model.keras')
+    pd.DataFrame(history.history).to_csv(f'{model_path}_classifier_final.csv')
+    new_model.save(f'{model_path}_classifier_final.model.keras')

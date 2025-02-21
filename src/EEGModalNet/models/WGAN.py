@@ -19,7 +19,7 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)  # TODO: check out the input and output channels when we include more channels
+            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
@@ -29,34 +29,15 @@ class Critic(keras.Model):
 
         ks = 5
 
-        # self.model = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     layers.Conv1D(feature_dim, ks, groups=8, padding='same', name='conv1', kernel_initializer=kernel_initializer),
-        #     # ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
-        #     layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Conv1D(2 * feature_dim, ks, strides=2, dilation_rate=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Conv1D(4 * feature_dim, ks, strides=2, dilation_rate=4, padding='same', name='conv5', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
-        #     SelfAttention1D(4, feature_dim),
-        #     # ChannelAttention(4, 16, 32, use_norm=True),  # because we transpose inside the ChannelAttention (4 * 16 = 64)
-        #     layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Flatten(name='dis_flatten'),
-        #     layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
-        # ], name='critic')
-
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             layers.Conv1D(feature_dim, ks, groups=8, padding='same', name='conv1', kernel_initializer=kernel_initializer),
-            # ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
+            ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(2 * feature_dim, ks, strides=2, dilation_rate=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+            layers.Conv1D(4 * feature_dim, ks, strides=2, dilation_rate=4, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
@@ -257,16 +238,15 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        # for _ in range(2):
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
-        real_pred = self.critic(data)
-        fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-        self.zero_grad()
-        # spectral_loss = spectral_regularization_loss(real_data=real_data, fake_data=fake_data, lambda_match=0.1)
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()
+        for _ in range(2):
+            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+            fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
+            real_pred = self.critic(data)
+            fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.zero_grad()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss.backward()
 
         # clip gradients
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)

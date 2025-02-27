@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, ChannelAttention
+from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding
 from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
@@ -41,7 +41,6 @@ class Critic(keras.Model):
             layers.LeakyReLU(negative_slope=negative_slope),
             LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
-            # ChannelAttention(4, 16, 32, use_norm=True),  # because we transpose inside the ChannelAttention (4 * 16 = 64)
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
@@ -102,7 +101,6 @@ class Generator(keras.Model):
             LearnablePositionalEmbedding(128, 32),
             layers.Conv1D(filters=32, kernel_size=3, groups=32, padding='same', name='gen_depthwise_conv', kernel_initializer=kernel_initializer),
             SelfAttention1D(4, 8),
-            # ChannelAttention(4, 32, 32, use_norm=True),  # 4 * 32 = 128
             *convBlock(filters=2 * [16 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],

@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding
+from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, ConvBlockResidual, StridedResidualBlock
 from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
@@ -29,17 +29,29 @@ class Critic(keras.Model):
 
         ks = 5
 
+        # self.model = keras.Sequential([
+        #     keras.Input(shape=self.input_shape),
+        #     layers.Conv1D(feature_dim, ks, groups=8, padding='same', name='conv1', kernel_initializer=kernel_initializer),
+        #     ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
+        #     layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+        #     layers.LeakyReLU(negative_slope=negative_slope),
+        #     layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+        #     layers.LeakyReLU(negative_slope=negative_slope),
+        #     layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+        #     layers.LeakyReLU(negative_slope=negative_slope),
+        #     LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
+        #     SelfAttention1D(4, feature_dim),
+        #     layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+        #     layers.LeakyReLU(negative_slope=negative_slope),
+        #     layers.Flatten(name='dis_flatten'),
+        #     layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
+        # ], name='critic')
+
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            layers.Conv1D(feature_dim, ks, groups=8, padding='same', name='conv1', kernel_initializer=kernel_initializer),
-            ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
-            layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, ks, strides=2, dilation_rate=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, ks, strides=2, dilation_rate=4, padding='same', name='conv5', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
+            LearnablePositionalEmbedding(512, 8),
+            SelfAttention1D(2, 4),
+            StridedResidualBlock(feature_dim, kernel_size=3, strides=2, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
             SelfAttention1D(4, feature_dim),
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
@@ -99,17 +111,26 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
-            layers.Conv1D(filters=32, kernel_size=3, groups=32, padding='same', name='gen_depthwise_conv', kernel_initializer=kernel_initializer),
             SelfAttention1D(4, 8),
-            *convBlock(filters=2 * [16 * feature_dim],
-                       kernel_sizes= 2 * [3],
-                       upsampling=[1, 1],
-                       stride=1,
-                       padding='same',
-                       interpolation=interpolation,
-                       negative_slope=0.2,
-                       kernel_initializer=kernel_initializer,
-                       batch_norm=True),
+            ConvBlockResidual(filters=2 * [8 * feature_dim],
+                              kernel_sizes= 2 * [3],
+                              upsampling=[1, 1],
+                              stride=1,
+                              padding='same',
+                              interpolation=interpolation,
+                              negative_slope=0.2,
+                              kernel_initializer=kernel_initializer,
+                              batch_norm=True),
+            SelfAttention1D(4, 8),
+            ConvBlockResidual(filters=2 * [8 * feature_dim],
+                              kernel_sizes= 2 * [3],
+                              upsampling=[0, 0],
+                              stride=1,
+                              padding='same',
+                              interpolation=interpolation,
+                              negative_slope=0.2,
+                              kernel_initializer=kernel_initializer,
+                              batch_norm=True),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 

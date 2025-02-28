@@ -52,6 +52,36 @@ class ResidualBlock(layers.Layer):
         return config
 
 
+class StridedResidualBlock(layers.Layer):
+    def __init__(self, filters, kernel_size, strides, kernel_initializer, activation='relu', **kwargs):
+        super(StridedResidualBlock, self).__init__(**kwargs)
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.kernel_initializer = kernel_initializer
+        self.strides = strides
+        self.activation = activation
+        self.conv1 = layers.Conv1D(filters, 3, padding='same', strides=strides, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv2 = layers.Conv1D(2 * filters, 3, padding='same', strides=strides, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv3 = layers.Conv1D(4 * filters, 3, padding='same', strides=strides, kernel_initializer=kernel_initializer)
+        self.activation_layer = layers.Activation(activation)
+
+    def call(self, inputs):
+        skip = inputs
+        x = self.conv1(inputs)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        # match time dimension
+        if x.shape[1] != skip.shape[1]:
+            skip = layers.MaxPool1D(pool_size=skip.shape[1] // x.shape[1])(skip)
+
+        # Match feature dimension
+        if x.shape[-1] != skip.shape[-1]:
+            skip = layers.Conv1D(x.shape[-1], kernel_size=1, padding='same', name='skip_conv')(skip)
+
+        x = layers.add([x, skip])  # shortcut connection
+        return self.activation_layer(x)
+
+
 class LearnablePositionalEmbedding(layers.Layer):
     """
     A simple trainable positional embedding layer.
@@ -189,6 +219,7 @@ class CustomUpSampling1D(layers.Layer):
         })
         return config
 
+
 class ChannelAttention(layers.Layer):
     def __init__(self, num_heads, key_dim, num_ch, use_norm=True, **kwargs):
         """
@@ -271,6 +302,7 @@ class SkipBlock(layers.Layer):
         out2 = self.block4(residual2)
         out2 = self.activation(layers.add([out2, residual2]))
         return out2
+
 
 # transformer encoder based on example on https://keras.io/examples/timeseries/timeseries_classification_transformer/
 class TransformerEncoder(layers.Layer):
@@ -486,6 +518,143 @@ def convBlock(filters: List[int],
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
         lyrs.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))
     return lyrs
+
+
+class ConvBlockResidual(layers.Layer):
+    def __init__(self, filters, kernel_sizes, upsampling, stride=1, padding='same',
+                 interpolation='bilinear', negative_slope=0.2, kernel_initializer='glorot_uniform',
+                 batch_norm=True):
+        super().__init__()
+        self.filters = filters
+        self.kernel_sizes = kernel_sizes
+        self.kernel_initializer = kernel_initializer
+        self.upsampling = upsampling
+        self.conv_layers = []
+        self.batch_norm = batch_norm
+        self.interpolation = interpolation
+        self.negative_slope = negative_slope
+
+        # Create convolutional layers
+        for i, (filter, kernel_size, up) in enumerate(zip(filters, kernel_sizes, upsampling)):
+            if up:  # Upsampling before Conv
+                self.conv_layers.append(CustomUpSampling1D(size=2, method=interpolation))  # Fixing time mismatch
+
+            self.conv_layers.append(layers.Conv1D(filter, kernel_size, strides=stride, padding=padding,
+                                                  kernel_initializer=kernel_initializer, name=f'conv_{i}'))
+            if batch_norm:
+                self.conv_layers.append(layers.BatchNormalization(name=f'bn_{i}'))
+            self.conv_layers.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))
+
+        # 1x1 Conv to Match Feature Dimension in Residual Connection
+        self.match_features = layers.Conv1D(filters[-1], kernel_size=1, padding='same', name='skip_conv')
+
+    def build(self, input_shape):
+        self.conv_layers = []  # Reset in case of re-build
+        self.match_features = None  # Reset matching layer
+
+        for i, (filter, kernel_size, up) in enumerate(zip(self.filters, self.kernel_sizes, self.upsampling)):
+            if up:  # Upsampling before Conv
+                self.conv_layers.append(CustomUpSampling1D(size=2, method=self.interpolation))
+
+            self.conv_layers.append(layers.Conv1D(filter, kernel_size, strides=1, padding='same',
+                                                  kernel_initializer='glorot_uniform', name=f'conv_{i}'))
+            if self.batch_norm:
+                self.conv_layers.append(layers.BatchNormalization(name=f'bn_{i}'))
+            self.conv_layers.append(layers.LeakyReLU(negative_slope=self.negative_slope, name=f'leaky_relu_{i}'))
+
+        # Define the 1x1 Conv1D to match feature dimensions if needed
+        self.match_features = layers.Conv1D(self.filters[-1], kernel_size=1, padding='same', name='skip_conv')
+
+        # Mark layer as built
+        super().build(input_shape)
+
+    def call(self, x):
+        skip = x  # Save input for residual connection
+
+        for layer in self.conv_layers:
+            x = layer(x)  # Apply each layer sequentially
+
+        # Match time dimension (if upsampling happened)
+        if x.shape[1] != skip.shape[1]:
+            skip = CustomUpSampling1D(size=x.shape[1] // skip.shape[1], method=self.interpolation)(skip)
+
+        # Match feature dimension
+        if x.shape[-1] != skip.shape[-1]:
+            skip = self.match_features(skip)
+
+        # Residual Addition
+        x = layers.Add(name='residual_addition')([x, skip])
+        return x
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "filters": self.filters,
+            "kernel_sizes": self.kernel_sizes,
+            "upsampling": self.upsampling,
+            "interpolation": self.interpolation,
+            "negative_slope": self.negative_slope,
+            "kernel_initializer": self.kernel_initializer,
+            "batch_norm": self.batch_norm
+        })
+        return config
+
+
+# class ConvBlockResidual(layers.Layer):
+#     """Residual Convolutional Block with Upsampling."""
+#     def __init__(self,
+#                  filters: List[int],
+#                  kernel_sizes: List[Union[int, tuple]],
+#                  upsampling: List[Union[bool, int]],
+#                  interpolation: str = 'linear',
+#                  negative_slope: float = 0.2,
+#                  kernel_initializer: str = 'glorot_uniform',
+#                  batch_norm: bool = True,
+#                  stride=1,
+#                  padding='same',
+#                  **kwargs):
+#         super().__init__(**kwargs)
+#         self.filters = filters
+#         self.kernel_sizes = kernel_sizes
+#         self.kernel_initializer = kernel_initializer
+#         self.batch_norm = batch_norm
+#         self.negative_slope = negative_slope
+#         self.upsampling = upsampling
+#         self.interpolation = interpolation
+
+#     def call(self, x):
+#         skip = x
+#         for i, (filter, kernel_size) in enumerate(zip(self.filters, self.kernel_sizes), 1):
+#             if self.upsampling[i - 1]:  # Check if upsampling is needed
+#                 x = CustomUpSampling1D(2, method=self.interpolation)(x)
+
+#             x = layers.Conv1D(filter, kernel_size, strides=1, padding='same',
+#                               kernel_initializer=self.kernel_initializer, name=f'conv_{i}')(x)
+
+#             if self.batch_norm:
+#                 x = layers.BatchNormalization(name=f'bn_{i}')(x)
+
+#             x = layers.LeakyReLU(negative_slope=self.negative_slope, name=f'leaky_relu_{i}')(x)
+
+#         # Match dimensions of skip and x before addition
+#         if skip.shape[-1] != x.shape[-1]:  # If the number of channels differs
+#             skip = layers.Conv1D(self.filters[-1], kernel_size=1, padding='same', name='skip_conv')(skip)
+
+#         x = layers.Add(name='residual_addition')([x, skip])  # Residual connection
+#         return x
+
+#     def get_config(self):
+#         config = super().get_config()
+#         config.update({
+#             "filters": self.filters,
+#             "kernel_sizes": self.kernel_sizes,
+#             "upsampling": self.upsampling,
+#             "interpolation": self.interpolation,
+#             "negative_slope": self.negative_slope,
+#             "kernel_initializer": self.kernel_initializer,
+#             "batch_norm": self.batch_norm
+#         })
+#         return config
 
 
 # Transformer Encoder Block

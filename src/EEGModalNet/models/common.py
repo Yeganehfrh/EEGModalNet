@@ -66,19 +66,19 @@ class StridedResidualBlock(layers.Layer):
         self.activation_layer = layers.Activation(activation)
 
     def call(self, inputs):
-        skip = inputs
+        # skip = inputs
         x = self.conv1(inputs)
         x = self.conv2(x)
         x = self.conv3(x)
-        # match time dimension
-        if x.shape[1] != skip.shape[1]:
-            skip = layers.MaxPool1D(pool_size=skip.shape[1] // x.shape[1])(skip)
+        # # match time dimension
+        # if x.shape[1] != skip.shape[1]:
+        #     skip = layers.MaxPool1D(pool_size=skip.shape[1] // x.shape[1])(skip)
 
-        # Match feature dimension
-        if x.shape[-1] != skip.shape[-1]:
-            skip = layers.Conv1D(x.shape[-1], kernel_size=1, padding='same', name='skip_conv')(skip)
+        # # Match feature dimension
+        # if x.shape[-1] != skip.shape[-1]:
+        #     skip = layers.Conv1D(x.shape[-1], kernel_size=1, padding='same', name='skip_conv')(skip)
 
-        x = layers.add([x, skip])  # shortcut connection
+        # x = layers.add([x, skip])  # shortcut connection
         return self.activation_layer(x)
 
 
@@ -562,28 +562,28 @@ class ConvBlockResidual(layers.Layer):
                 self.conv_layers.append(layers.BatchNormalization(name=f'bn_{i}'))
             self.conv_layers.append(layers.LeakyReLU(negative_slope=self.negative_slope, name=f'leaky_relu_{i}'))
 
-        # Define the 1x1 Conv1D to match feature dimensions if needed
-        self.match_features = layers.Conv1D(self.filters[-1], kernel_size=1, padding='same', name='skip_conv')
+        # # Define the 1x1 Conv1D to match feature dimensions if needed
+        # self.match_features = layers.Conv1D(self.filters[-1], kernel_size=1, padding='same', name='skip_conv')
 
         # Mark layer as built
         super().build(input_shape)
 
     def call(self, x):
-        skip = x  # Save input for residual connection
+        # skip = x  # Save input for residual connection
 
         for layer in self.conv_layers:
-            x = layer(x)  # Apply each layer sequentially
+            x = layer(x)
 
-        # Match time dimension (if upsampling happened)
-        if x.shape[1] != skip.shape[1]:
-            skip = CustomUpSampling1D(size=x.shape[1] // skip.shape[1], method=self.interpolation)(skip)
+        # # Match time dimension (if upsampling happened)
+        # if x.shape[1] != skip.shape[1]:
+        #     skip = CustomUpSampling1D(size=x.shape[1] // skip.shape[1], method=self.interpolation)(skip)
 
-        # Match feature dimension
-        if x.shape[-1] != skip.shape[-1]:
-            skip = self.match_features(skip)
+        # # Match feature dimension
+        # if x.shape[-1] != skip.shape[-1]:
+        #     skip = self.match_features(skip)
 
-        # Residual Addition
-        x = layers.Add(name='residual_addition')([x, skip])
+        # # Residual Addition
+        # x = layers.Add(name='residual_addition')([x, skip])
         return x
 
     def get_config(self):

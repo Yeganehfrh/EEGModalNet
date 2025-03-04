@@ -140,7 +140,7 @@ class Generator(keras.Model):
             #                   negative_slope=0.2,
             #                   kernel_initializer=kernel_initializer,
             #                   batch_norm=True),
-            SelfAttention1D(4, 16),
+            SelfAttention1D(4, 8),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 

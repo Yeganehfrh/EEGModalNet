@@ -112,7 +112,7 @@ class Generator(keras.Model):
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8),
-            *convBlock(filters=2 * [16 * feature_dim],
+            *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],
                        stride=1,
@@ -140,6 +140,7 @@ class Generator(keras.Model):
             #                   negative_slope=0.2,
             #                   kernel_initializer=kernel_initializer,
             #                   batch_norm=True),
+            SelfAttention1D(4, 16),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 

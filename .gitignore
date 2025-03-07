@@ -8,3 +8,5 @@ src/archived/
 logs/outputs/O1_11.12.2024/
 logs/label_classifier_old_doc/
 logs/
+env_mne.yml
+env_remote.yml

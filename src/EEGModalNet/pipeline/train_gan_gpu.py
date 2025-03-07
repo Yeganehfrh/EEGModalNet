@@ -70,7 +70,9 @@ def run(data,
 
     if reuse_model:
         print(reuse_model_path)
-        model.load_weights(reuse_model_path)
+        model = keras.saving.load_model(reuse_model_path,
+                                        custom_objects={'WGAN_GP': WGAN_GP})
+
 
     lr_schedule_g = ExponentialDecay(0.000188, decay_steps=100000, decay_rate=0.90, staircase=True)
     lr_schedule_d = ExponentialDecay(0.000282, decay_steps=100000, decay_rate=0.90, staircase=True)
@@ -126,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/07.03.2025'
+    output_path = 'logs/07.03.2025_reuse_model'
 
     model = run(data,
                 n_subjects=n_subs,
@@ -135,5 +137,5 @@ if __name__ == '__main__':
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
-                reuse_model=False,
-                reuse_model_path=None)
+                reuse_model=True,
+                reuse_model_path='logs/20250304/04.03.2025_epoch_1440.model.keras')

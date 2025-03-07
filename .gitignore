@@ -10,3 +10,4 @@ logs/label_classifier_old_doc/
 logs/
 env_mne.yml
 env_remote.yml
+/notebooks/

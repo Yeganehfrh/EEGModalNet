@@ -74,8 +74,8 @@ def run(data,
                                         custom_objects={'WGAN_GP': WGAN_GP})
 
 
-    lr_schedule_g = ExponentialDecay(0.000188, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.000282, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0003, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -88,7 +88,7 @@ def run(data,
     _ = model.fit(data,
                   batch_size=batch_size,
                   epochs=max_epochs,
-                  shuffle=True,
+                  shuffle=False,
                   callbacks=[
                       CustomModelCheckpoint(model_path, save_freq=20),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/07.03.2025_reuse_model'
+    output_path = 'logs/11.03.2025'
 
     model = run(data,
                 n_subjects=n_subs,
@@ -137,5 +137,5 @@ if __name__ == '__main__':
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
-                reuse_model=True,
-                reuse_model_path='logs/20250304/04.03.2025_epoch_1440.model.keras')
+                reuse_model=False,
+                reuse_model_path=None)

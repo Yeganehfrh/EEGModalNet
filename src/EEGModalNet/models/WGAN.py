@@ -33,14 +33,14 @@ class Critic(keras.Model):
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, 8),
             SelfAttention1D(2, 4),
-            layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(8 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+            layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             SelfAttention1D(4, feature_dim),
-            layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+            layers.Conv1D(32 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
@@ -231,12 +231,12 @@ class WGAN_GP(keras.Model):
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
         batch_size = real_data.size(0)
-        # mean = real_data.mean()
-        # std = real_data.std()
+        mean = real_data.mean()
+        std = real_data.std()
 
         # train critic
         # for _ in range(2):
-        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
         fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
         real_pred = self.critic(data)
         fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
@@ -252,14 +252,14 @@ class WGAN_GP(keras.Model):
         with torch.no_grad():
             self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
-        # # Monitor gradient norms
-        # gradient_norms = []
-        # for p in self.critic.parameters():
-        #     if p.grad is not None:
-        #         gradient_norms.append(p.grad.norm().item())
+        # Monitor gradient norms
+        gradient_norms = []
+        for p in self.critic.parameters():
+            if p.grad is not None:
+                gradient_norms.append(p.grad.norm().item())
 
         # train generator
-        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
+        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
 
         self.zero_grad()
         # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
@@ -280,7 +280,7 @@ class WGAN_GP(keras.Model):
         return {
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
-            # '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
+            '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
             '4 gp': gp.item(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),

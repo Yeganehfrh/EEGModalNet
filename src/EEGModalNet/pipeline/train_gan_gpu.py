@@ -88,7 +88,7 @@ def run(data,
     _ = model.fit(data,
                   batch_size=batch_size,
                   epochs=max_epochs,
-                  shuffle=False,
+                  shuffle=True,
                   callbacks=[
                       CustomModelCheckpoint(model_path, save_freq=20),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/11.03.2025'
+    output_path = 'logs/09.04.2025'
 
     model = run(data,
                 n_subjects=n_subs,

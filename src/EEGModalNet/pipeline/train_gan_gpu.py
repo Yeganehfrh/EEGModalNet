@@ -24,6 +24,9 @@ def load_data(data_path: str,
 
     channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
 
+    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
+    ch_positions = xarray.ch_positions
+
     if baseline_correct_first:
         xarray = xr.open_dataarray(data_path, engine='h5netcdf')
         x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
@@ -63,7 +66,7 @@ def load_data(data_path: str,
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
-    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
+    pos = torch.tensor(ch_positions[None].repeat(x.shape[0], 0), device=device)
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
@@ -128,7 +131,7 @@ def run(data,
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
                              n_subjects=202,
-                             bandpass_filter=0.5,
+                             highpass_filter=0.5,
                              time_dim=512,
                              baseline_correct_first=False,
                              exclude_sub_ids=None)

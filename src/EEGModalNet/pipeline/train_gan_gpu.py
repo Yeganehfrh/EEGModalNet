@@ -7,32 +7,56 @@ import keras
 from keras.optimizers.schedules import ExponentialDecay
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import CustomModelCheckpoint, StepLossHistory
+from ...EEGModalNet.preprocessing.preprocessing import preprocess_data
 from typing import List
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.signal import butter, sosfiltfilt
+from scipy.signal import butter, sosfiltfilt, resample
 
 
 def load_data(data_path: str,
               n_subjects: int = 202,
-              bandpass_filter: float = 1.0,
+              highpass_filter: float = 1.0,
               time_dim: int = 1024,
+              baseline_correct_first: bool = True,
               exclude_sub_ids=None) -> tuple:
 
-    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
-    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
-    if exclude_sub_ids is not None:
-        x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
+    if baseline_correct_first:
+        xarray = xr.open_dataarray(data_path, engine='h5netcdf')
+        x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
-    x = x.to_numpy()
-    n_subjects = x.shape[0]
+        if exclude_sub_ids is not None:
+            x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
 
-    if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
-        x = sosfiltfilt(sos, x, axis=-1)
+        x = x.to_numpy()
+        n_subjects = x.shape[0]
+
+        if highpass_filter is not None:
+            sos = butter(4, highpass_filter, btype='high', fs=98, output='sos')
+            x = sosfiltfilt(sos, x, axis=-1)
+    else:
+        data_path = 'data/LEMON_data/eeg_eo_ec.nc5'
+        xarray = xr.open_dataset(data_path, engine='h5netcdf')
+
+        x = xarray['eye_closed']
+        x = x.sel(channel=channels).to_numpy()
+        channels = xarray.channel.to_numpy()
+
+        # downsample
+        print(f'>>> downsampling the data to {98} Hz')
+        n_samples = int((x.shape[-1] / 128) * 98)
+        x = resample(x, num=n_samples, axis=-1)
+        sampling_rate = 98
+
+        # high_pass:
+        sos = butter(4, highpass_filter, btype='high', fs=98, output='sos')
+        x = sosfiltfilt(sos, x, axis=2)
+
+        print('preprocessing...')
+        data = preprocess_data(x, sampling_rate=sampling_rate)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
@@ -90,7 +114,7 @@ def run(data,
                   epochs=max_epochs,
                   shuffle=True,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=20),
+                      CustomModelCheckpoint(model_path, save_freq=50),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -106,6 +130,7 @@ if __name__ == '__main__':
                              n_subjects=202,
                              bandpass_filter=0.5,
                              time_dim=512,
+                             baseline_correct_first=False,
                              exclude_sub_ids=None)
 
     if torch.cuda.is_available():
@@ -128,11 +153,11 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/09.04.2025'
+    output_path = 'logs/10.04.2025'
 
     model = run(data,
                 n_subjects=n_subs,
-                max_epochs=5000,
+                max_epochs=200,
                 latent_dim=128,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',

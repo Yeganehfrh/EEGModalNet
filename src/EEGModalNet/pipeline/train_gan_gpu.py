@@ -104,9 +104,9 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_data/8_channels_filter_first',
+    data, n_subs = load_data('data/LEMON_data/8_channels_filter_first.nc5',
                              n_subjects=202,
-                             highpass_filter=None,
+                             highpass_filter=None,  # BEAWARE: depending on the data, this might be needed
                              time_dim=512,
                              exclude_sub_ids=None)
 

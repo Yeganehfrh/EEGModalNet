@@ -76,8 +76,8 @@ def run(data,
                                         custom_objects={'WGAN_GP': WGAN_GP})
 
 
-    lr_schedule_g = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0003, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.000188*1.4, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.000282*1.4, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -104,9 +104,9 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/8_channels_filter_first.nc5',
+    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
                              n_subjects=202,
-                             highpass_filter=None,  # BEAWARE: depending on the data, this might be needed
+                             highpass_filter=0.5,  # BEAWARE: depending on the data, this might be needed
                              time_dim=512,
                              exclude_sub_ids=None)
 
@@ -134,9 +134,9 @@ if __name__ == '__main__':
 
     model = run(data,
                 n_subjects=n_subs,
-                max_epochs=200,
+                max_epochs=4000,
                 latent_dim=128,
-                batch_size=128,
+                batch_size=256,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
                 reuse_model=False,

@@ -11,6 +11,7 @@
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=y.farahzadi@gmail.com
+#SBATCH --mem=32G
 
 alias micromamba=~/.local/bin/micromamba
 

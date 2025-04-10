@@ -7,66 +7,41 @@ import keras
 from keras.optimizers.schedules import ExponentialDecay
 from ...EEGModalNet import WGAN_GP
 from ...EEGModalNet import CustomModelCheckpoint, StepLossHistory
-from ...EEGModalNet.preprocessing.preprocessing import preprocess_data
 from typing import List
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.signal import butter, sosfiltfilt, resample
+from scipy.signal import butter, sosfiltfilt
 
 
 def load_data(data_path: str,
               n_subjects: int = 202,
-              highpass_filter: float = 1.0,
+              highpass_filter: float = 0.5,
               time_dim: int = 1024,
-              baseline_correct_first: bool = True,
               exclude_sub_ids=None) -> tuple:
 
     channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    ch_positions = xarray.ch_positions
+    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
+    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
-    if baseline_correct_first:
-        xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-        x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
+    if exclude_sub_ids is not None:
+        x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
 
-        if exclude_sub_ids is not None:
-            x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
+    x = x.to_numpy()
+    n_subjects = x.shape[0]
 
-        x = x.to_numpy()
-        n_subjects = x.shape[0]
-
-        if highpass_filter is not None:
-            sos = butter(4, highpass_filter, btype='high', fs=98, output='sos')
-            x = sosfiltfilt(sos, x, axis=-1)
-    else:
-        data_path = 'data/LEMON_data/eeg_eo_ec.nc5'
-        xarray = xr.open_dataset(data_path, engine='h5netcdf')
-
-        x = xarray['eye_closed']
-        x = x.sel(channel=channels).to_numpy()
-        channels = xarray.channel.to_numpy()
-
-        # downsample
-        print(f'>>> downsampling the data to {98} Hz')
-        n_samples = int((x.shape[-1] / 128) * 98)
-        x = resample(x, num=n_samples, axis=-1)
-        sampling_rate = 98
-
-        # high_pass:
+    if highpass_filter is not None:
         sos = butter(4, highpass_filter, btype='high', fs=98, output='sos')
-        x = sosfiltfilt(sos, x, axis=2)
-
-        print('preprocessing...')
-        data = preprocess_data(x, sampling_rate=sampling_rate)
+        x = sosfiltfilt(sos, x, axis=-1)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
-    pos = torch.tensor(ch_positions[None].repeat(x.shape[0], 0), device=device)
+    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
@@ -129,11 +104,10 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
+    data, n_subs = load_data('data/LEMON_data/8_channels_filter_first',
                              n_subjects=202,
-                             highpass_filter=0.5,
+                             highpass_filter=None,
                              time_dim=512,
-                             baseline_correct_first=False,
                              exclude_sub_ids=None)
 
     if torch.cuda.is_available():

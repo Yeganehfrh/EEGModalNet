@@ -277,7 +277,6 @@ class WGAN_GP(keras.Model):
 
         # Update the rolling average of the wasserstein distance:
         self.rolling_w_distance = SMOOTHING * self.rolling_w_distance + (1 - SMOOTHING) * avg_wd
-        print(f"Rolling WD: {self.rolling_w_distance:.2f} (avg WD: {avg_wd:.2f})")
 
         # Dynamic adjustment of critic update frequency
         if self.rolling_w_distance > UPPER_THRESHOLD and self.critic_updates > MIN_CRITIC_UPDATES:

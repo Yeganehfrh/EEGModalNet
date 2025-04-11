@@ -321,4 +321,6 @@ class WGAN_GP(keras.Model):
             '7 real_pred_std': real_pred.std().item(),
             '8 fake_pred_std': fake_pred.std().item(),
             'loss': total_loss,
+            'critic_updates': self.critic_updates,
+            'rolling_w_distance': self.rolling_w_distance,
         }

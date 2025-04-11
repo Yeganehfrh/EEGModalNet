@@ -76,8 +76,8 @@ def run(data,
                                         custom_objects={'WGAN_GP': WGAN_GP})
 
 
-    lr_schedule_g = ExponentialDecay(0.000188*1.4, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.000282*1.4, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.000188, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.000282, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -92,7 +92,7 @@ def run(data,
                   epochs=max_epochs,
                   shuffle=True,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=50),
+                      CustomModelCheckpoint(model_path, save_freq=20),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -106,7 +106,7 @@ def run(data,
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
                              n_subjects=202,
-                             highpass_filter=0.5,  # BEAWARE: depending on the data, this might be needed
+                             highpass_filter=0.5,
                              time_dim=512,
                              exclude_sub_ids=None)
 
@@ -130,13 +130,13 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/10.04.2025'
+    output_path = 'logs/11.04.2025'
 
     model = run(data,
                 n_subjects=n_subs,
                 max_epochs=4000,
                 latent_dim=128,
-                batch_size=256,
+                batch_size=128,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
                 reuse_model=False,

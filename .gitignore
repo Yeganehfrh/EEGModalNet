@@ -11,3 +11,8 @@ logs/
 env_mne.yml
 env_remote.yml
 /notebooks/
+
+# pixi environments
+.pixi
+pixi.lock
+*.egg-info

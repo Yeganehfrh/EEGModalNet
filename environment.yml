@@ -2,8 +2,8 @@ name: EEGModalNet
 
 channels:
   - conda-forge
-  - pytorch
-  - nvidia
+  # - pytorch
+  # - nvidia
   - default
 
 dependencies:

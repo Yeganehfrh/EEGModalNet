@@ -247,7 +247,7 @@ class WGAN_GP(keras.Model):
         UPPER_THRESHOLD = 10.0    # If WD > UPPER_THRESHOLD: critic is too strong
         SMOOTHING = 0.9           # Smoothing factor for rolling avg
         MIN_CRITIC_UPDATES = 1
-        MAX_CRITIC_UPDATES = 3
+        MAX_CRITIC_UPDATES = 2
 
         # train critic
         wd_total = 0.0  # we'll accumulate WD over the critic iterations

@@ -16,12 +16,14 @@ from scipy.signal import butter, sosfiltfilt
 
 def load_data(data_path: str,
               n_subjects: int = 202,
-              bandpass_filter: float = 1.0,
+              highpass_filter: float = 0.5,
               time_dim: int = 1024,
               exclude_sub_ids=None) -> tuple:
 
-    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
+
+    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
+    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
     if exclude_sub_ids is not None:
@@ -30,8 +32,8 @@ def load_data(data_path: str,
     x = x.to_numpy()
     n_subjects = x.shape[0]
 
-    if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
+    if highpass_filter is not None:
+        sos = butter(4, highpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -70,10 +72,12 @@ def run(data,
 
     if reuse_model:
         print(reuse_model_path)
-        model.load_weights(reuse_model_path)
+        model = keras.saving.load_model(reuse_model_path,
+                                        custom_objects={'WGAN_GP': WGAN_GP})
 
-    lr_schedule_g = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0003, decay_steps=100000, decay_rate=0.90, staircase=True)
+
+    lr_schedule_g = ExponentialDecay(0.000188, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.000282, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
@@ -102,7 +106,7 @@ def run(data,
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
                              n_subjects=202,
-                             bandpass_filter=0.5,
+                             highpass_filter=0.5,
                              time_dim=512,
                              exclude_sub_ids=None)
 
@@ -126,11 +130,11 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/20.02.2025'
+    output_path = 'logs/11.04.2025_dynamic_C_update'
 
     model = run(data,
                 n_subjects=n_subs,
-                max_epochs=5000,
+                max_epochs=4000,
                 latent_dim=128,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',

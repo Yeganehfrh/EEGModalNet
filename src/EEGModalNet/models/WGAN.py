@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, ChannelAttention
+from .common import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, ConvBlockResidual, StridedResidualBlock
 from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
@@ -31,17 +31,15 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            layers.Conv1D(feature_dim, ks, groups=8, padding='same', name='conv1', kernel_initializer=kernel_initializer),
-            ResidualBlock(feature_dim, ks, groups=1, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
+            LearnablePositionalEmbedding(512, 8),
+            SelfAttention1D(2, 4),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, ks, strides=2, dilation_rate=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, ks, strides=2, dilation_rate=4, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
-            # ChannelAttention(4, 16, 32, use_norm=True),  # because we transpose inside the ChannelAttention (4 * 16 = 64)
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
@@ -100,10 +98,8 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
-            layers.Conv1D(filters=32, kernel_size=3, groups=32, padding='same', name='gen_depthwise_conv', kernel_initializer=kernel_initializer),
             SelfAttention1D(4, 8),
-            # ChannelAttention(4, 32, 32, use_norm=True),  # 4 * 32 = 128
-            *convBlock(filters=2 * [16 * feature_dim],
+            *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],
                        stride=1,
@@ -112,6 +108,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
+            SelfAttention1D(4, 16),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
@@ -191,7 +188,7 @@ class WGAN_GP(keras.Model):
         config = super().get_config()
         config.update({
                       "time_dim": self.time_dim,
-                      "feature_dim": self.feature_dim, 
+                      "feature_dim": self.feature_dim,
                       "use_sublayer_generator": self.use_sublayer_generator,
                       "use_sublayer_critic": self.use_sublayer_critic,
                       "use_channel_merger_g": self.use_channel_merger_g,
@@ -237,23 +234,57 @@ class WGAN_GP(keras.Model):
         mean = real_data.mean()
         std = real_data.std()
 
+        # Initialize dynamic critic update variables if not already set
+        if not hasattr(self, 'critic_updates'):
+            self.critic_updates = 1
+            print(f'Initial critic updates: {self.critic_updates}')
+        if not hasattr(self, 'rolling_w_distance'):
+            self.rolling_w_distance = 0.0
+            print(f'Initial rolling_w_distance: {self.rolling_w_distance}')
+
+        # Hyperparameters for dynamic adjustment
+        LOWER_THRESHOLD = 2.0     # If WD < LOWER_THRESHOLD: critic is too weak
+        UPPER_THRESHOLD = 10.0    # If WD > UPPER_THRESHOLD: critic is too strong
+        SMOOTHING = 0.9           # Smoothing factor for rolling avg
+        MIN_CRITIC_UPDATES = 1
+        MAX_CRITIC_UPDATES = 3
+
         # train critic
-        for _ in range(2):
+        wd_total = 0.0  # we'll accumulate WD over the critic iterations
+        for _ in range(self.critic_updates):
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
             fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
+
             real_pred = self.critic(data)
             fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
+
+            # Compute wasserstein distance estimate for this iteration
+            wd = (real_pred.mean() - fake_pred.mean()).item()
+            wd_total += wd
+
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
             d_loss.backward()
 
-        # clip gradients
-        # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
+            grads = [v.value.grad for v in self.critic.trainable_weights]
+            with torch.no_grad():
+                self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
-        grads = [v.value.grad for v in self.critic.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        # Compute average WD over the critic updates in this step
+        avg_wd = wd_total / self.critic_updates
+
+        # Update the rolling average of the wasserstein distance:
+        self.rolling_w_distance = SMOOTHING * self.rolling_w_distance + (1 - SMOOTHING) * avg_wd
+
+        # Dynamic adjustment of critic update frequency
+        if self.rolling_w_distance > UPPER_THRESHOLD and self.critic_updates > MIN_CRITIC_UPDATES:
+            self.critic_updates -= 1
+            print(f"Critic too strong (rolling WD={self.rolling_w_distance:.2f}), reducing critic updates to {self.critic_updates}")
+        elif self.rolling_w_distance < LOWER_THRESHOLD and self.critic_updates < MAX_CRITIC_UPDATES:
+            self.critic_updates += 1
+            print(f"Critic too weak (rolling WD={self.rolling_w_distance:.2f}), increasing critic updates to {self.critic_updates}")
 
         # Monitor gradient norms
         gradient_norms = []
@@ -265,8 +296,8 @@ class WGAN_GP(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
 
         self.zero_grad()
-        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator((noise, random_sub, pos))  # TODO: consider using random positions
+        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
+        x_gen = self.generator((noise, sub, pos))  # TODO: consider using random positions
         fake_pred = self.critic({'x': x_gen, 'sub': sub, 'pos': pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()

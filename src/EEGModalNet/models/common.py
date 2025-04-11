@@ -52,6 +52,258 @@ class ResidualBlock(layers.Layer):
         return config
 
 
+class StridedResidualBlock(layers.Layer):
+    def __init__(self, filters, kernel_size, strides, kernel_initializer, activation='relu', **kwargs):
+        super(StridedResidualBlock, self).__init__(**kwargs)
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.kernel_initializer = kernel_initializer
+        self.strides = strides
+        self.activation = activation
+        self.conv1 = layers.Conv1D(filters, 3, padding='same', strides=strides, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv2 = layers.Conv1D(2 * filters, 3, padding='same', strides=strides, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv3 = layers.Conv1D(4 * filters, 3, padding='same', strides=strides, kernel_initializer=kernel_initializer)
+        self.activation_layer = layers.Activation(activation)
+
+    def call(self, inputs):
+        # skip = inputs
+        x = self.conv1(inputs)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        # # match time dimension
+        # if x.shape[1] != skip.shape[1]:
+        #     skip = layers.MaxPool1D(pool_size=skip.shape[1] // x.shape[1])(skip)
+
+        # # Match feature dimension
+        # if x.shape[-1] != skip.shape[-1]:
+        #     skip = layers.Conv1D(x.shape[-1], kernel_size=1, padding='same', name='skip_conv')(skip)
+
+        # x = layers.add([x, skip])  # shortcut connection
+        return self.activation_layer(x)
+
+
+class LearnablePositionalEmbedding(layers.Layer):
+    """
+    A simple trainable positional embedding layer.
+    Each position 'i' in the sequence has a learned embedding of dimension 'embedding_dim'.
+    """
+    def __init__(self, sequence_length: int = 128, embedding_dim: int = 32, **kwargs):
+        super().__init__(**kwargs)
+        self.sequence_length = sequence_length
+        self.embedding_dim = embedding_dim
+        self.pos_emb = self.add_weight(
+            name="pos_emb",
+            shape=(sequence_length, embedding_dim),
+            initializer="uniform",
+            trainable=True,
+        )
+
+    def call(self, inputs):
+        """
+        inputs: (batch_size, time, embedding_dim)
+        We'll add the positional embeddings up to 'time' steps.
+        """
+        return inputs + self.pos_emb
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "sequence_length": self.sequence_length,
+            "embedding_dim": self.embedding_dim,
+        })
+        return config
+
+
+# Custom Positional Embedding Layer
+class PositionalEmbedding(layers.Layer):
+    def __init__(self, sequence_length, embed_dim):
+        super(PositionalEmbedding, self).__init__()
+        self.position_embeddings = layers.Embedding(input_dim=sequence_length, output_dim=embed_dim)
+        self.sequence_length = sequence_length
+
+    def call(self, inputs):
+        positions = torch.arange(start=0, end=self.sequence_length, step=1)
+        position_embeddings = self.position_embeddings(positions)
+        return inputs + position_embeddings
+
+
+class SinePositionalEncoding(layers.Layer):
+    """
+    A sinusoidal positional encoding as introduced in the original Transformer paper.
+    This is non-trainable and encodes positions using sines and cosines of different frequencies.
+    """
+    def __init__(self, max_len: int = 1024, embedding_dim: int = 512, **kwargs):
+        super().__init__(**kwargs)
+        self.max_len = max_len
+        self.embedding_dim = embedding_dim
+
+        # Precompute the positional encodings in a [max_len, embedding_dim] array
+        pe = np.zeros((max_len, embedding_dim))
+        position = np.arange(0, max_len)[:, np.newaxis]  # shape (max_len, 1)
+        div_term = np.exp(
+            -math.log(10000.0) * (np.arange(0, embedding_dim, 2) / embedding_dim)
+        )
+        # Apply sin to even indices, cos to odd indices
+        pe[:, 0::2] = np.sin(position * div_term)
+        pe[:, 1::2] = np.cos(position * div_term)
+
+        # Convert to constant so we don't recalc every call
+        self.register_buffer('pe', torch.from_numpy(pe))   # shape (max_len, embedding_dim)
+
+    def call(self, inputs):
+        """
+        inputs: (batch, time, embedding_dim)
+        """
+        seq_len = inputs.shape[1]  # actual time dimension
+        # slice the first 'seq_len' positions: shape (seq_len, embedding_dim)
+        pos_slice = self.pe[:seq_len, :]
+        if inputs.device != pos_slice.device:
+            pos_slice = pos_slice.float().to(inputs.device)
+        # broadcast-add to (batch, seq_len, embedding_dim)
+        return inputs + pos_slice[None, :, :]
+
+
+class SelfAttention1D(layers.Layer):
+    def __init__(self, num_heads, key_dim, **kwargs):
+        super(SelfAttention1D, self).__init__(**kwargs)
+
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+
+        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
+        self.layer_norm = layers.LayerNormalization()
+
+    def build(self, input_shape):
+        self.attention.build(input_shape, input_shape)
+        self.layer_norm.build(input_shape)
+        super(SelfAttention1D, self).build(input_shape)
+
+    def call(self, inputs):
+        x = self.attention(inputs, inputs)  # (query=x, value=x)
+        x = x + inputs
+        x = self.layer_norm(x)
+        return x
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "num_heads": self.num_heads,
+            "key_dim": self.key_dim,
+        })
+        return config
+
+
+class CustomUpSampling1D(layers.Layer):
+    def __init__(self, size=2, method='bilinear', **kwargs):
+        super(CustomUpSampling1D, self).__init__(**kwargs)
+        self.size = size
+        self.method = method
+
+    def call(self, inputs):
+        # Expand dimensions to 2D (batch, time, 1) -> (batch, time, width=1, channels)
+        inputs_expanded = ops.expand_dims(inputs, axis=2)
+
+        # Apply resize operation with the chosen interpolation method
+        upsampled = ops.image.resize(inputs_expanded,
+                                     size=[inputs.shape[1] * self.size, 1],
+                                     interpolation=self.method)
+
+        # Remove the width dimension and return (batch, time * size, channels)
+        return ops.squeeze(upsampled, axis=2)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "size": self.size,
+            "method": self.method,
+        })
+        return config
+
+
+class ChannelAttention(layers.Layer):
+    def __init__(self, num_heads, key_dim, num_ch, use_norm=True, **kwargs):
+        """
+        num_heads: Number of attention heads.
+        key_dim: Dimension of each attention head.
+        use_norm: If True, apply layer normalization after the residual connection.
+        """
+        super(ChannelAttention, self).__init__(**kwargs)
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+        self.num_ch = num_ch
+        self.use_norm = use_norm
+        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
+        self.channel_pos_emb = LearnablePositionalEmbedding(num_ch, num_heads * key_dim)
+        if self.use_norm:
+            self.norm = layers.LayerNormalization(axis=-1)
+
+    def call(self, inputs):
+        x = inputs.permute(0, 2, 1)  # Transpose to shape (batch, channels, time)
+        x = self.channel_pos_emb(x)
+        attn_output = self.attention(x, x)  # Apply multi-head attention over channels (treating channels as tokens)
+        attn_output = attn_output.permute(0, 2, 1)
+        output = inputs + attn_output
+        if self.use_norm:
+            output = self.norm(output)
+        return output
+
+    def get_config(self):
+        config = super(ChannelAttention, self).get_config()
+        config.update({
+            "num_heads": self.num_heads,
+            "key_dim": self.key_dim,
+            "use_norm": self.use_norm,
+            "num_ch": self.num_ch
+        })
+        return config
+
+
+def SingleConvBlock(filter: int,
+                    kernel_size: Union[int, tuple],
+                    upsampling: Union[bool, int],
+                    stride: int = 1,
+                    padding: str = 'same',
+                    negative_slope: float = 0.2,
+                    kernel_initializer: str = 'glorot_uniform',
+                    batch_norm: bool = True,
+                    activation: bool = True) -> List[layers.Layer]:
+    lyrs = []
+    if upsampling:
+        lyrs.append(layers.UpSampling1D(2))
+    lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer))
+    if batch_norm:
+        lyrs.append(layers.BatchNormalization())
+    if activation:
+        lyrs.append(layers.LeakyReLU(negative_slope=negative_slope))
+    return lyrs
+
+
+class SkipBlock(layers.Layer):
+    def __init__(self, filter, kernel_size, kernel_initializer, **kwargs) -> None:
+        super(SkipBlock, self).__init__(**kwargs)
+        # First residual sub-block: block1 and block2
+        self.block1 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=True, kernel_initializer=kernel_initializer))
+        self.block2 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=False, kernel_initializer=kernel_initializer))
+
+        # Second residual sub-block: block3 and block4
+        self.block3 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=True, kernel_initializer=kernel_initializer))
+        self.block4 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=False, kernel_initializer=kernel_initializer))
+
+        self.activation = layers.LeakyReLU(negative_slope=0.2)
+
+    def call(self, inputs):
+        # First residual connection
+        residual1 = self.block1(inputs)
+        out1 = self.block2(residual1)
+        out1 = self.activation(layers.add([out1, residual1]))
+
+        # Second residual connection
+        residual2 = self.block3(out1)
+        out2 = self.block4(residual2)
+        out2 = self.activation(layers.add([out2, residual2]))
+        return out2
+
+
 # transformer encoder based on example on https://keras.io/examples/timeseries/timeseries_classification_transformer/
 class TransformerEncoder(layers.Layer):
     def __init__(self, feature_dim, head_size, num_heads, ff_dim, dropout=0.0):
@@ -268,6 +520,143 @@ def convBlock(filters: List[int],
     return lyrs
 
 
+class ConvBlockResidual(layers.Layer):
+    def __init__(self, filters, kernel_sizes, upsampling, stride=1, padding='same',
+                 interpolation='bilinear', negative_slope=0.2, kernel_initializer='glorot_uniform',
+                 batch_norm=True):
+        super().__init__()
+        self.filters = filters
+        self.kernel_sizes = kernel_sizes
+        self.kernel_initializer = kernel_initializer
+        self.upsampling = upsampling
+        self.conv_layers = []
+        self.batch_norm = batch_norm
+        self.interpolation = interpolation
+        self.negative_slope = negative_slope
+
+        # Create convolutional layers
+        for i, (filter, kernel_size, up) in enumerate(zip(filters, kernel_sizes, upsampling)):
+            if up:  # Upsampling before Conv
+                self.conv_layers.append(CustomUpSampling1D(size=2, method=interpolation))  # Fixing time mismatch
+
+            self.conv_layers.append(layers.Conv1D(filter, kernel_size, strides=stride, padding=padding,
+                                                  kernel_initializer=kernel_initializer, name=f'conv_{i}'))
+            if batch_norm:
+                self.conv_layers.append(layers.BatchNormalization(name=f'bn_{i}'))
+            self.conv_layers.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))
+
+        # 1x1 Conv to Match Feature Dimension in Residual Connection
+        self.match_features = layers.Conv1D(filters[-1], kernel_size=1, padding='same', name='skip_conv')
+
+    def build(self, input_shape):
+        self.conv_layers = []  # Reset in case of re-build
+        self.match_features = None  # Reset matching layer
+
+        for i, (filter, kernel_size, up) in enumerate(zip(self.filters, self.kernel_sizes, self.upsampling)):
+            if up:  # Upsampling before Conv
+                self.conv_layers.append(CustomUpSampling1D(size=2, method=self.interpolation))
+
+            self.conv_layers.append(layers.Conv1D(filter, kernel_size, strides=1, padding='same',
+                                                  kernel_initializer='glorot_uniform', name=f'conv_{i}'))
+            if self.batch_norm:
+                self.conv_layers.append(layers.BatchNormalization(name=f'bn_{i}'))
+            self.conv_layers.append(layers.LeakyReLU(negative_slope=self.negative_slope, name=f'leaky_relu_{i}'))
+
+        # # Define the 1x1 Conv1D to match feature dimensions if needed
+        # self.match_features = layers.Conv1D(self.filters[-1], kernel_size=1, padding='same', name='skip_conv')
+
+        # Mark layer as built
+        super().build(input_shape)
+
+    def call(self, x):
+        # skip = x  # Save input for residual connection
+
+        for layer in self.conv_layers:
+            x = layer(x)
+
+        # # Match time dimension (if upsampling happened)
+        # if x.shape[1] != skip.shape[1]:
+        #     skip = CustomUpSampling1D(size=x.shape[1] // skip.shape[1], method=self.interpolation)(skip)
+
+        # # Match feature dimension
+        # if x.shape[-1] != skip.shape[-1]:
+        #     skip = self.match_features(skip)
+
+        # # Residual Addition
+        # x = layers.Add(name='residual_addition')([x, skip])
+        return x
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "filters": self.filters,
+            "kernel_sizes": self.kernel_sizes,
+            "upsampling": self.upsampling,
+            "interpolation": self.interpolation,
+            "negative_slope": self.negative_slope,
+            "kernel_initializer": self.kernel_initializer,
+            "batch_norm": self.batch_norm
+        })
+        return config
+
+
+# class ConvBlockResidual(layers.Layer):
+#     """Residual Convolutional Block with Upsampling."""
+#     def __init__(self,
+#                  filters: List[int],
+#                  kernel_sizes: List[Union[int, tuple]],
+#                  upsampling: List[Union[bool, int]],
+#                  interpolation: str = 'linear',
+#                  negative_slope: float = 0.2,
+#                  kernel_initializer: str = 'glorot_uniform',
+#                  batch_norm: bool = True,
+#                  stride=1,
+#                  padding='same',
+#                  **kwargs):
+#         super().__init__(**kwargs)
+#         self.filters = filters
+#         self.kernel_sizes = kernel_sizes
+#         self.kernel_initializer = kernel_initializer
+#         self.batch_norm = batch_norm
+#         self.negative_slope = negative_slope
+#         self.upsampling = upsampling
+#         self.interpolation = interpolation
+
+#     def call(self, x):
+#         skip = x
+#         for i, (filter, kernel_size) in enumerate(zip(self.filters, self.kernel_sizes), 1):
+#             if self.upsampling[i - 1]:  # Check if upsampling is needed
+#                 x = CustomUpSampling1D(2, method=self.interpolation)(x)
+
+#             x = layers.Conv1D(filter, kernel_size, strides=1, padding='same',
+#                               kernel_initializer=self.kernel_initializer, name=f'conv_{i}')(x)
+
+#             if self.batch_norm:
+#                 x = layers.BatchNormalization(name=f'bn_{i}')(x)
+
+#             x = layers.LeakyReLU(negative_slope=self.negative_slope, name=f'leaky_relu_{i}')(x)
+
+#         # Match dimensions of skip and x before addition
+#         if skip.shape[-1] != x.shape[-1]:  # If the number of channels differs
+#             skip = layers.Conv1D(self.filters[-1], kernel_size=1, padding='same', name='skip_conv')(skip)
+
+#         x = layers.Add(name='residual_addition')([x, skip])  # Residual connection
+#         return x
+
+#     def get_config(self):
+#         config = super().get_config()
+#         config.update({
+#             "filters": self.filters,
+#             "kernel_sizes": self.kernel_sizes,
+#             "upsampling": self.upsampling,
+#             "interpolation": self.interpolation,
+#             "negative_slope": self.negative_slope,
+#             "kernel_initializer": self.kernel_initializer,
+#             "batch_norm": self.batch_norm
+#         })
+#         return config
+
+
 # Transformer Encoder Block
 def transformer_encoder(inputs, head_size, num_heads, ff_dim, dropout=0.1):
     # Multi-Head Self-Attention
@@ -313,259 +702,3 @@ def build_eeg_transformer(sequence_length, embed_dim, num_heads, ff_dim, num_lay
     model = keras.Model(inputs=inputs, outputs=outputs)
 
     return model
-
-
-class CustomUpSampling1D(layers.Layer):
-    def __init__(self, size=2, method='bilinear', **kwargs):
-        super(CustomUpSampling1D, self).__init__(**kwargs)
-        self.size = size
-        self.method = method
-
-    def call(self, inputs):
-        # Expand dimensions to 2D (batch, time, 1) -> (batch, time, width=1, channels)
-        inputs_expanded = ops.expand_dims(inputs, axis=2)
-
-        # Apply resize operation with the chosen interpolation method
-        upsampled = ops.image.resize(inputs_expanded,
-                                     size=[inputs.shape[1] * self.size, 1],
-                                     interpolation=self.method)
-
-        # Remove the width dimension and return (batch, time * size, channels)
-        return ops.squeeze(upsampled, axis=2)
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "size": self.size,
-            "method": self.method,
-        })
-        return config
-
-
-class Classifier(keras.Model):
-    def __init__(self, feature_dim, l2_lambda=0.01, dropout_rate=0.4):
-        super(Classifier, self).__init__()
-
-        self.conv1 = ResidualBlock(feature_dim * 4, 5, activation='relu')
-        self.conv2 = layers.Conv1D(2, 5, padding='same', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
-        self.conv3 = layers.Conv1D(1, 5, padding='same', activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
-        self.flatten = layers.Flatten()
-        self.dense1 = layers.Dense(512, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
-        self.dropout1 = layers.Dropout(dropout_rate)
-        self.dense2 = layers.Dense(128, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
-        self.dropout2 = layers.Dropout(dropout_rate)
-        self.dense3 = layers.Dense(32, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
-        self.dropout3 = layers.Dropout(dropout_rate)
-        self.dense4 = layers.Dense(8, activation='relu', kernel_regularizer=regularizers.L2(l2_lambda))
-        self.dropout4 = layers.Dropout(dropout_rate)
-        self.output_layer = layers.Dense(1, activation='sigmoid', kernel_regularizer=regularizers.L2(l2_lambda))
-
-    def call(self, inputs):
-        x = self.conv1(inputs)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.flatten(x)
-        x = self.dense1(x)
-        x = self.dropout1(x)
-        x = self.dense2(x)
-        x = self.dropout2(x)
-        x = self.dense3(x)
-        x = self.dropout3(x)
-        x = self.dense4(x)
-        x = self.dropout4(x)
-        return self.output_layer(x)
-
-
-class LearnablePositionalEmbedding(layers.Layer):
-    """
-    A simple trainable positional embedding layer.
-    Each position 'i' in the sequence has a learned embedding of dimension 'embedding_dim'.
-    """
-    def __init__(self, sequence_length: int = 128, embedding_dim: int = 32, **kwargs):
-        super().__init__(**kwargs)
-        self.sequence_length = sequence_length
-        self.embedding_dim = embedding_dim
-        self.pos_emb = self.add_weight(
-            name="pos_emb",
-            shape=(sequence_length, embedding_dim),
-            initializer="uniform",
-            trainable=True,
-        )
-
-    def call(self, inputs):
-        """
-        inputs: (batch_size, time, embedding_dim)
-        We'll add the positional embeddings up to 'time' steps.
-        """
-        return inputs + self.pos_emb
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "sequence_length": self.sequence_length,
-            "embedding_dim": self.embedding_dim,
-        })
-        return config
-
-
-# Custom Positional Embedding Layer
-class PositionalEmbedding(layers.Layer):
-    def __init__(self, sequence_length, embed_dim):
-        super(PositionalEmbedding, self).__init__()
-        self.position_embeddings = layers.Embedding(input_dim=sequence_length, output_dim=embed_dim)
-        self.sequence_length = sequence_length
-
-    def call(self, inputs):
-        positions = torch.arange(start=0, end=self.sequence_length, step=1)
-        position_embeddings = self.position_embeddings(positions)
-        return inputs + position_embeddings
-
-
-class SinePositionalEncoding(layers.Layer):
-    """
-    A sinusoidal positional encoding as introduced in the original Transformer paper.
-    This is non-trainable and encodes positions using sines and cosines of different frequencies.
-    """
-    def __init__(self, max_len: int = 1024, embedding_dim: int = 512, **kwargs):
-        super().__init__(**kwargs)
-        self.max_len = max_len
-        self.embedding_dim = embedding_dim
-
-        # Precompute the positional encodings in a [max_len, embedding_dim] array
-        pe = np.zeros((max_len, embedding_dim))
-        position = np.arange(0, max_len)[:, np.newaxis]  # shape (max_len, 1)
-        div_term = np.exp(
-            -math.log(10000.0) * (np.arange(0, embedding_dim, 2) / embedding_dim)
-        )
-        # Apply sin to even indices, cos to odd indices
-        pe[:, 0::2] = np.sin(position * div_term)
-        pe[:, 1::2] = np.cos(position * div_term)
-
-        # Convert to constant so we don't recalc every call
-        self.register_buffer('pe', torch.from_numpy(pe))   # shape (max_len, embedding_dim)
-
-    def call(self, inputs):
-        """
-        inputs: (batch, time, embedding_dim)
-        """
-        seq_len = inputs.shape[1]  # actual time dimension
-        # slice the first 'seq_len' positions: shape (seq_len, embedding_dim)
-        pos_slice = self.pe[:seq_len, :]
-        if inputs.device != pos_slice.device:
-            pos_slice = pos_slice.float().to(inputs.device)
-        # broadcast-add to (batch, seq_len, embedding_dim)
-        return inputs + pos_slice[None, :, :]
-
-
-class SelfAttention1D(layers.Layer):
-    def __init__(self, num_heads, key_dim, **kwargs):
-        super(SelfAttention1D, self).__init__(**kwargs)
-
-        self.num_heads = num_heads
-        self.key_dim = key_dim
-
-        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
-        self.layer_norm = layers.LayerNormalization()
-
-    def build(self, input_shape):
-        self.attention.build(input_shape, input_shape)
-        self.layer_norm.build(input_shape)
-        super(SelfAttention1D, self).build(input_shape)
-
-    def call(self, inputs):
-        x = self.attention(inputs, inputs)  # (query=x, value=x)
-        x = x + inputs
-        x = self.layer_norm(x)
-        return x
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "num_heads": self.num_heads,
-            "key_dim": self.key_dim,
-        })
-        return config
-
-
-class ChannelAttention(layers.Layer):
-    def __init__(self, num_heads, key_dim, num_ch, use_norm=True, **kwargs):
-        """
-        num_heads: Number of attention heads.
-        key_dim: Dimension of each attention head.
-        use_norm: If True, apply layer normalization after the residual connection.
-        """
-        super(ChannelAttention, self).__init__(**kwargs)
-        self.num_heads = num_heads
-        self.key_dim = key_dim
-        self.num_ch = num_ch
-        self.use_norm = use_norm
-        self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
-        self.channel_pos_emb = LearnablePositionalEmbedding(num_ch, num_heads * key_dim)
-        if self.use_norm:
-            self.norm = layers.LayerNormalization(axis=-1)
-
-    def call(self, inputs):
-        x = inputs.permute(0, 2, 1)  # Transpose to shape (batch, channels, time)
-        x = self.channel_pos_emb(x)
-        attn_output = self.attention(x, x)  # Apply multi-head attention over channels (treating channels as tokens)
-        attn_output = attn_output.permute(0, 2, 1)
-        output = inputs + attn_output
-        if self.use_norm:
-            output = self.norm(output)
-        return output
-
-    def get_config(self):
-        config = super(ChannelAttention, self).get_config()
-        config.update({
-            "num_heads": self.num_heads,
-            "key_dim": self.key_dim,
-            "use_norm": self.use_norm,
-            "num_ch": self.num_ch
-        })
-        return config
-
-
-def SingleConvBlock(filter: int,
-                    kernel_size: Union[int, tuple],
-                    upsampling: Union[bool, int],
-                    stride: int = 1,
-                    padding: str = 'same',
-                    negative_slope: float = 0.2,
-                    kernel_initializer: str = 'glorot_uniform',
-                    batch_norm: bool = True,
-                    activation: bool = True) -> List[layers.Layer]:
-    lyrs = []
-    if upsampling:
-        lyrs.append(layers.UpSampling1D(2))
-    lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer))
-    if batch_norm:
-        lyrs.append(layers.BatchNormalization())
-    if activation:
-        lyrs.append(layers.LeakyReLU(negative_slope=negative_slope))
-    return lyrs
-
-
-class SkipBlock(layers.Layer):
-    def __init__(self, filter, kernel_size, kernel_initializer, **kwargs) -> None:
-        super(SkipBlock, self).__init__(**kwargs)
-        # First residual sub-block: block1 and block2
-        self.block1 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=True, kernel_initializer=kernel_initializer))
-        self.block2 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=False, kernel_initializer=kernel_initializer))
-
-        # Second residual sub-block: block3 and block4
-        self.block3 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=True, kernel_initializer=kernel_initializer))
-        self.block4 = keras.Sequential(SingleConvBlock(filter, kernel_size, upsampling=False, kernel_initializer=kernel_initializer))
-
-        self.activation = layers.LeakyReLU(negative_slope=0.2)
-
-    def call(self, inputs):
-        # First residual connection
-        residual1 = self.block1(inputs)
-        out1 = self.block2(residual1)
-        out1 = self.activation(layers.add([out1, residual1]))
-
-        # Second residual connection
-        residual2 = self.block3(out1)
-        out2 = self.block4(residual2)
-        out2 = self.activation(layers.add([out2, residual2]))
-        return out2

@@ -130,7 +130,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/11.04.2025_dynamic_C_update'
+    output_path = 'logs/12.04.2025'
 
     model = run(data,
                 n_subjects=n_subs,

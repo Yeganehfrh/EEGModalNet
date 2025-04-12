@@ -234,33 +234,13 @@ class WGAN_GP(keras.Model):
         mean = real_data.mean()
         std = real_data.std()
 
-        # Initialize dynamic critic update variables if not already set
-        if not hasattr(self, 'critic_updates'):
-            self.critic_updates = 1
-            print(f'Initial critic updates: {self.critic_updates}')
-        if not hasattr(self, 'rolling_w_distance'):
-            self.rolling_w_distance = 0.0
-            print(f'Initial rolling_w_distance: {self.rolling_w_distance}')
-
-        # Hyperparameters for dynamic adjustment
-        LOWER_THRESHOLD = 2.0     # If WD < LOWER_THRESHOLD: critic is too weak
-        UPPER_THRESHOLD = 10.0    # If WD > UPPER_THRESHOLD: critic is too strong
-        SMOOTHING = 0.9           # Smoothing factor for rolling avg
-        MIN_CRITIC_UPDATES = 1
-        MAX_CRITIC_UPDATES = 2
-
         # train critic
-        wd_total = 0.0  # we'll accumulate WD over the critic iterations
-        for _ in range(self.critic_updates):
+        for _ in range(2):
             noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
             fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
 
             real_pred = self.critic(data)
             fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-
-            # Compute wasserstein distance estimate for this iteration
-            wd = (real_pred.mean() - fake_pred.mean()).item()
-            wd_total += wd
 
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 
@@ -268,23 +248,9 @@ class WGAN_GP(keras.Model):
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
             d_loss.backward()
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
-
-        # Compute average WD over the critic updates in this step
-        avg_wd = wd_total / self.critic_updates
-
-        # Update the rolling average of the wasserstein distance:
-        self.rolling_w_distance = SMOOTHING * self.rolling_w_distance + (1 - SMOOTHING) * avg_wd
-
-        # Dynamic adjustment of critic update frequency
-        if self.rolling_w_distance > UPPER_THRESHOLD and self.critic_updates > MIN_CRITIC_UPDATES:
-            self.critic_updates -= 1
-            print(f"Critic too strong (rolling WD={self.rolling_w_distance:.2f}), reducing critic updates to {self.critic_updates}")
-        elif self.rolling_w_distance < LOWER_THRESHOLD and self.critic_updates < MAX_CRITIC_UPDATES:
-            self.critic_updates += 1
-            print(f"Critic too weak (rolling WD={self.rolling_w_distance:.2f}), increasing critic updates to {self.critic_updates}")
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

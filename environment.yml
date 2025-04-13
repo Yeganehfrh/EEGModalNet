@@ -1,9 +1,8 @@
 name: EEGModalNet
 
 channels:
-  - conda-forge
   - pytorch
-  - nvidia
+  - conda-forge
   - default
 
 dependencies:
@@ -17,13 +16,13 @@ dependencies:
   - ipykernel
   - pytorch
   - torchvision
-  - keras
+  - keras>3
   # - jupyter
   # - notebook
   - xarray
   - h5netcdf
   # - tensorboard
-  - dvc>3
+  # - dvc>3
   # - dvc-gdrive
   # - dvc-ssh
   # - openai

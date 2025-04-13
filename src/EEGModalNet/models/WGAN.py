@@ -31,7 +31,7 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            LearnablePositionalEmbedding(512, feature_dim),
+            LearnablePositionalEmbedding(512, 8),
             SelfAttention1D(2, 4),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),

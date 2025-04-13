@@ -11,9 +11,6 @@ dependencies:
   - python
   - pip
   - pytest
-  - pytorch
-  - keras
-  - torchvision
   - seaborn
   - pandas
   - flake8
@@ -30,3 +27,8 @@ dependencies:
   - scikit-learn
   # - mne
   # - wordcloud
+
+  - pip:
+    - pytorch
+    - torchvision
+    - keras

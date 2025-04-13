@@ -16,5 +16,7 @@ alias micromamba=~/.local/bin/micromamba
 
 git pull
 
+micromamba env remove -n EEGModalNet || true
+micromamba create -f environment.yml -n EEGModalNet -y
 # SECTION Run pipeline
 micromamba run -n EEGModalNet python -m notebooks.channels_benchmark

@@ -110,8 +110,7 @@ def main(data_path: str, channels: list):
     device = 'cpu'
     if torch.cuda.is_available():
         print('CUDA is available')
-        print(f'Running on {torch.cuda.device_count()} GPUs')
-        print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
+        print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
         torch.cuda.set_device(0)
         # preload CUDA libraries with a dummy tensor

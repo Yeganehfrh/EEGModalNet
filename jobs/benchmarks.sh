@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#SBATCH --job-name=train_gan_gpu
+#SBATCH --job-name=benchmarks
 #SBATCH --chdir=//work/projects/acnets/EEGModalNet/
 #SBATCH --partition=gpu
 #SBATCH --nodes=1

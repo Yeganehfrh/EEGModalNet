@@ -29,6 +29,6 @@ dependencies:
   # - wordcloud
 
   - pip:
-    - pytorch
+    - torch
     - torchvision
     - keras

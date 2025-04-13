@@ -112,7 +112,6 @@ def main(data_path: str, channels: list):
         torch.cuda.set_device(0)
         print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
-        torch.cuda.set_device(0)
         # preload CUDA libraries with a dummy tensor
         _ = torch.randn(1, device="cuda")
     elif torch.backends.mps.is_available():

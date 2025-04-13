@@ -18,7 +18,7 @@ def load_data(data_path: str,
               n_subjects: int = 202,
               bandpass_filter: float = 1.0,
               time_dim: int = 1024,
-              exclude_sub_ids=None) -> tuple:
+              exclude_sub_ids=None, device='cpu') -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
@@ -34,7 +34,6 @@ def load_data(data_path: str,
         sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
@@ -54,7 +53,8 @@ def run(data,
         cvloger_path='tmp/tmp/simple_gan_v1.csv',
         model_path='tmp/tmp/wgan_v2.model.keras',
         reuse_model=False,
-        reuse_model_path=None):
+        reuse_model_path=None,
+        device='cpu'):
 
     model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
@@ -64,7 +64,6 @@ def run(data,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print(f'>>>> Model is on {device}')
 
@@ -100,27 +99,31 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
-                             n_subjects=202,
-                             bandpass_filter=0.5,
-                             time_dim=512,
-                             exclude_sub_ids=None)
 
+
+    device = 'cpu'
     if torch.cuda.is_available():
-        print('GPU is available')
-        # torch.cuda.current_device()
+        device = 'cuda'
+        print('CUDA is available')
+        print(f'Running on {torch.cuda.device_count()} CUDA devices')
+        # Explicitly set the CUDA device
+        torch.cuda.set_device(0)
+        # preload CUDA libraries with a dummy tensor
+        _ = torch.randn(1, device="cuda")
+    elif torch.backends.mps.is_available():
+        device = 'mps'
+        print('MPS is available')
     else:
         print('GPU is not available!!')
         exit()
 
-    print(f'Running on {torch.cuda.device_count()} GPUs')
-    # print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
+    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
+                             n_subjects=202,
+                             bandpass_filter=0.5,
+                             time_dim=512,
+                             exclude_sub_ids=None,
+                             device=device)
 
-    # Explicitly set the CUDA device
-    torch.cuda.set_device(0)
-
-    # preload CUDA libraries with a dummy tensor
-    _ = torch.randn(1, device="cuda")
 
     # Apply mixed precision policy
     keras.mixed_precision.set_global_policy('mixed_float16')
@@ -136,4 +139,4 @@ if __name__ == '__main__':
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
                 reuse_model=False,
-                reuse_model_path=None)
+                reuse_model_path=None, device=device)

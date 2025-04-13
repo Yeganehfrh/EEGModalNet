@@ -237,8 +237,8 @@ class WGAN_GP(keras.Model):
         # train critic
         # for _ in range(2):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)
-        fake_data = self.generator((noise, random_sub, pos)).detach()  # TODO: consider using random sub
+        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)
+        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
         real_pred = self.critic(data)
         fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
@@ -260,9 +260,9 @@ class WGAN_GP(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
 
         self.zero_grad()
-        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
+        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
         x_gen = self.generator((noise, random_sub, pos))  # TODO: consider using random positions
-        fake_pred = self.critic({'x': x_gen, 'sub': random_sub, 'pos': pos})  # TODO: consider using random sub
+        fake_pred = self.critic({'x': x_gen, 'sub': sub, 'pos': pos})  # TODO: consider using random sub
         g_loss = -fake_pred.mean()
         g_loss.backward()
 

@@ -109,16 +109,16 @@ def main(data_path: str, channels: list):
 
     device = 'cpu'
     if torch.cuda.is_available():
-        print('CUDA is available')
         device = 'cuda'
+        print('CUDA is available')
         print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
         torch.cuda.set_device(0)
         # preload CUDA libraries with a dummy tensor
         _ = torch.randn(1, device="cuda")
     elif torch.backends.mps.is_available():
-        print('MPS is available')
         device = 'mps'
+        print('MPS is available')
     else:
         print('GPU is not available!!')
         exit()
@@ -138,7 +138,7 @@ def main(data_path: str, channels: list):
 
     model = run(data,
                 n_subjects=n_subjects,
-                max_epochs=1,
+                max_epochs=100,
                 latent_dim=128,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
@@ -147,16 +147,24 @@ def main(data_path: str, channels: list):
                 reuse_model_path=None,
                 device=device)
 
-data_path = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
-channels_choices = [
-    ['O1'],
-    ['O1', 'O2'],
-    ['P1', 'P2'],
-    ['C1', 'C2'],
-    ['O1', 'O2', 'P1', 'P2'],
-    ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
-]
 
-for channels in channels_choices:
-    print(f'Running with channels: {channels}')
-    main(data_path=data_path, channels=channels)
+# Entry point
+if __name__ == '__main__':
+    data_path = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
+    channels_choices = [
+        # 1 electrode
+        ['O1'],
+        # 2 electrodes
+        ['O1', 'O2'],
+        # 4 electrodes
+        ['O1', 'O2', 'P1', 'P2'],
+        # 8 electrodes
+        ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
+        # 16 electrodes
+        ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
+        'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
+    ]
+
+    for channels in channels_choices:
+        print(f'Running with channels: {channels}')
+        main(data_path=data_path, channels=channels)

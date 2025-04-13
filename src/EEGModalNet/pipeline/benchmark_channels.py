@@ -153,7 +153,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', type=int, default=8, help='Number of electrodes to use (default: 8)')
     parser.add_argument('--data', type=str, default='data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5', help='Path to the nc5 LEMON data file')
 
-    electrodes_choices = {
+    channels_choices = {
         1: ['O1'],
         2: ['O1', 'O2'],
         4: ['O1', 'O2', 'P1', 'P2'],
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     data_path = params.data
 
     # Default to 8 electrodes if not found
-    electrodes = electrodes_choices.get(params.n, electrodes_choices[8])
+    channels = channels_choices.get(params.n, channels_choices[8])
 
-    print(f'Running with channels: {electrodes}')
-    main(data_path=data_path, channels=electrodes)
+    print(f'Running with channels: {channels}')
+    main(data_path=data_path, channels=channels)

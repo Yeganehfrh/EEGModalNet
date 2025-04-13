@@ -1,13 +1,12 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
 from src.EEGModalNet import WGAN_GP
 from src.EEGModalNet import CustomModelCheckpoint, StepLossHistory
-from typing import List
+from typing import Dict
 import numpy as np
 import xarray as xr
 from scipy.signal import butter, sosfiltfilt
@@ -111,9 +110,9 @@ if __name__ == '__main__':
     if torch.cuda.is_available():
         device = 'cuda'
         print('CUDA is available')
+        torch.cuda.set_device(0)
         print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
-        torch.cuda.set_device(0)
         # preload CUDA libraries with a dummy tensor
         _ = torch.randn(1, device="cuda")
     elif torch.backends.mps.is_available():

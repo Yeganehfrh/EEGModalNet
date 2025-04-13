@@ -150,14 +150,14 @@ def main(data_path: str, channels: list):
 if __name__ == '__main__':
     data_path = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
     channels_choices = [
+        # 8 electrodes (default)
+        ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
         # 1 electrode
         ['O1'],
         # 2 electrodes
         ['O1', 'O2'],
         # 4 electrodes
         ['O1', 'O2', 'P1', 'P2'],
-        # 8 electrodes
-        ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
         # 16 electrodes
         ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
         'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],

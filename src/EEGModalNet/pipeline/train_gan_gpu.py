@@ -129,7 +129,7 @@ def main(data_path: str, channels: list):
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/13.04.2025_critic_sub_layer'
+    output_path = 'logs/13.04.2025_only_G_random_sub'
 
     model = run(data,
                 n_subjects=n_subjects,

@@ -149,6 +149,6 @@ def main(data_path: str, channels: list):
 # Entry point
 if __name__ == '__main__':
     data_path = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
-    channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
+    channels = ['O1']
     print(f'Running with channels: {channels}')
     main(data_path=data_path, channels=channels)

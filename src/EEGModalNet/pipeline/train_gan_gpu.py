@@ -66,6 +66,9 @@ def run(data,
 
     model.to(device)
     print(f'>>>> Model is on {device}')
+    print(f">>>> data.x is on {data.x.device}")
+    print(f">>>> data.sub is on {data.sub.device}")
+    print(f">>>> data.pos is on {data.pos.device}")
 
     if reuse_model:
         print(reuse_model_path)
@@ -103,16 +106,16 @@ if __name__ == '__main__':
 
     device = 'cpu'
     if torch.cuda.is_available():
-        device = 'cuda'
         print('CUDA is available')
+        device = 'cuda'
+        torch.cuda.set_device(0)
         print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
-        torch.cuda.set_device(0)
         # preload CUDA libraries with a dummy tensor
         _ = torch.randn(1, device="cuda")
     elif torch.backends.mps.is_available():
-        device = 'mps'
         print('MPS is available')
+        device = 'mps'
     else:
         print('GPU is not available!!')
         exit()

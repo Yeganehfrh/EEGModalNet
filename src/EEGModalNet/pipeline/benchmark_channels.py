@@ -57,8 +57,7 @@ def run(data,
         reuse_model_path=None,
         device='cpu'):
 
-    feature_dim = data['x'].shape[-1]
-    model = WGAN_GP(time_dim=512, feature_dim=feature_dim,
+    model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=True,
@@ -66,41 +65,40 @@ def run(data,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
 
-    model.to(device)
+    model = model.to(device)
     print(f'>>>> Model is on {device}')
+    print(f">>>> data.x is on {data['x'].device}")
+    print(f">>>> data.sub is on {data['sub'].device}")
+    print(f">>>> data.pos is on {data['pos'].device}")
 
     if reuse_model:
-        print("Reusing ", reuse_model_path)
-        model = keras.saving.load_model(reuse_model_path,
-                                        custom_objects={'WGAN_GP': WGAN_GP})
-
+        print(reuse_model_path)
+        model.load_weights(reuse_model_path)
 
     lr_schedule_g = ExponentialDecay(0.000188, decay_steps=100000, decay_rate=0.90, staircase=True)
     lr_schedule_d = ExponentialDecay(0.000282, decay_steps=100000, decay_rate=0.90, staircase=True)
 
-    model.compile(
-        d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
-        g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
-        gradient_penalty_weight=10.0)
+    model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
+                  g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
+                  gradient_penalty_weight=10.0)
 
     if device == 'cuda':
         torch.cuda.synchronize()  # wait for model to be loaded
 
     # step_loss_history = StepLossHistory()
 
-    _ = model.fit(
-        data,
-        batch_size=batch_size,
-        epochs=max_epochs,
-        shuffle=True,
-        callbacks=[
-            CustomModelCheckpoint(model_path, save_freq=20),
-            keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
-            keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True),
-            keras.callbacks.CSVLogger(cvloger_path),
-            keras.callbacks.TerminateOnNaN()
-            # step_loss_history
-        ])
+    _ = model.fit(data,
+                  batch_size=batch_size,
+                  epochs=max_epochs,
+                  shuffle=True,
+                  callbacks=[
+                      CustomModelCheckpoint(model_path, save_freq=20),
+                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True),
+                      keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True),
+                      keras.callbacks.CSVLogger(cvloger_path),
+                      keras.callbacks.TerminateOnNaN()
+                      # step_loss_history
+                  ])
 
     return model
 
@@ -111,14 +109,15 @@ def main(data_path: str, channels: list):
     if torch.cuda.is_available():
         device = 'cuda'
         print('CUDA is available')
+        torch.cuda.set_device(0)
         print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
         torch.cuda.set_device(0)
         # preload CUDA libraries with a dummy tensor
         _ = torch.randn(1, device="cuda")
     elif torch.backends.mps.is_available():
-        device = 'mps'
         print('MPS is available')
+        device = 'mps'
     else:
         print('GPU is not available!!')
         exit()
@@ -138,7 +137,7 @@ def main(data_path: str, channels: list):
 
     model = run(data,
                 n_subjects=n_subjects,
-                max_epochs=100,
+                max_epochs=5000,
                 latent_dim=128,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',

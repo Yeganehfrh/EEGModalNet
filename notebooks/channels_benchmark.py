@@ -110,6 +110,7 @@ def main(data_path: str, channels: list):
     device = 'cpu'
     if torch.cuda.is_available():
         print('CUDA is available')
+        device = 'cuda'
         print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
         torch.cuda.set_device(0)

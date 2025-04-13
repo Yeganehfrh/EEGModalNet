@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --time=30:00:00
 #SBATCH --gres=gpu:1
-#SBATCH --output=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
-#SBATCH --error=/work/projects/acnets/EEGModalNet/logs/train_gan_pipeline_%j.log
+#SBATCH --output=/work/projects/acnets/EEGModalNet/logs/benchmarks_%j.log
+#SBATCH --error=/work/projects/acnets/EEGModalNet/logs/benchmarks_%j.log
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=morteza.ansarinia@uni.lu
 

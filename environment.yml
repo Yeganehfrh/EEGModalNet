@@ -15,6 +15,9 @@ dependencies:
   - pandas
   - flake8
   - ipykernel
+  - pytorch
+  - torchvision
+  - keras
   # - jupyter
   # - notebook
   - xarray
@@ -27,8 +30,3 @@ dependencies:
   - scikit-learn
   # - mne
   # - wordcloud
-
-  - pip:
-    - torch
-    - torchvision
-    - keras

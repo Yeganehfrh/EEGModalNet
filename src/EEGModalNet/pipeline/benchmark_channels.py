@@ -23,6 +23,8 @@ def load_data(data_path: str,
     db = xr.open_dataarray(data_path, engine='h5netcdf')
     x = db.sel(subject=db.subject[:n_subjects], channel=channels)
 
+    print(db.channel)
+
     if exclude_sub_ids is not None:
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
 
@@ -159,7 +161,17 @@ if __name__ == '__main__':
         4: ['O1', 'O2', 'P1', 'P2'],
         8: ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
         16: ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
-             'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4']
+             'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
+        32: ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
+             'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4',
+             'Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2',
+             'FC6', 'CP5', 'CP1', 'CP2', 'CP6', 'POz'],
+        56: ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6',
+             'C3', 'C4', 'CP5', 'CP1', 'CP2', 'CP6', 'AFz', 'P7',
+             'P3', 'Pz', 'P4', 'P8', 'O1', 'Oz', 'O2', 'AF7', 'AF3',
+             'AF4', 'AF8', 'F5', 'F1', 'F2', 'F6', 'FT7', 'FC3', 'FC4', 'FT8', 'C5',
+             'C1', 'C2', 'C6', 'TP7', 'CP3', 'CPz', 'CP4', 'TP8', 'P5', 'P1', 'P2',
+             'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
 
     params = parser.parse_args()
@@ -169,4 +181,6 @@ if __name__ == '__main__':
     channels = channels_choices.get(params.n, channels_choices[8])
 
     print(f'Running with channels: {channels}')
-    main(data_path=data_path, channels=channels)
+    # main(data_path=data_path, channels=channels)
+    # data = load_data(data_path, channels=channels, device='mps')
+    print(channels_choices[32].__len__())

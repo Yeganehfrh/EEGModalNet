@@ -169,4 +169,4 @@ if __name__ == '__main__':
     electrodes = electrodes_choices.get(params.n, electrodes_choices[8])
 
     print(f'Running with channels: {electrodes}')
-    # main(data_path=data_path, channels=electrodes)
+    main(data_path=data_path, channels=electrodes)

@@ -39,25 +39,12 @@ class Critic(keras.Model):
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            # LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
-
-        # self.model = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     LearnablePositionalEmbedding(512, 8),
-        #     SelfAttention1D(2, 4),
-        #     StridedResidualBlock(feature_dim, kernel_size=3, strides=2, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
-        #     SelfAttention1D(4, feature_dim),
-        #     layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Flatten(name='dis_flatten'),
-        #     layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
-        # ], name='critic')
 
         self.built = True
 

@@ -46,7 +46,6 @@ def load_data(data_path: str,
 
     return data
 
-
 def run(data,
         n_subjects,
         max_epochs=100_000,
@@ -104,7 +103,7 @@ def run(data,
     return model
 
 
-def main():
+def main(data_path: str, channels: list):
 
     device = 'cpu'
     if torch.cuda.is_available():
@@ -122,16 +121,18 @@ def main():
         print('GPU is not available!!')
         exit()
 
-    data = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
-                      channels=['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
-                     device=device)
+    data = load_data(data_path, channels=channels, device=device)
     n_subjects = len(torch.unique(data['sub']))
+    n_channels = len(channels)
 
     # Apply mixed precision policy
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/13.04.2025'
+    output_path = f'logs/benchmarks/20250413_{n_channels}_electrodes'
+
+    if not os.path.exists('logs/benchmarks'):
+        os.makedirs('logs/benchmarks')
 
     model = run(data,
                 n_subjects=n_subjects,
@@ -147,4 +148,7 @@ def main():
 
 # Entry point
 if __name__ == '__main__':
-    main()
+    data_path = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
+    channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
+    print(f'Running with channels: {channels}')
+    main(data_path=data_path, channels=channels)

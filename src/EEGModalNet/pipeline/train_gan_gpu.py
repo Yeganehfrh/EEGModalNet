@@ -14,13 +14,14 @@ from scipy.signal import butter, sosfiltfilt
 
 def load_data(data_path: str,
               n_subjects: int = 202,
-              bandpass_filter: float = 1.0,
-              time_dim: int = 1024,
-              exclude_sub_ids=None, device='cpu') -> tuple:
+              channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
+              bandpass_filter: float = 0.5,
+              time_dim: int = 512,
+              exclude_sub_ids=None,
+              device='cpu') -> Dict:
 
-    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
-    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
+    db = xr.open_dataarray(data_path, engine='h5netcdf')
+    x = db.sel(subject=db.subject[:n_subjects], channel=channels)
 
     if exclude_sub_ids is not None:
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
@@ -31,7 +32,7 @@ def load_data(data_path: str,
     if bandpass_filter is not None:
         sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
-
+    
     # HACK MPS does not support float64
     x = x.astype(np.float32)
 
@@ -39,11 +40,11 @@ def load_data(data_path: str,
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
-    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
+    pos = torch.tensor(db.ch_positions[None].repeat(x.shape[0], 0), device=device)
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
-    return data, n_subjects
+    return data
 
 
 def run(data,
@@ -122,13 +123,10 @@ if __name__ == '__main__':
         print('GPU is not available!!')
         exit()
 
-    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
-                             n_subjects=202,
-                             bandpass_filter=0.5,
-                             time_dim=512,
-                             exclude_sub_ids=None,
-                             device=device)
-
+    data = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
+                      channels=['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
+                     device=device)
+    n_subjects = len(torch.unique(data['sub']))
 
     # Apply mixed precision policy
     keras.mixed_precision.set_global_policy('mixed_float16')
@@ -137,7 +135,7 @@ if __name__ == '__main__':
     output_path = 'logs/13.04.2025'
 
     model = run(data,
-                n_subjects=n_subs,
+                n_subjects=n_subjects,
                 max_epochs=5000,
                 latent_dim=128,
                 batch_size=128,

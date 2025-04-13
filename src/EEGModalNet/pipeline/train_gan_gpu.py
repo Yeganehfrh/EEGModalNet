@@ -5,11 +5,10 @@ os.environ['KERAS_BACKEND'] = 'torch'
 import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
-from ...EEGModalNet import WGAN_GP
-from ...EEGModalNet import CustomModelCheckpoint, StepLossHistory
+from src.EEGModalNet import WGAN_GP
+from src.EEGModalNet import CustomModelCheckpoint, StepLossHistory
 from typing import List
 import numpy as np
-import pandas as pd
 import xarray as xr
 from scipy.signal import butter, sosfiltfilt
 
@@ -34,6 +33,7 @@ def load_data(data_path: str,
         sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
 
+    # HACK MPS does not support float64
     x = x.astype(np.float32)
 
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
@@ -83,7 +83,8 @@ def run(data,
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=10.0)
 
-    torch.cuda.synchronize()  # wait for model to be loaded
+    if device == 'cuda':
+        torch.cuda.synchronize()  # wait for model to be loaded
 
     # step_loss_history = StepLossHistory()
 
@@ -108,11 +109,11 @@ if __name__ == '__main__':
 
     device = 'cpu'
     if torch.cuda.is_available():
-        print('CUDA is available')
         device = 'cuda'
-        torch.cuda.set_device(0)
+        print('CUDA is available')
         print(f'Running on {torch.cuda.device_count()} CUDA devices')
         # Explicitly set the CUDA device
+        torch.cuda.set_device(0)
         # preload CUDA libraries with a dummy tensor
         _ = torch.randn(1, device="cuda")
     elif torch.backends.mps.is_available():
@@ -144,4 +145,5 @@ if __name__ == '__main__':
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
                 reuse_model=False,
-                reuse_model_path=None, device=device)
+                reuse_model_path=None,
+                device=device)

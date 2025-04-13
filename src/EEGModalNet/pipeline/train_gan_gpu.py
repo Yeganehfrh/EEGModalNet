@@ -64,8 +64,8 @@ def run(data,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
 
-    model.to(device)
-    print(f'>>>> Model is on {model.device}')
+    model = model.to(device)
+    print(f'>>>> Model is on {device}')
     print(f">>>> data.x is on {data['x'].device}")
     print(f">>>> data.sub is on {data['sub'].device}")
     print(f">>>> data.pos is on {data['pos'].device}")

@@ -32,32 +32,19 @@ class Critic(keras.Model):
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, feature_dim),
-            SelfAttention1D(2, 4),
+            SelfAttention1D(2, feature_dim/2),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            # LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
-
-        # self.model = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     LearnablePositionalEmbedding(512, 8),
-        #     SelfAttention1D(2, 4),
-        #     StridedResidualBlock(feature_dim, kernel_size=3, strides=2, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
-        #     SelfAttention1D(4, feature_dim),
-        #     layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Flatten(name='dis_flatten'),
-        #     layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
-        # ], name='critic')
 
         self.built = True
 
@@ -107,11 +94,11 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
-            layers.Dense(4096 * 1, kernel_initializer=kernel_initializer, name='gen_layer5'),
+            layers.Dense(feature_dim * time_dim * 1, kernel_initializer=kernel_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
-            layers.Reshape((128, 32), name='gen_layer9'),
-            LearnablePositionalEmbedding(128, 32),
-            SelfAttention1D(4, 8),
+            layers.Reshape((128, feature_dim * 4), name='gen_layer9'),
+            LearnablePositionalEmbedding(128, feature_dim * 4),
+            SelfAttention1D(4, feature_dim),
             *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],
@@ -121,26 +108,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
-            # ConvBlockResidual(filters=2 * [8 * feature_dim],
-            #                   kernel_sizes= 2 * [3],
-            #                   upsampling=[1, 1],
-            #                   stride=1,
-            #                   padding='same',
-            #                   interpolation=interpolation,
-            #                   negative_slope=0.2,
-            #                   kernel_initializer=kernel_initializer,
-            #                   batch_norm=True),
-            # SelfAttention1D(4, 8),
-            # ConvBlockResidual(filters=2 * [8 * feature_dim],
-            #                   kernel_sizes= 2 * [3],
-            #                   upsampling=[0, 0],
-            #                   stride=1,
-            #                   padding='same',
-            #                   interpolation=interpolation,
-            #                   negative_slope=0.2,
-            #                   kernel_initializer=kernel_initializer,
-            #                   batch_norm=True),
-            SelfAttention1D(4, 16),
+            SelfAttention1D(4, feature_dim * 2),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 

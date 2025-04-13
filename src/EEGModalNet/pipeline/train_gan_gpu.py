@@ -1,6 +1,6 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
@@ -108,13 +108,13 @@ if __name__ == '__main__':
 
     if torch.cuda.is_available():
         print('GPU is available')
-        torch.cuda.current_device()
+        # torch.cuda.current_device()
     else:
         print('GPU is not available!!')
         exit()
 
     print(f'Running on {torch.cuda.device_count()} GPUs')
-    print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
+    # print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
 
     # Explicitly set the CUDA device
     torch.cuda.set_device(0)

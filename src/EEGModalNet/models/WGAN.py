@@ -39,25 +39,12 @@ class Critic(keras.Model):
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            # LearnablePositionalEmbedding(64, 32),  # the length of signal is in fact 64
             SelfAttention1D(4, feature_dim),
             layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
-
-        # self.model = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     LearnablePositionalEmbedding(512, 8),
-        #     SelfAttention1D(2, 4),
-        #     StridedResidualBlock(feature_dim, kernel_size=3, strides=2, kernel_initializer=kernel_initializer, activation=keras.layers.LeakyReLU(0.1)),
-        #     SelfAttention1D(4, feature_dim),
-        #     layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Flatten(name='dis_flatten'),
-        #     layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
-        # ], name='critic')
 
         self.built = True
 
@@ -121,25 +108,6 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
-            # ConvBlockResidual(filters=2 * [8 * feature_dim],
-            #                   kernel_sizes= 2 * [3],
-            #                   upsampling=[1, 1],
-            #                   stride=1,
-            #                   padding='same',
-            #                   interpolation=interpolation,
-            #                   negative_slope=0.2,
-            #                   kernel_initializer=kernel_initializer,
-            #                   batch_norm=True),
-            # SelfAttention1D(4, 8),
-            # ConvBlockResidual(filters=2 * [8 * feature_dim],
-            #                   kernel_sizes= 2 * [3],
-            #                   upsampling=[0, 0],
-            #                   stride=1,
-            #                   padding='same',
-            #                   interpolation=interpolation,
-            #                   negative_slope=0.2,
-            #                   kernel_initializer=kernel_initializer,
-            #                   batch_norm=True),
             SelfAttention1D(4, 16),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
@@ -276,9 +244,6 @@ class WGAN_GP(keras.Model):
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
             d_loss.backward()
-
-        # clip gradients
-        # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
         grads = [v.value.grad for v in self.critic.trainable_weights]
         with torch.no_grad():

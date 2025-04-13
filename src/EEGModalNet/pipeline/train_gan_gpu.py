@@ -34,6 +34,8 @@ def load_data(data_path: str,
         sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
 
+    x = x.astype(np.float32)
+
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
 
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)

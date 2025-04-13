@@ -15,7 +15,7 @@ from scipy.signal import butter, sosfiltfilt
 def load_data(data_path: str,
               n_subjects: int = 202,
               channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
-              highpass_filter: float = 0.5,
+              bandpass_filter: float = 0.5,
               time_dim: int = 512,
               exclude_sub_ids=None,
               device='cpu') -> Dict:
@@ -29,8 +29,8 @@ def load_data(data_path: str,
     x = x.to_numpy()
     n_subjects = x.shape[0]
 
-    if highpass_filter is not None:
-        sos = butter(4, highpass_filter, btype='high', fs=98, output='sos')
+    if bandpass_filter is not None:
+        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
     
     # HACK MPS does not support float64

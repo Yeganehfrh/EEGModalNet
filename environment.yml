@@ -10,6 +10,7 @@ dependencies:
   - python
   - pip
   - pytest
+  - tqdm
   - seaborn
   - pandas
   - flake8

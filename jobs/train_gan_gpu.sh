@@ -17,4 +17,4 @@ alias micromamba=~/.local/bin/micromamba
 git pull
 
 # SECTION Run pipeline
-micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan_hpc
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.train_gan_gpu

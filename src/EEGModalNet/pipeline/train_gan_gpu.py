@@ -104,8 +104,7 @@ def run(data,
     return model
 
 
-if __name__ == '__main__':
-
+def main():
 
     device = 'cpu'
     if torch.cuda.is_available():
@@ -144,3 +143,7 @@ if __name__ == '__main__':
                 reuse_model=False,
                 reuse_model_path=None,
                 device=device)
+
+
+if __name__ == '__main__':
+    main()

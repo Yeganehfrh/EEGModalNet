@@ -181,6 +181,4 @@ if __name__ == '__main__':
     channels = channels_choices.get(params.n, channels_choices[8])
 
     print(f'Running with channels: {channels}')
-    # main(data_path=data_path, channels=channels)
-    # data = load_data(data_path, channels=channels, device='mps')
-    print(channels_choices[32].__len__())
+    main(data_path=data_path, channels=channels)

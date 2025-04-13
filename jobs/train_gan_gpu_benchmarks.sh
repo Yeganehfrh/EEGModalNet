@@ -20,4 +20,4 @@ git pull
 # micromamba create -f environment.yml -n EEGModalNet -y
 
 # SECTION Run pipeline
-micromamba run -n EEGModalNet python -m notebooks.channels_benchmark
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.benchmark_channels

@@ -60,7 +60,7 @@ def run(data,
     model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
                     latent_dim=latent_dim, n_subjects=n_subjects,
                     use_sublayer_generator=False,
-                    use_sublayer_critic=False,
+                    use_sublayer_critic=True,
                     use_channel_merger_g=False,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
@@ -129,7 +129,7 @@ def main(data_path: str, channels: list):
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/13.04.2025_no_sub_layer'
+    output_path = 'logs/13.04.2025_critic_sub_layer'
 
     model = run(data,
                 n_subjects=n_subjects,

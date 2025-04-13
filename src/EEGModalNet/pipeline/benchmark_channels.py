@@ -6,11 +6,11 @@ import keras
 from keras.optimizers.schedules import ExponentialDecay
 from src.EEGModalNet import WGAN_GP
 from src.EEGModalNet import CustomModelCheckpoint, StepLossHistory
-from typing import Dict
+from typing import Dict, List
 import numpy as np
 import xarray as xr
 from scipy.signal import butter, sosfiltfilt
-
+import argparse
 
 def load_data(data_path: str,
               n_subjects: int = 202,
@@ -103,7 +103,7 @@ def run(data,
     return model
 
 
-def main(data_path: str, channels: list):
+def main(data_path: str, channels: List[str]):
 
     device = 'cpu'
     if torch.cuda.is_available():
@@ -148,21 +148,25 @@ def main(data_path: str, channels: list):
 
 # Entry point
 if __name__ == '__main__':
-    data_path = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
-    channels_choices = [
-        # 8 electrodes (default)
-        ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
-        # 1 electrode
-        ['O1'],
-        # 2 electrodes
-        ['O1', 'O2'],
-        # 4 electrodes
-        ['O1', 'O2', 'P1', 'P2'],
-        # 16 electrodes
-        ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
-        'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
-    ]
 
-    for channels in channels_choices:
-        print(f'Running with channels: {channels}')
-        main(data_path=data_path, channels=channels)
+    parser = argparse.ArgumentParser(description='Benchmark YARE-GAN with different number of electrodes')
+    parser.add_argument('-n', type=int, default=8, help='Number of electrodes to use (default: 8)')
+    parser.add_argument('--data', type=str, default='data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5', help='Path to the nc5 LEMON data file')
+
+    electrodes_choices = {
+        1: ['O1'],
+        2: ['O1', 'O2'],
+        4: ['O1', 'O2', 'P1', 'P2'],
+        8: ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
+        16: ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
+             'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4']
+    }
+
+    params = parser.parse_args()
+    data_path = params.data
+
+    # Default to 8 electrodes if not found
+    electrodes = electrodes_choices.get(params.n, electrodes_choices[8])
+
+    print(f'Running with channels: {electrodes}')
+    # main(data_path=data_path, channels=electrodes)

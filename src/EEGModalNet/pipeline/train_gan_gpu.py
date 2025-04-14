@@ -72,12 +72,12 @@ def run(data,
         print(reuse_model_path)
         model.load_weights(reuse_model_path)
 
-    lr_schedule_g = ExponentialDecay(0.000188, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.000282, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_g = ExponentialDecay(0.000188//2, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.000282//2, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=10.0)
+                  gradient_penalty_weight=1.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -100,8 +100,24 @@ def run(data,
 
 
 if __name__ == '__main__':
+    electrodes_choices = {
+        8: ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
+        16: ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
+             'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
+        32: ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
+             'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4',
+             'Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2',
+             'FC6', 'CP5', 'CP1', 'CP2', 'CP6', 'POz'],
+        56: ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5', 'FC1', 'FC2', 'FC6',
+             'C3', 'C4', 'CP5', 'CP1', 'CP2', 'CP6', 'AFz', 'P7',
+             'P3', 'Pz', 'P4', 'P8', 'O1', 'Oz', 'O2', 'AF7', 'AF3',
+             'AF4', 'AF8', 'F5', 'F1', 'F2', 'F6', 'FT7', 'FC3', 'FC4', 'FT8', 'C5',
+             'C1', 'C2', 'C6', 'TP7', 'CP3', 'CPz', 'CP4', 'TP8', 'P5', 'P1', 'P2',
+             'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
+    }
+
     data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
-                             channels=['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4', 'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
+                             channels=electrodes_choices[56],
                              n_subjects=202,
                              bandpass_filter=0.5,
                              time_dim=512,
@@ -127,7 +143,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/14042025_16_electrodes'
+    output_path = 'logs/20250414_56_electrodes'
 
     model = run(data,
                 n_subjects=n_subs,

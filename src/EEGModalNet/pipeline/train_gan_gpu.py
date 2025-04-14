@@ -15,13 +15,13 @@ from scipy.signal import butter, sosfiltfilt
 
 
 def load_data(data_path: str,
+              channels: List[str] = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
               bandpass_filter: float = 1.0,
               time_dim: int = 1024,
               exclude_sub_ids=None) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
     x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
     if exclude_sub_ids is not None:
@@ -101,6 +101,7 @@ def run(data,
 
 if __name__ == '__main__':
     data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
+                             channels=['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4', 'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
                              n_subjects=202,
                              bandpass_filter=0.5,
                              time_dim=512,
@@ -126,7 +127,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/13.04.2025_critic_sub_layer'
+    output_path = 'logs/14042025_16_electrodes'
 
     model = run(data,
                 n_subjects=n_subs,

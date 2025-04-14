@@ -13,6 +13,7 @@ from scipy.signal import butter, sosfiltfilt
 
 
 def load_data(data_path: str,
+              channels: List[str] = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
               channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               bandpass_filter: float = 0.5,
@@ -103,7 +104,13 @@ def run(data,
     return model
 
 
-def main(data_path: str, channels: list):
+if __name__ == '__main__':
+    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
+                             channels=['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4', 'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
+                             n_subjects=202,
+                             bandpass_filter=0.5,
+                             time_dim=512,
+                             exclude_sub_ids=None)
 
     device = 'cpu'
     if torch.cuda.is_available():
@@ -129,7 +136,7 @@ def main(data_path: str, channels: list):
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/13.04.2025_critic_sub_layer'
+    output_path = 'logs/14042025_16_electrodes'
 
     model = run(data,
                 n_subjects=n_subjects,

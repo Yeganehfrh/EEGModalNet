@@ -31,8 +31,8 @@ class Critic(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            LearnablePositionalEmbedding(512, 8),
-            SelfAttention1D(2, 4),
+            LearnablePositionalEmbedding(512, feature_dim),
+            SelfAttention1D(4, feature_dim / 4),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
@@ -94,11 +94,11 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
-            layers.Dense(4096 * 1, kernel_initializer=kernel_initializer, name='gen_layer5'),
-            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
-            layers.Reshape((128, 32), name='gen_layer9'),
-            LearnablePositionalEmbedding(128, 32),
-            SelfAttention1D(4, 8),
+            layers.Dense(feature_dim * time_dim * 1, kernel_initializer=kernel_initializer, name='gen-ly1_dense1'),
+            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen-ly2_act1'),
+            layers.Reshape((128, feature_dim * 4), name='gen-ly3_reshape'),
+            LearnablePositionalEmbedding(128, feature_dim * 4),
+            SelfAttention1D(4, feature_dim),
             *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],
@@ -108,7 +108,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
-            SelfAttention1D(4, 16),
+            SelfAttention1D(4, feature_dim * 2),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
@@ -188,7 +188,7 @@ class WGAN_GP(keras.Model):
         config = super().get_config()
         config.update({
                       "time_dim": self.time_dim,
-                      "feature_dim": self.feature_dim,
+                      "feature_dim": self.feature_dim, 
                       "use_sublayer_generator": self.use_sublayer_generator,
                       "use_sublayer_critic": self.use_sublayer_critic,
                       "use_channel_merger_g": self.use_channel_merger_g,
@@ -235,22 +235,22 @@ class WGAN_GP(keras.Model):
         std = real_data.std()
 
         # train critic
-        # for _ in range(2):
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
-        real_pred = self.critic(data)
-        fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-        self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()
+        for _ in range(2):
+            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+            fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
+            real_pred = self.critic(data)
+            fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.zero_grad()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss.backward()
 
         # clip gradients
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
-        grads = [v.value.grad for v in self.critic.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.critic.trainable_weights)
+            grads = [v.value.grad for v in self.critic.trainable_weights]
+            with torch.no_grad():
+                self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []
@@ -262,8 +262,8 @@ class WGAN_GP(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
 
         self.zero_grad()
-        # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
-        x_gen = self.generator((noise, sub, pos))  # TODO: consider using random positions
+        random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary
+        x_gen = self.generator((noise, random_sub, pos))  # TODO: consider using random positions
         fake_pred = self.critic({'x': x_gen, 'sub': sub, 'pos': pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#SBATCH --job-name=benchmarks
+#SBATCH --chdir=//work/projects/acnets/EEGModalNet/
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --time=30:00:00
+#SBATCH --gres=gpu:1
+#SBATCH --output=/work/projects/acnets/EEGModalNet/logs/benchmarks_%j.log
+#SBATCH --error=/work/projects/acnets/EEGModalNet/logs/benchmarks_%j.log
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=morteza.ansarinia@uni.lu
+
+alias micromamba=~/.local/bin/micromamba
+
+git pull
+
+# micromamba env remove -n EEGModalNet || true
+# micromamba create -f environment.yml -n EEGModalNet -y
+
+# SECTION Run pipeline
+micromamba run -n EEGModalNet python -m src.EEGModalNet.pipeline.benchmark_channels $*

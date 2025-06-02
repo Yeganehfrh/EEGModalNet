@@ -1,3 +1,8 @@
+[project]
+name = "YARE-GAN"
+version = "0.1.0"
+requires-python = ">=3.12"
+
 [flake8]
 ignore=["E501"]
 max-line-length=160
@@ -7,3 +12,28 @@ addopts = "-ra -q"
 testpaths = ["src"]
 python_files = ["*_test.py"]
 
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+
+[tool.pixi.tasks]
+
+[tool.pixi.dependencies]
+pytorch = ">=2.6.0,<3"
+keras = ">=3.9.0,<4"
+pytest = ">=8.3.5,<9"
+pip = ">=25.0.1,<26"
+torchvision = ">=0.21.0,<0.22"
+seaborn = ">=0.13.2,<0.14"
+pandas = ">=2.2.3,<3"
+flake8 = ">=7.2.0,<8"
+ipykernel = ">=6.29.5,<7"
+xarray = ">=2025.3.1,<2026"
+h5netcdf = ">=1.6.1,<2"
+dvc = ">3"
+scikit-learn = ">=1.6.1,<2"
+umap-learn = ">=0.5.7,<0.6"
+tqdm = ">=4.67.1,<5"
+ipywidgets = ">=8.1.6,<9"

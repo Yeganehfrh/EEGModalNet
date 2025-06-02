@@ -13,3 +13,7 @@ env_remote.yml
 /notebooks/*
 !notebooks/
 !notebooks/Data.ipynb
+# pixi environments
+.pixi
+pixi.lock
+*.egg-info

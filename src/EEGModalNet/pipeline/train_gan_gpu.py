@@ -17,7 +17,6 @@ from scipy.signal import butter, sosfiltfilt
 def load_data(data_path: str,
               channels: List[str] = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
-              bandpass_filter: float = 1.0,
               time_dim: int = 1024,
               exclude_sub_ids=None) -> tuple:
 
@@ -29,10 +28,6 @@ def load_data(data_path: str,
 
     x = x.to_numpy()
     n_subjects = x.shape[0]
-
-    if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
-        x = sosfiltfilt(sos, x, axis=-1)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
@@ -116,10 +111,9 @@ if __name__ == '__main__':
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
 
-    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
+    data, n_subs = load_data('data/LEMON_DATA/EO-EC_processed_ch-16_sf-128.nc5',
                              channels=electrodes_choices[56],
                              n_subjects=202,
-                             bandpass_filter=0.5,
                              time_dim=512,
                              exclude_sub_ids=None)
 

@@ -9,20 +9,16 @@ from src.EEGModalNet import CustomModelCheckpoint, StepLossHistory
 from typing import Dict
 import numpy as np
 import xarray as xr
-from scipy.signal import butter, sosfiltfilt
 
 
 def load_data(data_path: str,
               channels: List[str] = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
-              channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
-              bandpass_filter: float = 0.5,
               time_dim: int = 512,
-              exclude_sub_ids=None,
-              device='cpu') -> Dict:
+              exclude_sub_ids=None) -> tuple:
 
-    db = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = db.sel(subject=db.subject[:n_subjects], channel=channels)
+    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
+    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
 
     if exclude_sub_ids is not None:
         x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
@@ -30,16 +26,12 @@ def load_data(data_path: str,
     x = x.to_numpy()
     n_subjects = x.shape[0]
 
-    if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=98, output='sos')
-        x = sosfiltfilt(sos, x, axis=-1)
-    
-    # HACK MPS does not support float64
-    x = x.astype(np.float32)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    x = torch.tensor(x.copy(), device=device).flatten(0, 1)  # TODO: merge condition and participants' axes
+    x = x.unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
 
-    x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
-
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects // 2)[:, np.newaxis], device=device)
+    sub = torch.concat([sub, sub])  # the first half: eye open, and the second half: eye close
 
     pos = torch.tensor(db.ch_positions[None].repeat(x.shape[0], 0), device=device)
 
@@ -58,8 +50,10 @@ def run(data,
         reuse_model_path=None,
         device='cpu'):
 
-    model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
-                    latent_dim=latent_dim, n_subjects=n_subjects,
+    model = WGAN_GP(time_dim=512,
+                    feature_dim=data['x'].shape[-1],
+                    latent_dim=latent_dim,
+                    n_subjects=n_subjects,
                     use_sublayer_generator=True,
                     use_sublayer_critic=True,
                     use_channel_merger_g=False,
@@ -121,10 +115,9 @@ if __name__ == '__main__':
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
 
-    data, n_subs = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
-                             channels=electrodes_choices[56],
+    data, n_subs = load_data('data/LEMON_DATA/EO-EC_processed_ch-16_sf-128.nc5',
+                             channels=electrodes_choices[16],
                              n_subjects=202,
-                             bandpass_filter=0.5,
                              time_dim=512,
                              exclude_sub_ids=None)
 
@@ -152,12 +145,12 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/20250414_56_electrodes'
+    output_path = 'logs/20250602'
 
     model = run(data,
                 n_subjects=n_subjects,
                 max_epochs=5000,
-                latent_dim=128,
+                latent_dim=128 * 2,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,

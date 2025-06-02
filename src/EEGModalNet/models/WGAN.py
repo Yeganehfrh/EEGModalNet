@@ -32,7 +32,7 @@ class Critic(keras.Model):
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, feature_dim),
-            SelfAttention1D(2, feature_dim / 2),
+            SelfAttention1D(4, feature_dim / 4),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
@@ -94,9 +94,9 @@ class Generator(keras.Model):
 
         self.model = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
-            layers.Dense(feature_dim * time_dim * 1, kernel_initializer=kernel_initializer, name='gen_layer5'),
-            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
-            layers.Reshape((128, feature_dim * 4), name='gen_layer9'),
+            layers.Dense(feature_dim * time_dim * 1, kernel_initializer=kernel_initializer, name='gen-ly1_dense1'),
+            layers.LeakyReLU(negative_slope=self.negative_slope, name='gen-ly2_act1'),
+            layers.Reshape((128, feature_dim * 4), name='gen-ly3_reshape'),
             LearnablePositionalEmbedding(128, feature_dim * 4),
             SelfAttention1D(4, feature_dim),
             *convBlock(filters=2 * [8 * feature_dim],

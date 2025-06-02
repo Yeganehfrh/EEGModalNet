@@ -32,7 +32,8 @@ def load_data(data_path: str,
     x = torch.tensor(x.copy(), device=device).flatten(0, 1)  # TODO: merge condition and participants' axes
     x = x.unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
 
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects // 2)[:, np.newaxis], device=device)
+    sub = torch.concat([sub, sub])  # the first half: eye open, and the second half: eye close
 
     pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
 

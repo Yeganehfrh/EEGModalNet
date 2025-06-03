@@ -6,10 +6,9 @@ import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
 from ...EEGModalNet import WGAN_GP
-from ...EEGModalNet import CustomModelCheckpoint, StepLossHistory
-from typing import List
+from ...EEGModalNet import CustomModelCheckpoint
+from typing import List, Dict
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 
@@ -17,29 +16,36 @@ def load_data(data_path: str,
               channels: List[str] = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
               time_dim: int = 512,
-              exclude_sub_ids=None) -> tuple:
+              condition=None,
+              exclude_sub_ids=None) -> Dict:
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
+    xarray = xarray.sel(channel=channels, dim='eye_closed')
+
+    if condition is not None:
+        xarray = xarray.sel(dim=condition)
 
     if exclude_sub_ids is not None:
-        x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
+        xarray = xarray.sel(subject=~xarray.subject.isin(exclude_sub_ids))
 
-    x = x.to_numpy()
-    n_subjects = x.shape[0]
+    x = xarray.to_numpy()
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    x = torch.tensor(x.copy(), device=device).flatten(0, 1)  # TODO: merge condition and participants' axes
-    x = x.unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
-
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects // 2)[:, np.newaxis], device=device)
-    sub = torch.concat([sub, sub])  # the first half: eye open, and the second half: eye close
+    if condition is None:  # if condition is None, include both eye closed and eye open
+        x = torch.tensor(x.copy(), device=device).flatten(0, 1)
+        x = x.unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
+        sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects // 2)[:, np.newaxis], device=device)
+        sub = torch.concat([sub, sub])  # the first half: eye open, and the second half: eye close
+    else:
+        x = torch.tensor(x.copy(), device=device).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
+        sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis], device=device)
 
     pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
-    return data, n_subjects
+    return data
 
 
 def run(data,
@@ -98,7 +104,7 @@ def run(data,
 
 
 if __name__ == '__main__':
-    electrodes_choices = {
+    CHANNELS = {
         8: ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
         16: ['O1', 'O2', 'P3', 'P1', 'Pz', 'P2', 'P4',
              'C3', 'C1', 'C2', 'C4', 'F1', 'F2', 'AF3', 'AFz', 'AF4'],
@@ -113,12 +119,18 @@ if __name__ == '__main__':
              'C1', 'C2', 'C6', 'TP7', 'CP3', 'CPz', 'CP4', 'TP8', 'P5', 'P1', 'P2',
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
+    N_SUBJECTS = 202
+    LATENT_DIM = 128 * 2
+    BATCH_SIZE = 128
+    OUTPUT_PATH = 'logs/20250603'
+    CONDITION = None
 
-    data, n_subs = load_data('data/LEMON_DATA/EO-EC_processed_ch-16_sf-128.nc5',
-                             channels=electrodes_choices[16],
-                             n_subjects=202,
-                             time_dim=512,
-                             exclude_sub_ids=None)
+    data = load_data('data/LEMON_DATA/EO-EC_processed_ch-16_sf-128.nc5',
+                     channels=CHANNELS[16],
+                     n_subjects=N_SUBJECTS,
+                     time_dim=512,
+                     condition=CONDITION,
+                     exclude_sub_ids=None)
 
     if torch.cuda.is_available():
         print('GPU is available')
@@ -140,14 +152,12 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    output_path = 'logs/20250603'
-
     model = run(data,
-                n_subjects=n_subs,
+                n_subjects=N_SUBJECTS,
                 max_epochs=5000,
-                latent_dim=128 * 2,
-                batch_size=128,
-                cvloger_path=f'{output_path}.csv',
-                model_path=output_path,
+                latent_dim=LATENT_DIM,
+                batch_size=BATCH_SIZE,
+                cvloger_path=f'{OUTPUT_PATH}.csv',
+                model_path=OUTPUT_PATH,
                 reuse_model=False,
                 reuse_model_path=None)

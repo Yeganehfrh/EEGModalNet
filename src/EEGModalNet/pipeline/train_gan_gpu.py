@@ -22,7 +22,7 @@ def load_data(data_path: str,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    xarray = xarray.sel(channel=channels, dim='eye_closed')
+    xarray = xarray.sel(channel=channels)
 
     if condition is not None:
         xarray = xarray.sel(condition=condition)

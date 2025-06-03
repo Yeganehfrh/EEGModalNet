@@ -1,6 +1,6 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
@@ -10,12 +10,14 @@ from ...EEGModalNet import CustomModelCheckpoint
 from typing import List, Dict
 import numpy as np
 import xarray as xr
+from meegkit import dss
 
 
 def load_data(data_path: str,
               channels: List[str] = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
               time_dim: int = 512,
+              remove_line_noise=True,
               condition=None,
               exclude_sub_ids=None) -> Dict:
 
@@ -31,6 +33,10 @@ def load_data(data_path: str,
         xarray = xarray.sel(subject=~xarray.subject.isin(exclude_sub_ids))
 
     x = xarray.to_numpy()
+
+    if remove_line_noise:
+        x, _ = dss.dss_line(x.T, fline=50, sfreq=128, nremove=1)
+        x = x.T
 
     if condition is None:  # if condition is None, include both eye closed and eye open
         x = torch.tensor(x.copy(), device=device).flatten(0, 1)
@@ -81,7 +87,7 @@ def run(data,
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=1.0)
+                  gradient_penalty_weight=10.0)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -120,15 +126,16 @@ if __name__ == '__main__':
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
     N_SUBJECTS = 202
-    LATENT_DIM = 128 * 2
+    LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20250603_16-ch'
+    OUTPUT_PATH = 'logs/20250603_8-ch_7th_no_fline'
     CONDITION = 'eye_closed'
 
     data = load_data('data/LEMON_DATA/EO-EC_processed_ch-16_sf-128.nc5',
-                     channels=CHANNELS[16],
+                     channels=CHANNELS[8],
                      n_subjects=N_SUBJECTS,
                      time_dim=512,
+                     remove_line_noise=True,
                      condition=CONDITION,
                      exclude_sub_ids=None)
 

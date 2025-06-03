@@ -1,13 +1,15 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
-from src.EEGModalNet import WGAN_GP
-from src.EEGModalNet import CustomModelCheckpoint, StepLossHistory
-from typing import Dict
+from ...EEGModalNet import WGAN_GP
+from ...EEGModalNet import CustomModelCheckpoint, StepLossHistory
+from typing import List
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 
@@ -33,11 +35,12 @@ def load_data(data_path: str,
     sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects // 2)[:, np.newaxis], device=device)
     sub = torch.concat([sub, sub])  # the first half: eye open, and the second half: eye close
 
-    pos = torch.tensor(db.ch_positions[None].repeat(x.shape[0], 0), device=device)
+    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], 0), device=device)
 
     data = {'x': x, 'sub': sub, 'pos': pos}
 
-    return data
+    return data, n_subjects
+
 
 def run(data,
         n_subjects,
@@ -47,8 +50,7 @@ def run(data,
         cvloger_path='tmp/tmp/simple_gan_v1.csv',
         model_path='tmp/tmp/wgan_v2.model.keras',
         reuse_model=False,
-        reuse_model_path=None,
-        device='cpu'):
+        reuse_model_path=None):
 
     model = WGAN_GP(time_dim=512,
                     feature_dim=data['x'].shape[-1],
@@ -60,11 +62,9 @@ def run(data,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
 
-    model = model.to(device)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model.to(device)
     print(f'>>>> Model is on {device}')
-    print(f">>>> data.x is on {data['x'].device}")
-    print(f">>>> data.sub is on {data['sub'].device}")
-    print(f">>>> data.pos is on {data['pos'].device}")
 
     if reuse_model:
         print(reuse_model_path)
@@ -77,8 +77,7 @@ def run(data,
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=1.0)
 
-    if device == 'cuda':
-        torch.cuda.synchronize()  # wait for model to be loaded
+    torch.cuda.synchronize()  # wait for model to be loaded
 
     # step_loss_history = StepLossHistory()
 
@@ -121,25 +120,21 @@ if __name__ == '__main__':
                              time_dim=512,
                              exclude_sub_ids=None)
 
-    device = 'cpu'
     if torch.cuda.is_available():
-        device = 'cuda'
-        print('CUDA is available')
-        torch.cuda.set_device(0)
-        print(f'Running on {torch.cuda.device_count()} CUDA devices')
-        # Explicitly set the CUDA device
-        # preload CUDA libraries with a dummy tensor
-        _ = torch.randn(1, device="cuda")
-    elif torch.backends.mps.is_available():
-        print('MPS is available')
-        device = 'mps'
+        print('GPU is available')
+        # torch.cuda.current_device()
     else:
         print('GPU is not available!!')
         exit()
 
-    data = load_data(data_path, channels=channels, device=device)
-    n_subjects = len(torch.unique(data['sub']))
-    n_channels = len(channels)
+    print(f'Running on {torch.cuda.device_count()} GPUs')
+    # print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
+
+    # Explicitly set the CUDA device
+    torch.cuda.set_device(0)
+
+    # preload CUDA libraries with a dummy tensor
+    _ = torch.randn(1, device="cuda")
 
     # Apply mixed precision policy
     keras.mixed_precision.set_global_policy('mixed_float16')
@@ -148,20 +143,11 @@ if __name__ == '__main__':
     output_path = 'logs/20250602'
 
     model = run(data,
-                n_subjects=n_subjects,
+                n_subjects=n_subs,
                 max_epochs=5000,
                 latent_dim=128 * 2,
                 batch_size=128,
                 cvloger_path=f'{output_path}.csv',
                 model_path=output_path,
                 reuse_model=False,
-                reuse_model_path=None,
-                device=device)
-
-
-# Entry point
-if __name__ == '__main__':
-    data_path = 'data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5'
-    channels = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
-    print(f'Running with channels: {channels}')
-    main(data_path=data_path, channels=channels)
+                reuse_model_path=None)

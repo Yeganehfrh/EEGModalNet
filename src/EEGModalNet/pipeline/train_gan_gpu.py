@@ -18,14 +18,14 @@ def load_data(data_path: str,
               time_dim: int = 512,
               condition=None,
               exclude_sub_ids=None) -> Dict:
-    
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     xarray = xarray.sel(channel=channels, dim='eye_closed')
 
     if condition is not None:
-        xarray = xarray.sel(dim=condition)
+        xarray = xarray.sel(condition=condition)
 
     if exclude_sub_ids is not None:
         xarray = xarray.sel(subject=~xarray.subject.isin(exclude_sub_ids))

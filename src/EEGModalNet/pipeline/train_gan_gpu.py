@@ -120,13 +120,13 @@ if __name__ == '__main__':
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
     N_SUBJECTS = 202
-    LATENT_DIM = 128
+    LATENT_DIM = 128 * 2
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20250603_8-ch'
+    OUTPUT_PATH = 'logs/20250603_16-ch'
     CONDITION = 'eye_closed'
 
     data = load_data('data/LEMON_DATA/EO-EC_processed_ch-16_sf-128.nc5',
-                     channels=CHANNELS[8],
+                     channels=CHANNELS[16],
                      n_subjects=N_SUBJECTS,
                      time_dim=512,
                      condition=CONDITION,

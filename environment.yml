@@ -30,3 +30,5 @@ dependencies:
   - scikit-learn
   # - mne
   # - wordcloud
+  - meegkit
+

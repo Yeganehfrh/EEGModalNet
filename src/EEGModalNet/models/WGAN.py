@@ -108,7 +108,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
-            SelfAttention1D(4, feature_dim * 2),
+            SelfAttention1D(4, feature_dim),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
@@ -248,9 +248,9 @@ class WGAN_GP(keras.Model):
         # clip gradients
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

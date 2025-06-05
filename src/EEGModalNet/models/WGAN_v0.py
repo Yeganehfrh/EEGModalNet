@@ -1,20 +1,25 @@
 import torch
 from keras import layers
 import keras
-from .commonold import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding
+from .common_v0 import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, ConvBlockResidual, StridedResidualBlock
+from ..preprocessing.spectral_regularization import spectral_regularization_loss
 
 
+@keras.saving.register_keras_serializable()
 class Critic(keras.Model):
-    def __init__(self, time_dim, feature_dim, n_subjects, use_sublayer, use_channel_merger, *args, **kwargs):
-        super(Critic, self).__init__()
-
-        self.input_shape = (time_dim, feature_dim)
+    def __init__(self, time_dim, feature_dim, n_subjects, use_sublayer, use_channel_merger, **kwargs):
+        super(Critic, self).__init__(**kwargs)
+        self.time_dim = time_dim
+        self.feature_dim = feature_dim
+        self.n_subjects = n_subjects
         self.use_sublayer = use_sublayer
+        self.use_channel_merger = use_channel_merger
+        self.input_shape = (time_dim, feature_dim)
         negative_slope = 0.1
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)  # TODO: check out the input and output channels when we include more channels
+            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
@@ -22,18 +27,20 @@ class Critic(keras.Model):
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
+        ks = 5
+
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
-            ResidualBlock(feature_dim, 5, kernel_initializer=kernel_initializer, activation='relu'),  # TODO: update kernel size argument
-            layers.Conv1D(1 * feature_dim, 5, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            LearnablePositionalEmbedding(512, 8),
+            SelfAttention1D(2, 4),
+            layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, 5, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, 5, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(256, 32),
-            SelfAttention1D(4, 8),
-            layers.Conv1D(16 * feature_dim, 5, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+            SelfAttention1D(4, feature_dim),
+            layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
@@ -50,20 +57,35 @@ class Critic(keras.Model):
         out = self.model(x)
         return out
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+                      "time_dim": self.time_dim,
+                      "feature_dim": self.feature_dim, 
+                      "use_sublayer": self.use_sublayer,
+                      "n_subjects": self.n_subjects,
+                      "use_channel_merger": self.use_channel_merger})
+        return config
 
+
+@keras.saving.register_keras_serializable()
 class Generator(keras.Model):
-    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer, num_classes, emb_dim,
-                 n_subjects, use_channel_merger, interpolation, *args, **kwargs):
-        super(Generator, self).__init__()
+    def __init__(self, time_dim, feature_dim, latent_dim, use_sublayer,
+                 n_subjects, use_channel_merger, interpolation, **kwargs):
+        super(Generator, self).__init__(**kwargs)
         self.negative_slope = 0.2
-        self.input_shape = (time_dim, feature_dim)
+        self.time_dim = time_dim
+        self.feature_dim = feature_dim
         self.use_sublayer = use_sublayer
         self.latent_dim = latent_dim
+        self.n_subjects = n_subjects
+        self.use_channel_merger = use_channel_merger
+        self.interpolation = interpolation
+        self.input_shape = (time_dim, feature_dim)
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
         if use_sublayer:
             self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
-            # self.sub_layer = SubjectLayers_v2(num_classes, emb_dim)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
@@ -86,6 +108,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
+            SelfAttention1D(4, 16),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')
 
@@ -102,22 +125,39 @@ class Generator(keras.Model):
             x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+                      "time_dim": self.time_dim,
+                      "feature_dim": self.feature_dim, 
+                      "use_sublayer": self.use_sublayer,
+                      "latent_dim": self.latent_dim,
+                      "n_subjects": self.n_subjects,
+                      "use_channel_merger": self.use_channel_merger,
+                      "interpolation": self.interpolation})
+        return config
+
 
 @keras.saving.register_keras_serializable()
-class WGAN_GP_old(keras.Model):
+class WGAN_GP_V0(keras.Model):
     def __init__(self,
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,
-                 emb_dim=20,
                  use_channel_merger_g=False,
                  use_channel_merger_c=False,
                  interpolation='bilinear',
-                 *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.time = time_dim
-        self.feature = feature_dim
-        self.input_shape = (time_dim, feature_dim)
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.time_dim = time_dim
+        self.feature_dim = feature_dim
         self.latent_dim = latent_dim
+        self.n_subjects = n_subjects
+        self.use_sublayer_generator = use_sublayer_generator
+        self.use_sublayer_critic = use_sublayer_critic
+        self.use_channel_merger_g = use_channel_merger_g
+        self.use_channel_merger_c = use_channel_merger_c
+        self.interpolation = interpolation
+        self.input_shape = (time_dim, feature_dim)
         self.d_loss_tracker = keras.metrics.Mean(name='d_loss')
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
@@ -127,8 +167,6 @@ class WGAN_GP_old(keras.Model):
                                    feature_dim=feature_dim,
                                    latent_dim=latent_dim,
                                    use_sublayer=use_sublayer_generator,
-                                   num_classes=n_subjects,
-                                   emb_dim=emb_dim,
                                    n_subjects=n_subjects,
                                    use_channel_merger=use_channel_merger_g,
                                    interpolation=interpolation)
@@ -136,7 +174,6 @@ class WGAN_GP_old(keras.Model):
         self.critic = Critic(time_dim=time_dim,
                              feature_dim=feature_dim,
                              n_subjects=n_subjects,
-                             emb_dim=emb_dim,
                              use_sublayer=use_sublayer_critic,
                              use_channel_merger=use_channel_merger_c,)
 
@@ -149,6 +186,16 @@ class WGAN_GP_old(keras.Model):
 
     def get_config(self):
         config = super().get_config()
+        config.update({
+                      "time_dim": self.time_dim,
+                      "feature_dim": self.feature_dim, 
+                      "use_sublayer_generator": self.use_sublayer_generator,
+                      "use_sublayer_critic": self.use_sublayer_critic,
+                      "use_channel_merger_g": self.use_channel_merger_g,
+                      "use_channel_merger_c": self.use_channel_merger_c,
+                      "latent_dim": self.latent_dim,
+                      "n_subjects": self.n_subjects,
+                      "interpolation": self.interpolation})
         return config
 
     def call(self, x):

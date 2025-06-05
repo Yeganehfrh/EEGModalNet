@@ -5,28 +5,32 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
-from ...EEGModalNet import WGAN_GP
-from ...EEGModalNet import CustomModelCheckpoint
+from ...EEGModalNet import WGAN_GP_V0, CustomModelCheckpoint, preprocess_data
 from typing import List, Dict
 import numpy as np
 import xarray as xr
 from meegkit import dss
+from scipy.signal import butter, sosfiltfilt
 
 
 def load_data(data_path: str,
-              channels: List[str] = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
+              channels: List[str] | str = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
               time_dim: int = 512,
-              remove_line_noise=True,
               condition=None,
-              exclude_sub_ids=None) -> Dict:
+              exclude_sub_ids=None,
+              preprocess=False,
+              highpass=False,
+              remove_line_noise=True) -> Dict:
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    xarray = xarray.sel(channel=channels)
 
-    if condition is not None:
+    if channels != 'all':
+        xarray = xarray.sel(channel=channels)
+
+    if condition == 'EC_EO':  # include both eye closed and eye open
         xarray = xarray.sel(condition=condition)
 
     if exclude_sub_ids is not None:
@@ -34,11 +38,18 @@ def load_data(data_path: str,
 
     x = xarray.to_numpy()
 
+    if preprocess:
+        x = preprocess_data(x, sampling_rate=128)
+
+    if highpass:
+        sos = butter(4, 0.5, btype='high', fs=128, output='sos')
+        x = sosfiltfilt(sos, x, axis=-1)
+
     if remove_line_noise:
         x, _ = dss.dss_line(x.T, fline=50, sfreq=128, nremove=1)
         x = x.T
 
-    if condition is None:  # if condition is None, include both eye closed and eye open
+    if condition == 'EC_EO':
         x = torch.tensor(x.copy(), device=device).flatten(0, 1)
         x = x.unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
         sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects // 2)[:, np.newaxis], device=device)
@@ -64,15 +75,15 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    model = WGAN_GP(time_dim=512,
-                    feature_dim=data['x'].shape[-1],
-                    latent_dim=latent_dim,
-                    n_subjects=n_subjects,
-                    use_sublayer_generator=True,
-                    use_sublayer_critic=True,
-                    use_channel_merger_g=False,
-                    use_channel_merger_c=False,
-                    interpolation='bilinear')
+    model = WGAN_GP_V0(time_dim=512,
+                       feature_dim=data['x'].shape[-1],
+                       latent_dim=latent_dim,
+                       n_subjects=n_subjects,
+                       use_sublayer_generator=True,
+                       use_sublayer_critic=True,
+                       use_channel_merger_g=False,
+                       use_channel_merger_c=False,
+                       interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -128,16 +139,18 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20250605_modi_upsample'
-    CONDITION = 'eye_closed'
+    OUTPUT_PATH = 'logs/20250605_7th'
+    CONDITION = None
 
-    data = load_data('data/LEMON_DATA/EO-EC_processed_ch-16_sf-128.nc5',
-                     channels=CHANNELS[8],
+    data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
+                     channels='all',
                      n_subjects=N_SUBJECTS,
                      time_dim=512,
-                     remove_line_noise=True,
                      condition=CONDITION,
-                     exclude_sub_ids=None)
+                     exclude_sub_ids=None,
+                     preprocess=True,
+                     highpass=True,
+                     remove_line_noise=True)
 
     if torch.cuda.is_available():
         print('GPU is available')

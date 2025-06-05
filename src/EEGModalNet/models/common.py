@@ -500,6 +500,18 @@ class SubjectLayers_v2(nn.Module):
         return x_
 
 
+def lowpass_initializer(shape, dtype=None):
+    # shape = (kernel_size, in_channels, out_channels)
+    sigma = 1.0
+    kernel_size, in_channels, out_channels = shape
+    x = np.linspace(-kernel_size // 2, kernel_size // 2, kernel_size)
+    kernel = np.exp(-0.5 * (x / sigma) ** 2)
+    kernel = kernel / np.sum(kernel)
+    # Expand to (kernel_size, in_channels, out_channels)
+    kernel = np.tile(kernel[:, None, None], (1, in_channels, out_channels))
+    return torch.tensor(kernel, dtype=torch.float16)  # HACK use other dype if not trainig with mixed precision
+
+
 def convBlock(filters: List[int],
               kernel_sizes: List[Union[int, tuple]],
               upsampling: List[Union[bool, int]],
@@ -513,7 +525,12 @@ def convBlock(filters: List[int],
     for i, (filter, kernel_size) in enumerate(zip(filters, kernel_sizes), 1):
         if upsampling[i - 1]:
             lyrs.append(CustomUpSampling1D(2, method=interpolation))
-        lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer, name=f'conv_{i}'))
+        lyrs.append(layers.Conv1D(filter,
+                                  kernel_size,
+                                  stride, padding,
+                                  groups=filter // (2 // i),  # HACK
+                                  kernel_initializer=lowpass_initializer,
+                                  name=f'conv_{i}'))
         if batch_norm:
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
         lyrs.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))

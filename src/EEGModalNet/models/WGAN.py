@@ -100,7 +100,7 @@ class Generator(keras.Model):
             LearnablePositionalEmbedding(128, feature_dim * 4),
             SelfAttention1D(4, feature_dim),
             *convBlock(filters=2 * [8 * feature_dim],
-                       kernel_sizes= 2 * [3],
+                       kernel_sizes= 2 * [5],
                        upsampling=[1, 1],
                        stride=1,
                        padding='same',
@@ -243,7 +243,7 @@ class WGAN_GP(keras.Model):
         fake_pred = self.critic({'x': fake_data, 'sub': random_sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
         self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + spectral_regularization_loss(real_data, fake_data)
+        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
 
         # clip gradients

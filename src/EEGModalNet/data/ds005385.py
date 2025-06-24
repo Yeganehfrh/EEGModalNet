@@ -1,3 +1,5 @@
+from typing import List
+
 import numpy as np
 import pandas as pd
 
@@ -69,3 +71,51 @@ def create_dataset(bids_root_path,
 
     # save
     dataset.to_netcdf(output_path, engine='h5netcdf')
+
+
+def process_ds005385_for_CBraMod(sub_id: str,
+                                 channels: List[str],
+                                 resampling_frq=200,
+                                 notchfilter_frq=50,
+                                 filter_bounds=[0.3, 75],
+                                 verbose=False,
+                                 microvolts=False,
+                                 pretrain=False):
+
+    # open data
+    raw = mne.io.read_raw_edf(f'ds005385/{sub_id}/ses-1/eeg/{sub_id}_ses-1_task-EyesClosed_acq-pre_eeg.edf', verbose=verbose, preload=True)
+    raw.set_montage('standard_1020')
+
+    # pick eeg channels
+    print('picking eeg channels...')
+    # ['T3', 'T4', 'T5', 'T6'] channels that are only in the 10-20 system
+    # replaced with their equivalent name in the 10-10 system [T7, T8, P7, P8]
+    raw.pick(channels, verbose=verbose)
+
+    # interpolate bad channels if there is any
+    print('interpolating bad channels...')
+    raw.interpolate_bads(verbose=verbose)
+
+    # resampling
+    if resampling_frq is not None:
+        raw.resample(resampling_frq, verbose=verbose)
+
+    raw.filter(l_freq=filter_bounds[0], h_freq=filter_bounds[1], verbose=verbose)
+    raw.notch_filter((notchfilter_frq), verbose=verbose)
+    eeg_array = raw.get_data().T
+    points, chs = eeg_array.shape
+    if microvolts:
+        eeg_array = eeg_array * 10**6
+
+    if pretrain:  # pretrain mode follows their pretraining's preprocessing steps
+        a = points % (30 * 200)
+        eeg_array = eeg_array[60 * 200:-(a+60 * 200), :]
+        eeg_array = eeg_array.reshape(-1, 30, 200, chs)
+
+    else:
+        eeg_array = eeg_array[:36000, :]  # HACK: trim the data based on the shortest recording and its divisiblity by 200
+        eeg_array = eeg_array.reshape(-1, 2, 200, chs)
+
+    eeg_array = eeg_array.transpose(0, 3, 1, 2)
+
+    return eeg_array

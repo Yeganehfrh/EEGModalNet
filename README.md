@@ -9,7 +9,6 @@ The method and findings are described in our preprint on [arXiv](https://arxiv.o
 ├── .vscode/                      # Editor settings
 ├── jobs/                         # Slurm job scripts
 ├── notebooks/                    # Experiment notebooks
-├── run/                          # Training and evaluation runners
 ├── src/EEGModalNet/              # Main source code
 │   ├── data/                     # Data loading & handling
 │   ├── models/                   # GAN models definitions

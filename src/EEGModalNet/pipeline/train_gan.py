@@ -4,11 +4,12 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
-from ...EEGModalNet import WGAN_GP
-from ...EEGModalNet import CustomModelCheckpoint
+from ...EEGModalNet import WGAN_GP_V0
+from ...EEGModalNet import CustomModelCheckpoint, preprocess_data
 from typing import List
 import numpy as np
 import xarray as xr
+from meegkit import dss
 from scipy.signal import butter, sosfiltfilt
 
 
@@ -21,7 +22,9 @@ def load_data(data_path: str,
               channels: List[str] = ['all'],
               highpass_filter: float = 0.5,
               time_dim: int = 1024,
-              exclude_sub_ids=None) -> tuple:
+              exclude_sub_ids=None,
+              preprocess=True,
+              remove_line_noise=True) -> tuple:
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
     x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
@@ -32,9 +35,16 @@ def load_data(data_path: str,
     x = x.to_numpy()
     n_subjects = x.shape[0]
 
+    if preprocess:
+        x = preprocess_data(x, sampling_rate=128)
+
     if highpass_filter is not None:
         sos = butter(4, highpass_filter, btype='high', fs=128, output='sos')
         x = sosfiltfilt(sos, x, axis=-1)
+
+    if remove_line_noise:
+        x, _ = dss.dss_line(x.T, fline=50, sfreq=128, nremove=1)
+        x = x.T
 
     x = torch.tensor(x.copy()).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
 
@@ -57,19 +67,19 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    model = WGAN_GP(time_dim=512, feature_dim=data['x'].shape[-1],
-                    latent_dim=latent_dim, n_subjects=n_subjects,
-                    use_sublayer_generator=True,
-                    use_sublayer_critic=True,
-                    use_channel_merger_c=False,
-                    use_channel_merger_g=False,
-                    interpolation='bilinear')
+    model = WGAN_GP_V0(time_dim=512, feature_dim=data['x'].shape[-1],
+                       latent_dim=latent_dim, n_subjects=n_subjects,
+                       use_sublayer_generator=True,
+                       use_sublayer_critic=False,
+                       use_channel_merger_c=False,
+                       use_channel_merger_g=False,
+                       interpolation='bilinear')
 
     model.compile(d_optimizer=keras.optimizers.Adam(0.0000940, beta_1=0.5, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(0.0000940, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=10.0)
 
-    callbacks = [CustomModelCheckpoint(model_path, save_freq=50),
+    callbacks = [CustomModelCheckpoint(model_path, save_freq=20),
                  keras.callbacks.CSVLogger(cvloger_path, append=True),
                  keras.callbacks.ModelCheckpoint(model_path + 'best_gloss.model.keras', monitor='g_loss', save_best_only=True),
                  keras.callbacks.TerminateOnNaN()]
@@ -83,12 +93,12 @@ def run(data,
 
 
 if __name__ == '__main__':
-    data, n_subs = load_data('data/LEMON_DATA/EC_8_channels_processed.nc5',
-                             n_subjects=202, channels=['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2'],
+    data, n_subs = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
+                             n_subjects=20, channels=['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
                              highpass_filter=0.5, time_dim=512,
                              )
 
-    output_path = 'logs/multichannel_test_08-01-2025'
+    output_path = 'logs/20250702_test_on_cpu'
 
     max_epochs = 2000
     latent_dim = 128

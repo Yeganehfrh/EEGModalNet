@@ -80,7 +80,7 @@ def run(data,
                        latent_dim=latent_dim,
                        n_subjects=n_subjects,
                        use_sublayer_generator=True,
-                       use_sublayer_critic=True,
+                       use_sublayer_critic=False,
                        use_channel_merger_g=False,
                        use_channel_merger_c=False,
                        interpolation='bilinear')
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20250605_7th_modified'
+    OUTPUT_PATH = 'logs/20250702'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',

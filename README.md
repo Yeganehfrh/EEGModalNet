@@ -29,8 +29,7 @@ The method and findings are described in our preprint on [arXiv](https://arxiv.o
 Install the required packages using the following command:
 
 ```bash
-mamba env create -f environment.yml
-mamba activate EEGModalNet
+pixi shell
 ```
 
 ## Citation

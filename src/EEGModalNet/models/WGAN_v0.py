@@ -39,13 +39,13 @@ class Critic(keras.Model):
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
-            LearnablePositionalEmbedding(64, 4 * feature_dim),
+            # LearnablePositionalEmbedding(64, 4 * feature_dim),
             SelfAttention1D(4, feature_dim),
             # layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
             # layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
-            layers.Dense(4096, name='dis_dense1', dtype='float32', kernel_initializer=kernel_initializer),
-            layers.LeakyReLU(negative_slope=negative_slope),
+            # layers.Dense(4096, name='dis_dense1', dtype='float32', kernel_initializer=kernel_initializer),
+            # layers.LeakyReLU(negative_slope=negative_slope),
             layers.Dense(1, name='dis_dense2', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
 
@@ -238,22 +238,22 @@ class WGAN_GP_V0(keras.Model):
         std = real_data.std()
 
         # train critic
-        # for _ in range(2):
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
-        fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
-        real_pred = self.critic(data)
-        fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-        self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()
+        for _ in range(2):
+            noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+            fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
+            real_pred = self.critic(data)
+            fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.zero_grad()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss.backward()
 
         # clip gradients
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
-        grads = [v.value.grad for v in self.critic.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.critic.trainable_weights)
+            grads = [v.value.grad for v in self.critic.trainable_weights]
+            with torch.no_grad():
+                self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

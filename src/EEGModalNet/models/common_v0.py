@@ -171,17 +171,24 @@ class SelfAttention1D(layers.Layer):
         self.key_dim = key_dim
 
         self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
-        self.layer_norm = layers.LayerNormalization()
+        self.layer_norm1 = layers.LayerNormalization()
+        self.layer_norm2 = layers.LayerNormalization()
+
+        self.ffn = keras.Sequential([
+            layers.Dense(64, activation='gelu'),
+            layers.Dense(key_dim * num_heads),  # match the attention output dimension
+        ])
 
     def build(self, input_shape):
         self.attention.build(input_shape, input_shape)
-        self.layer_norm.build(input_shape)
+        self.layer_norm1.build(input_shape)
         super(SelfAttention1D, self).build(input_shape)
 
     def call(self, inputs):
-        x = self.attention(inputs, inputs)  # (query=x, value=x)
-        x = x + inputs
-        x = self.layer_norm(x)
+        attn_output = self.attention(inputs, inputs)  # (query=x, value=x)
+        x = self.layer_norm1(inputs + attn_output)
+        ff_output = self.ffn(x)
+        x = self.layer_norm2(x + ff_output)
         return x
 
     def get_config(self):

@@ -164,31 +164,33 @@ class SinePositionalEncoding(layers.Layer):
 
 
 class SelfAttention1D(layers.Layer):
-    def __init__(self, num_heads, key_dim, **kwargs):
+    def __init__(self, num_heads, key_dim, use_ffn=False, ffn_inner_d=64, **kwargs):
         super(SelfAttention1D, self).__init__(**kwargs)
 
         self.num_heads = num_heads
         self.key_dim = key_dim
 
         self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
-        self.layer_norm1 = layers.LayerNormalization()
-        self.layer_norm2 = layers.LayerNormalization()
+        self.layer_norm = layers.LayerNormalization()
 
-        self.ffn = keras.Sequential([
-            layers.Dense(64, activation='gelu'),
-            layers.Dense(key_dim * num_heads),  # match the attention output dimension
-        ])
+        if use_ffn:
+            self.layer_norm_ffn = layers.LayerNormalization()
+            self.ffn = keras.Sequential([
+                layers.Dense(ffn_inner_d, activation='gelu'),
+                layers.Dense(key_dim * num_heads),  # match the attention output dimension
+            ])
 
     def build(self, input_shape):
         self.attention.build(input_shape, input_shape)
-        self.layer_norm1.build(input_shape)
+        self.layer_norm.build(input_shape)
         super(SelfAttention1D, self).build(input_shape)
 
     def call(self, inputs):
         attn_output = self.attention(inputs, inputs)  # (query=x, value=x)
-        x = self.layer_norm1(inputs + attn_output)
-        ff_output = self.ffn(x)
-        x = self.layer_norm2(x + ff_output)
+        x = self.layer_norm(inputs + attn_output)
+        if hasattr(self, 'ffn'):
+            ff_output = self.ffn(x)
+            x = self.layer_norm_ffn(x + ff_output)
         return x
 
     def get_config(self):

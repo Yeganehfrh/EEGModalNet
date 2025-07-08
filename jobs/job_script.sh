@@ -6,7 +6,7 @@
 #SBATCH --nodes=2
 #SBATCH --ntasks=1
 #SBATCH --mem=16GB
-#SBATCH --time=12:00:00
+#SBATCH --time=4:00:00
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/IG_pipeline_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/IG_pipeline_%j.log
 #SBATCH --mail-type=ALL

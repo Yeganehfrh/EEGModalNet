@@ -34,27 +34,26 @@ class Critic(keras.Model):
             LearnablePositionalEmbedding(512, 8),
             SelfAttention1D(2, 4, use_ffn=True, ffn_inner_d=256),
             ResidualBlock(8, ks, 1, kernel_initializer, activation='leaky_relu'),
-            layers.Conv1D(2 * feature_dim, ks, strides=1, padding='same', name='conv3', kernel_initializer=kernel_initializer),
-            layers.LayerNormalization(),
-            layers.LeakyReLU(negative_slope=negative_slope),
-            # layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
-            # layers.LayerNormalization(),
-            # layers.LeakyReLU(negative_slope=negative_slope),
-            SelfAttention1D(4, 4, use_ffn=True, ffn_inner_d=256),
-            layers.Flatten(name='dis_flatten'),
-            layers.Dense(1, name='dis_dense2', dtype='float32', kernel_initializer=kernel_initializer),
+            SelfAttention1D(2, 4, use_ffn=True, ffn_inner_d=256),
+            # layers.Flatten(name='dis_flatten'),
         ], name='critic')
+
+        self.fc = layers.Dense(1, name='dis_dense2', dtype='float32', kernel_initializer=kernel_initializer)
 
         self.built = True
 
     def call(self, inputs):
         x, sub_labels, positions = inputs['x'], inputs['sub'], inputs['pos']
+        skip = x
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, sub_labels)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
-        out = self.model(x)
-        return out
+        x = self.model(x)
+        x = layers.add([x, skip])
+        x = x.reshape((x.shape[0], -1))  # Flatten the output
+        x = self.fc(x)
+        return x
 
     def get_config(self):
         config = super().get_config()

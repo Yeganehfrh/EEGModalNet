@@ -33,14 +33,14 @@ class Critic(keras.Model):
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, 8),
             SelfAttention1D(2, 4, use_ffn=True, ffn_inner_d=256),
-            # ResidualBlock(8, ks, 1, kernel_initializer, activation='leaky_relu'),
-            # layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
-            # layers.LayerNormalization(),
-            # layers.LeakyReLU(negative_slope=negative_slope),
+            ResidualBlock(8, ks, 1, kernel_initializer, activation='leaky_relu'),
+            layers.Conv1D(2 * feature_dim, ks, strides=1, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            layers.LayerNormalization(),
+            layers.LeakyReLU(negative_slope=negative_slope),
             # layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             # layers.LayerNormalization(),
             # layers.LeakyReLU(negative_slope=negative_slope),
-            SelfAttention1D(2, 4, use_ffn=True, ffn_inner_d=256),
+            SelfAttention1D(4, 4, use_ffn=True, ffn_inner_d=256),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense2', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
@@ -247,9 +247,9 @@ class WGAN_GP_V0(keras.Model):
         # clip gradients
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

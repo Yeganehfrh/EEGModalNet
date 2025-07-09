@@ -32,28 +32,34 @@ class Critic(keras.Model):
         self.model = keras.Sequential([
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, 8),
-            SelfAttention1D(2, 4, use_ffn=True, ffn_inner_d=256),
+            SelfAttention1D(2, 4, use_ffn=False, ffn_inner_d=256),
             ResidualBlock(8, ks, 1, kernel_initializer, activation='leaky_relu'),
-            SelfAttention1D(2, 4, use_ffn=True, ffn_inner_d=256),
+            layers.Conv1D(2 * feature_dim, ks, strides=1, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.LeakyReLU(negative_slope=negative_slope),
+            SelfAttention1D(4, 4, use_ffn=False, ffn_inner_d=256),
             # layers.Flatten(name='dis_flatten'),
+            # layers.Dense(1, name='dis_dense2', dtype='float32', kernel_initializer=kernel_initializer)
         ], name='critic')
 
         self.fc = layers.Dense(1, name='dis_dense2', dtype='float32', kernel_initializer=kernel_initializer)
+        self.conv_matcher = layers.Conv1D(2 * feature_dim, 1)
 
         self.built = True
 
     def call(self, inputs):
         x, sub_labels, positions = inputs['x'], inputs['sub'], inputs['pos']
-        skip = x
+        skip = x  # TODO I can either add the original input before the sub layer or the one projected by the sub layer
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, sub_labels)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
-        x = self.model(x)
-        x = layers.add([x, skip])
-        x = x.reshape((x.shape[0], -1))  # Flatten the output
-        x = self.fc(x)
-        return x
+        out = self.model(x)
+        if x.shape[-1] != out.shape[-1]:
+            x = self.conv_matcher(x)
+        out = layers.add([out, x])
+        out = out.reshape((out.shape[0], -1))  # Flatten the output
+        out = self.fc(out)
+        return out
 
     def get_config(self):
         config = super().get_config()

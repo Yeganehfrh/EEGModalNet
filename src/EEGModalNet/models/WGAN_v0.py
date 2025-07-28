@@ -15,7 +15,7 @@ class Critic(keras.Model):
         self.use_sublayer = use_sublayer
         self.use_channel_merger = use_channel_merger
         self.input_shape = (time_dim, feature_dim)
-        negative_slope = 0.1
+        negative_slope = 0.2
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 
         if use_sublayer:
@@ -244,7 +244,7 @@ class WGAN_GP_V0(keras.Model):
             fake_data = self.generator((noise, sub, pos)).detach()  # TODO: consider using random sub
             real_pred = self.critic(data)
             fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})  # TODO: should we use the same sub and pos for fake data?
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            gp = self.gradient_penalty(real_data, fake_data, sub, pos)
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
             d_loss.backward()

@@ -1,5 +1,6 @@
 import os
 os.environ['KERAS_BACKEND'] = 'torch'
+os.environ["PYTORCH_SDP_ATTENTION_BACKEND"] = "math"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch

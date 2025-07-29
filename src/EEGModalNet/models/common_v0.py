@@ -17,9 +17,9 @@ class ResidualBlock(layers.Layer):
         self.kernel_initializer = kernel_initializer
         self.groups = groups
         self.activation = activation
-        self.conv1 = layers.Conv1D(filters, 3, padding='same', groups=groups, kernel_initializer=kernel_initializer, activation=activation)
-        self.conv2 = layers.Conv1D(filters, 3, padding='same', groups=groups, dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
-        self.conv3 = layers.Conv1D(filters, 3, padding='same', groups=groups, dilation_rate=4, kernel_initializer=kernel_initializer)
+        self.conv1 = layers.Conv1D(filters, kernel_size, padding='same', groups=groups, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv2 = layers.Conv1D(filters, kernel_size, padding='same', groups=groups, dilation_rate=2, kernel_initializer=kernel_initializer, activation=activation)
+        self.conv3 = layers.Conv1D(filters, kernel_size, padding='same', groups=groups, dilation_rate=4, kernel_initializer=kernel_initializer)
         self.activation_layer = layers.Activation(activation)
 
     def build(self, input_shape):
@@ -711,3 +711,63 @@ def build_eeg_transformer(sequence_length, embed_dim, num_heads, ff_dim, num_lay
     model = keras.Model(inputs=inputs, outputs=outputs)
 
     return model
+
+
+class WeightNormConv1D(keras.layers.Layer):
+    def __init__(self, filters, kernel_size, dilation_rate=1, padding='same', activation=None, **kwargs):
+        super().__init__(**kwargs)
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.dilation_rate = dilation_rate
+        self.padding = padding
+        self.activation = activation
+
+    def build(self, input_shape):
+        # PyTorch Conv1d expects (batch, channels, length)
+        self.conv = torch.nn.utils.parametrizations.weight_norm(torch.nn.Conv1d(
+            in_channels=input_shape[-1],
+            out_channels=self.filters,
+            kernel_size=self.kernel_size,
+            dilation=self.dilation_rate,
+            padding='same',
+        ))
+
+        if self.activation:
+            self.act = getattr(torch.nn, self.activation)() if isinstance(self.activation, str) else self.activation
+        else:
+            self.act = None
+
+    def call(self, inputs):
+        # Keras uses (batch, time, channels); PyTorch Conv1d uses (batch, channels, time)
+        x = torch.permute(inputs, (0, 2, 1))
+        x = self.conv(x)
+        if self.act:
+            x = self.act(x)
+        x = torch.permute(x, (0, 2, 1))
+        return x
+
+
+class TCNResidualBlock(keras.Model):
+    def __init__(self, filters, kernel_size=7, dilation_rates=[1, 2, 4], dropout_rate=0.1, **kwargs):
+        super().__init__(**kwargs)
+        self.layers_ = []
+        for d in dilation_rates:
+            # self.layers_.append(WeightNormConv1D(filters=filters, kernel_size=kernel_size, dilation_rate=d, activation=None, name=f'conv_{d}'))
+            self.layers_.append(layers.Conv1D(filters, kernel_size, dilation_rate=d, padding='same', name=f'conv_{d}'))
+            self.layers_.append(layers.LayerNormalization())
+            self.layers_.append(layers.LeakyReLU(0.2, name=f'act_{d}'))
+            self.layers_.append(layers.Dropout(dropout_rate, name=f'drp_{d}'))
+        self.final_activation = layers.LeakyReLU(0.2, name='final_act')
+        self.projection = layers.Conv1D(self.layers_[0].filters, kernel_size=1, padding='same', name='conv_proj')
+        self.built = True
+
+    def call(self, x):
+        if x.shape[-1] != self.layers_[0].filters:
+            residual = self.projection(x)
+        else:
+            residual = x
+        out = x
+        for layer in self.layers_:
+            out = layer(out)
+        out = layers.add([out, residual])
+        return self.final_activation(out)

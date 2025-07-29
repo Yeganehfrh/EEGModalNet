@@ -1,17 +1,20 @@
 import os
-os.environ['KERAS_BACKEND'] = 'torch'
 os.environ["PYTORCH_SDP_ATTENTION_BACKEND"] = "math"
+os.environ['KERAS_BACKEND'] = 'torch'
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
-from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data
+from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data, WGAN_GP_V0
 from typing import List, Dict
 import numpy as np
 import xarray as xr
 from meegkit import dss
 from scipy.signal import butter, sosfiltfilt
+
+torch.backends.cuda.enable_math_sdp(enabled=True)
+print('TORCH Attention Backened', torch.backends.cuda.math_sdp_enabled())
 
 
 def load_data(data_path: str,
@@ -76,7 +79,7 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    model = TCNWGAN(time_dim=512,
+    model = WGAN_GP_V0(time_dim=512,
                        feature_dim=data['x'].shape[-1],
                        latent_dim=latent_dim,
                        n_subjects=n_subjects,

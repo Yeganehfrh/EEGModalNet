@@ -5,7 +5,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import torch
 import keras
 from keras.optimizers.schedules import ExponentialDecay
-from ...EEGModalNet import WGAN_GP_V0, CustomModelCheckpoint, preprocess_data
+from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data
 from typing import List, Dict
 import numpy as np
 import xarray as xr
@@ -75,7 +75,7 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    model = WGAN_GP_V0(time_dim=512,
+    model = TCNWGAN(time_dim=512,
                        feature_dim=data['x'].shape[-1],
                        latent_dim=latent_dim,
                        n_subjects=n_subjects,
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20250709'
+    OUTPUT_PATH = 'logs/20250729'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',

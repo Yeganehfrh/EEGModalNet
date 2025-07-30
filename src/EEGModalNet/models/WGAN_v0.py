@@ -33,7 +33,7 @@ class Critic(keras.Model):
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, 8),
             SelfAttention1D(2, 4, use_ffn=False, ffn_inner_d=256),
-            ResidualBlock(8, ks, 1, kernel_initializer, activation='leaky_relu'),
+            ResidualBlock(8, 3, 1, kernel_initializer, activation='leaky_relu'),
             layers.Conv1D(2 * feature_dim, ks, strides=1, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             SelfAttention1D(4, 4, use_ffn=False, ffn_inner_d=256),

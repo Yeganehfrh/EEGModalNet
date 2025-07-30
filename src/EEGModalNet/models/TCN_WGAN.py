@@ -34,19 +34,16 @@ class Critic(keras.Model):
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
-        self.attention1 = keras.Sequential([
+        self.model = keras.Sequential([
             keras.Input(shape=(self.input_shape)),
             LearnablePositionalEmbedding(512, 8),
-            SelfAttention1D(2, 4, use_ffn=False, ffn_inner_d=256)
-        ], name='attention_block_1')
-
-        self.blocks = [
-            TCNResidualBlock(f, kernel_size=kernel_size, dropout_rate=dropout_rate, name=f'residual_block_{i+1}')
-            for i, f in enumerate(filters_list)
-        ]
-
-        self.attention2 = SelfAttention1D(8, 8, use_ffn=False, ffn_inner_d=256, name='attention_block_2')
-        self.patch_output = layers.Conv1D(1, kernel_size=1, padding='same', name='patch_output')  # output shape: (batch, time, 1)
+            SelfAttention1D(2, 4, use_ffn=False, ffn_inner_d=256, name='attention_1'),
+            TCNResidualBlock(filters_list[0], kernel_size=kernel_size, dropout_rate=dropout_rate, name=f'residual_block_1'),
+            TCNResidualBlock(filters_list[1], kernel_size=kernel_size, dropout_rate=dropout_rate, name=f'residual_block_2'),
+            TCNResidualBlock(filters_list[2], kernel_size=kernel_size, dropout_rate=dropout_rate, name=f'residual_block_3'),
+            # SelfAttention1D(8, 8, use_ffn=False, ffn_inner_d=256, name='attention_2')
+            layers.Conv1D(1, kernel_size=1, padding='same', name='patch_output') 
+        ], name='critic')
         
         self.built = True
 
@@ -56,11 +53,7 @@ class Critic(keras.Model):
             x = self.sub_layer(x, sub_labels)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
-        x = self.attention1(x)
-        for block in self.blocks:
-            x = block(x)
-        x = self.attention2(x)
-        patch_scores = self.patch_output(x)  # shape: (batch, time, 1)
+        patch_scores = self.model(x)
         return patch_scores.mean(axis=1)  # resolve time dimention in patch scores
 
     def get_config(self):

@@ -1,5 +1,4 @@
 import os
-os.environ["PYTORCH_SDP_ATTENTION_BACKEND"] = "math"
 os.environ['KERAS_BACKEND'] = 'torch'
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -12,9 +11,6 @@ import numpy as np
 import xarray as xr
 from meegkit import dss
 from scipy.signal import butter, sosfiltfilt
-
-torch.backends.cuda.enable_math_sdp(enabled=True)
-print('TORCH Attention Backened', torch.backends.cuda.math_sdp_enabled())
 
 
 def load_data(data_path: str,

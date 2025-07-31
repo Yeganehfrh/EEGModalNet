@@ -15,4 +15,4 @@
 git pull
 
 # SECTION Run pipeline
-pixi run python -m src.EEGModalNet.pipeline.gender_classifier --use-cbramod --model-path 'logs/gender_cls_20250731_OTKA_Cbra'
+pixi run python -m src.EEGModalNet.pipeline.gender_classifier --model-path 'logs/gender_cls_20250731-V2_OTKA'

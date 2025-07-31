@@ -128,10 +128,8 @@ if __name__ == '__main__':
 
     ##### Classifier
     cls_model = keras.models.Sequential([   
-                layers.Dense(1024, activation='gelu', kernel_regularizer=regularizers.l2(0.001)),
+                layers.Dense(512, activation='gelu'),
                 layers.Dropout(0.4),
-                layers.Dense(512, activation='gelu', kernel_regularizer=regularizers.l2(0.001)),
-                layers.Dropout(0.3),
                 layers.Dense(1, activation='sigmoid')
                 ])
     
@@ -149,8 +147,8 @@ if __name__ == '__main__':
 
     history = cls_model.fit(X_e[train_idx],
                             y[train_idx],
-                            epochs=1000,
-                            batch_size=128,
+                            epochs=500,
+                            batch_size=256,
                             validation_data=(X_e[val_idx], y[val_idx]),
                             class_weight=class_weights,
                             callbacks=callbacks,

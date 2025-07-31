@@ -6,145 +6,149 @@ from typing import List
 import torch
 import keras
 import xarray as xr
-from ...EEGModalNet import WGAN_GP_old
+from ...EEGModalNet import WGAN_GP_V0, preprocess_data
 from scipy.signal import butter, sosfiltfilt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.utils import class_weight
 from keras import regularizers, layers
+from meegkit import dss
+import argparse
 
 
-def load_data(data_path: str,
+def load_data(eeg_path: str,
+              demo_path: str,
               channels: List[str],
-              n_subjects: int = 202,
-              bandpass_filter: float = 1.0,
-              time_dim: int = 1024,
-              exclude_sub_ids=None) -> tuple:
+              downsample_data: bool = True,
+              time_dim: int = 512) -> tuple:
+    
+    EEG = xr.open_dataarray(eeg_path, engine='h5netcdf')
+    behavioral = pd.read_csv(demo_path)
+    classes = behavioral[['gender', 'bids_id']].dropna().set_index('bids_id')
+    classes['gender'] = classes['gender'].apply(lambda x: 0 if x == 'Male' else 1)
 
-    xarray = xr.open_dataarray(data_path, engine='h5netcdf')
-    x = xarray.sel(subject=xarray.subject[:n_subjects], channel=channels)
+    def format_subject_id(subject_id):
+        return f"sub-{int(subject_id):02d}"
 
-    if exclude_sub_ids is not None:
-        x = x.sel(subject=~x.subject.isin(exclude_sub_ids))
+    sub_ids = classes.index
+    if downsample_data:
+        n_y0 = (classes == 0).sum().values
+        n_y1 = (classes == 1).sum().values
+        n_min = min(n_y0, n_y1)
+        n_subjects = n_min * 2
+        y0_sub_ids = classes.query("gender == 0").index[:n_min[0]]
+        y1_sub_ids = classes.query("gender == 1").index[:n_min[0]]
+        sub_ids = y0_sub_ids.append(y1_sub_ids)
 
-    x = x.to_numpy()
-    n_subjects = x.shape[0]
+    sub_ids_formatted = [format_subject_id(sub_id) for sub_id in sub_ids]
 
-    if bandpass_filter is not None:
-        sos = butter(4, bandpass_filter, btype='high', fs=128, output='sos')  # TODO: fs
-        x = sosfiltfilt(sos, x, axis=-1)
+    # X_input
+    x = EEG.sel(subject=sub_ids_formatted, channel=channels).to_numpy()
+    x = x.reshape(-1, *x.shape[2:])
 
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    x = torch.tensor(x.copy()).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)  # TODO: copy was added because of an error, look into this
+    # Process
+    x = preprocess_data(x, sampling_rate=128)
 
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(x.shape[0] // n_subjects)[:, np.newaxis])
-    labels = xarray.gender - 1
-    y = labels.repeat(x.shape[0] // 202)
-    sub_ids_classifier = sub.squeeze().numpy()
+    # Highpass filter
+    sos = butter(4, 0.5, btype='high', fs=128, output='sos')
+    x = sosfiltfilt(sos, x, axis=-1)
 
-    return x, y, sub_ids_classifier
+    # Remove the line noise
+    x, _ = dss.dss_line(x.T, fline=50, sfreq=128, nremove=1)
+    x = x.T
+
+    X_input = torch.tensor(x.copy()).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
+
+    # Classes
+    n_subjects = len(sub_ids)
+    y = classes.loc[sub_ids].values
+    y = y.repeat(X_input.shape[0] / n_subjects)
+
+    # Groups
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(X_input.shape[0] // n_subjects)[:, np.newaxis])
+    groups = sub.squeeze().numpy()
+
+    return X_input, y, groups
 
 
 if __name__ == '__main__':
 
-    channels = ['O1', 'O2', 'F1', 'F2', 'C1', 'C2', 'P1', 'P2']
+    CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
+    USE_CBRAMOD = False
+    USE_RAW = False
+    MODEL_PATH = 'logs/gender_cls_20250731_OTKA'
 
-    X_input, y, groups = load_data('data/LEMON_DATA/EC_all_channels_processed_downsampled.nc5',
-                                   channels=channels,
-                                   n_subjects=202,
-                                   bandpass_filter=0.5,
-                                   time_dim=512,
-                                   exclude_sub_ids=None)
+    # Load weights
+    model = WGAN_GP_V0(time_dim=512, feature_dim=len(CHANNELS),
+                       latent_dim=128, n_subjects=202,
+                       use_sublayer_generator=True,
+                       use_sublayer_critic=True,
+                       use_channel_merger_g=False,
+                       use_channel_merger_c=False,
+                       interpolation='bilinear')
 
-    group_shuffle = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=2)  # random state == 9
-    train_idx, val_idx = next(group_shuffle.split(X_input, y, groups=groups))
+    model.load_weights('logs/20250605/20250605_7th_epoch_1280.model.keras')
+    critic = model.critic.model
+
+    if USE_CBRAMOD:
+        print('>>>> Use Features Extracted from CBraMod')
+        cbramod_dict = torch.load('data/benchmarking/CBraMod_features_gender_seg-4s.pt', weights_only=False)
+        X_e = np.array(cbramod_dict['features'])
+        y = np.repeat(np.array(cbramod_dict['gender']), X_e.shape[0]/51)  # 51 is the number of participants so X_e.shape[0]/51 will be the number of epochs
+        groups = np.repeat(np.array(cbramod_dict['subject_ids']), X_e.shape[0]/51)
+    else:
+        X_input, y, groups = load_data('data/OTKA/experiment_EEG_data.nc5',
+                                       'data/OTKA/PLB_HYP_data_MASTER.csv',
+                                       channels=CHANNELS,
+                                       time_dim=512)
+        if USE_RAW:
+            print('>>>> Use Flattened Signal')
+            X_e = X_input.flatten(1, 2)
+        else:
+            print('>>>> Use Features Extracted from Yare-GAN')
+            extractor = keras.Sequential([critic.layers[4],
+                                          critic.layers[6]])
+            X_e = extractor(X_input).detach().cpu()
+            X_e = X_e.flatten(1, 2)
+
+    random_state = 2 if USE_CBRAMOD else 8  # to ensure a balanced split
+    group_shuffle = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=random_state)
+    train_idx, val_idx = next(group_shuffle.split(X_e, y, groups=groups))
     print('Chance level',
           np.unique(y[train_idx], return_counts=True)[1] / len(y[train_idx]), np.unique(y[val_idx], return_counts=True)[1] / len(y[val_idx]))
 
     class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y), y=y)
     class_weights = {'0': class_weights[0], '1': class_weights[1]}
 
-    model = WGAN_GP_old(time_dim=512, feature_dim=len(channels),
-                        latent_dim=128, n_subjects=202,
-                        use_sublayer_generator=True,
-                        use_sublayer_critic=True,
-                        use_channel_merger_g=False,
-                        use_channel_merger_c=False,
-                        interpolation='bilinear')
-
-    model.load_weights('logs/06022025/06.02.2025_epoch_2500.model.keras')
-    critic = model.critic.model
-
-    # critic_output = critic.get_layer('dis_flatten').output  # the 4096-dim layer
-    # # critic_output = layers.BatchNormalization()(critic_output)
-    # x = keras.layers.Dropout(0.4)(critic_output)
-    # new_output = keras.layers.Dense(1,
-    #                                 activation='sigmoid',
-    #                                 name='classification_head',
-    #                                 kernel_regularizer=regularizers.l2(0.001))(x)
-
-    # new_model = keras.Model(inputs=critic.layers[0].input, outputs=new_output)
-
-    critic = model.critic.model
-
-    # 1. Get the input tensor of the Critic
-    critic_input = critic.layers[0].input
-    x = critic.get_layer('residual_block')(critic_input)
-    x = critic.get_layer('conv3')(x)
-    x = critic.get_layer('leaky_re_lu')(x)
-    x = critic.get_layer('conv4')(x)
-    x = critic.get_layer('leaky_re_lu_1')(x)
-
-    x = critic.get_layer('conv5')(x)
-    x = critic.get_layer('leaky_re_lu_2')(x)
-
-    # Now we feed x into the positional embedding
-    x = critic.get_layer('learnable_positional_embedding_1')(x)
-
-    # Next is the self-attention
-    x = critic.get_layer('self_attention1d_1')(x)
-    # x = layers.Dropout(0.2, name='dropout_after_selfattention')(x)
-    x = critic.get_layer('conv6')(x)
-    x = critic.get_layer('leaky_re_lu_3')(x)
-    x = layers.Dropout(0.2, name='dropout_after_conv6')(x)
-
-    # 8. Flatten
-    x = critic.get_layer('dis_flatten')(x)
-    x = layers.Dropout(0.2, name='dropout_after_flatten')(x)
-
-    # 10. Add your new classification head
-    new_output = layers.Dense(1, activation='sigmoid', name='classification_head')(x)
-
-    # 11. Build the new model
-    new_model = keras.Model(inputs=critic_input, outputs=new_output)
-
-    # 4. Freeze the original layers
-    for layer in new_model.layers[:-8]:
-        layer.trainable = False
-
-    # 5. Compile and train
-    new_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0009),
+    ##### Classifier
+    cls_model = keras.models.Sequential([   
+                layers.Dense(1024, activation='gelu', kernel_regularizer=regularizers.l2(0.001)),
+                layers.Dropout(0.4),
+                layers.Dense(512, activation='gelu', kernel_regularizer=regularizers.l2(0.001)),
+                layers.Dropout(0.3),
+                layers.Dense(1, activation='sigmoid')
+                ])
+    
+    cls_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001),
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
-
-    model_path = 'logs/20.02.2025_moreDropout'
-    # Callbacks for learning rate scheduling and early stopping
+    
     callbacks = [
-        # keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=1e-6),
-        keras.callbacks.ModelCheckpoint(f'{model_path}_best_val_accuracy.model.keras', monitor='val_accuracy', save_best_only=True),
-        keras.callbacks.CSVLogger(f'{model_path}.csv'),
+        keras.callbacks.ModelCheckpoint(f'{MODEL_PATH}_best_val_acc.model.keras',
+                                        monitor='val_accuracy',
+                                        save_best_only=True),
+        keras.callbacks.CSVLogger(f'{MODEL_PATH}.csv'),
         keras.callbacks.TerminateOnNaN()
     ]
 
-    history = new_model.fit(X_input[train_idx], y[train_idx],
-                            epochs=3000,
+    history = cls_model.fit(X_e[train_idx],
+                            y[train_idx],
+                            epochs=1000,
                             batch_size=128,
-                            validation_data=(X_input[val_idx], y[val_idx]),
-                            callbacks=callbacks,
+                            validation_data=(X_e[val_idx], y[val_idx]),
                             class_weight=class_weights,
-                            shuffle=True,
-                            )
+                            callbacks=callbacks,
+                            shuffle=True)
 
-    pd.DataFrame(history.history).to_csv(f'{model_path}_classifier_final.csv')
-    new_model.save(f'{model_path}_classifier_final.model.keras')
+    pd.DataFrame(history.history).to_csv(f'{MODEL_PATH}_classifier_final.csv')

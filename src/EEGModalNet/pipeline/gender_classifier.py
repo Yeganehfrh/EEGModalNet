@@ -73,11 +73,16 @@ def load_data(eeg_path: str,
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--use-raw', action='store_true', help='Use flattened (raw) signal instead of features')
+    parser.add_argument('--use-cbramod', action='store_true', help='Use features extracted from CBraMod instead of Yare-GAN')
+    parser.add_argument('--model-path', type=str, default='logs/gender_cls_20250731_OTKA', help='Path for saving model and logs')
+    args = parser.parse_args()
 
     CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
-    USE_CBRAMOD = False
-    USE_RAW = False
-    MODEL_PATH = 'logs/gender_cls_20250731_OTKA'
+    USE_CBRAMOD = args.use_cbramod
+    USE_RAW = args.use_raw
+    MODEL_PATH = args.model_path
 
     # Load weights
     model = WGAN_GP_V0(time_dim=512, feature_dim=len(CHANNELS),

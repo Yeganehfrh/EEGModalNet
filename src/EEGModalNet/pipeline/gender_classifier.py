@@ -155,5 +155,3 @@ if __name__ == '__main__':
                             class_weight=class_weights,
                             callbacks=callbacks,
                             shuffle=True)
-
-    pd.DataFrame(history.history).to_csv(f'{MODEL_PATH}_classifier_final.csv')

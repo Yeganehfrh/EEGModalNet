@@ -76,7 +76,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--use-raw', action='store_true', help='Use flattened (raw) signal instead of features')
     parser.add_argument('--use-cbramod', action='store_true', help='Use features extracted from CBraMod instead of Yare-GAN')
-    parser.add_argument('--model-path', type=str, default='logs/gender_cls_20250731_OTKA', help='Path for saving model and logs')
+    parser.add_argument('--model-path', type=str, default='logs/gender_cls_OTKA', help='Path for saving model and logs')
     args = parser.parse_args()
 
     CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
@@ -128,8 +128,8 @@ if __name__ == '__main__':
 
     ##### Classifier
     cls_model = keras.models.Sequential([   
-                layers.Dense(512, activation='gelu'),
-                layers.Dropout(0.4),
+                layers.Dense(512, activation='gelu', kernel_regularizer=regularizers.l2(0.001)),
+                layers.Dropout(0.3),
                 layers.Dense(1, activation='sigmoid')
                 ])
     
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 
     history = cls_model.fit(X_e[train_idx],
                             y[train_idx],
-                            epochs=500,
+                            epochs=1000,
                             batch_size=256,
                             validation_data=(X_e[val_idx], y[val_idx]),
                             class_weight=class_weights,

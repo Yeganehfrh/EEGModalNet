@@ -10,9 +10,7 @@
 #SBATCH --output=/work/projects/acnets/EEGModalNet/logs/classifier_%j.log
 #SBATCH --error=/work/projects/acnets/EEGModalNet/logs/classifier_%j.log
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=y.farahzadi@gmail.com
-
-git pull
+#SBATCH --mail-user=y.farahzadi@gmail.coml
 
 # SECTION Run pipeline
-pixi run python -m src.EEGModalNet.pipeline.gender_classifier --model-path 'logs/gender_cls_20250731-V2_OTKA'
+pixi run python -m src.EEGModalNet.pipeline.gender_classifier --use-cbramod --model-path 'logs/gender_cls_20250801_OTKA_Cbra'

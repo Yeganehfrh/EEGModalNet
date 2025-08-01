@@ -17,11 +17,11 @@ from meegkit import dss
 import argparse
 
 
-def load_data(eeg_path: str,
-              demo_path: str,
-              channels: List[str],
-              downsample_data: bool = True,
-              time_dim: int = 512) -> tuple:
+def load_OTKA_data(eeg_path: str,
+                   demo_path: str,
+                   channels: List[str],
+                   downsample_data: bool = True,
+                   time_dim: int = 512) -> tuple:
     
     EEG = xr.open_dataarray(eeg_path, engine='h5netcdf')
     behavioral = pd.read_csv(demo_path)
@@ -72,6 +72,24 @@ def load_data(eeg_path: str,
     return X_input, y, groups
 
 
+def load_CBraMod_features(feature_path, do_downsample=True):
+        cbramod_dict = torch.load(feature_path, weights_only=False)
+        X_e = np.asarray(cbramod_dict['features'])
+        y = np.repeat(np.asarray(cbramod_dict['gender']), X_e.shape[0]/51)  # 51 is the number of participants so X_e.shape[0]/51 will be the number of epochs
+        groups = np.repeat(np.asarray(cbramod_dict['subject_ids']), X_e.shape[0]/51)
+        if do_downsample:
+            y_1_idx = np.where(y==1)[0]
+            # we know that there is less male (class 1) than female, so we down sample based on the lenght of data in class 1
+            y_0_idx = np.where(y==0)[0][:len(y_1_idx)]
+            all_idx = np.append(y_0_idx, y_1_idx)
+
+            # now we downsample features, subject ids and gender based on these indeces
+            X_e = X_e[all_idx]
+            y = y[all_idx]
+            groups = groups[all_idx]
+        return X_e, y, groups
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--use-raw', action='store_true', help='Use flattened (raw) signal instead of features')
@@ -98,15 +116,12 @@ if __name__ == '__main__':
 
     if USE_CBRAMOD:
         print('>>>> Use Features Extracted from CBraMod')
-        cbramod_dict = torch.load('data/benchmarking/CBraMod_features_gender_seg-4s.pt', weights_only=False)
-        X_e = np.array(cbramod_dict['features'])
-        y = np.repeat(np.array(cbramod_dict['gender']), X_e.shape[0]/51)  # 51 is the number of participants so X_e.shape[0]/51 will be the number of epochs
-        groups = np.repeat(np.array(cbramod_dict['subject_ids']), X_e.shape[0]/51)
+        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-4s.pt')
     else:
-        X_input, y, groups = load_data('data/OTKA/experiment_EEG_data.nc5',
-                                       'data/OTKA/PLB_HYP_data_MASTER.csv',
-                                       channels=CHANNELS,
-                                       time_dim=512)
+        X_input, y, groups = load_OTKA_data('data/OTKA/experiment_EEG_data.nc5',
+                                            'data/OTKA/PLB_HYP_data_MASTER.csv',
+                                            channels=CHANNELS,
+                                            time_dim=512)
         if USE_RAW:
             print('>>>> Use Flattened Signal')
             X_e = X_input.flatten(1, 2)

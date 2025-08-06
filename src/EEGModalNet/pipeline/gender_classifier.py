@@ -93,12 +93,15 @@ if __name__ == '__main__':
     parser.add_argument('--use-raw', action='store_true', help='Use flattened (raw) signal instead of features')
     parser.add_argument('--use-cbramod', action='store_true', help='Use features extracted from CBraMod instead of Yare-GAN')
     parser.add_argument('--model-path', type=str, default='logs/gender_cls_OTKA', help='Path for saving model and logs')
+    parser.add_argument('--classifier', type=str, default='MLP', choices=['MLP', 'Convolution'],
+                        help='Type of classifier to use: MLP or Convolution')
     args = parser.parse_args()
 
     CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
     USE_CBRAMOD = args.use_cbramod
     USE_RAW = args.use_raw
     MODEL_PATH = args.model_path
+    CLASSIFIER = args.classifier
 
     # Load weights
     model = WGAN_GP_V0(time_dim=512, feature_dim=len(CHANNELS),
@@ -115,6 +118,10 @@ if __name__ == '__main__':
     if USE_CBRAMOD:
         print('>>>> Use Features Extracted from CBraMod')
         X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-2s_balanced.pt')
+        if CLASSIFIER == 'Convolution':
+            print('CbraMod Features shape', X_e.shape)
+            X_e = X_e.reshape(X_e.shape[0], 200, -1)
+            print(X_e.shape)
     else:
         X_input, y, groups = load_OTKA_data('data/OTKA/experiment_EEG_data.nc5',
                                             'data/OTKA/PLB_HYP_data_MASTER.csv',
@@ -122,7 +129,11 @@ if __name__ == '__main__':
                                             time_dim=512)
         if USE_RAW:
             print('>>>> Use Flattened Signal')
-            X_e = X_input.flatten(1, 2)
+            if CLASSIFIER == 'MLP':
+                X_e = X_input.flatten(1, 2)
+            elif CLASSIFIER == 'Convolution':
+                X_e = X_input
+
         else:
             print('>>>> Use Intermediate Features Extracted from Yare-GAN')
             extractor = keras.Sequential([
@@ -130,7 +141,8 @@ if __name__ == '__main__':
                                           critic.layers[6],     
                                           ])
             X_e = extractor(X_input).detach().cpu()
-            X_e = X_e.flatten(1, 2)
+            if CLASSIFIER == 'MLP':
+                X_e = X_e.flatten(1, 2)
 
     random_state = 0 if USE_CBRAMOD else 8  # to ensure a balanced split
     group_shuffle = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=random_state)
@@ -141,11 +153,22 @@ if __name__ == '__main__':
     class_weights = {'0': class_weights[0], '1': class_weights[1]}
 
     ##### Classifier
-    cls_model = keras.models.Sequential([   
-                layers.Dense(512, activation='gelu',),
-                layers.Dropout(0.4),
-                layers.Dense(1, activation='sigmoid')
-                ])
+    if CLASSIFIER == 'MLP':
+        cls_model = keras.models.Sequential([   
+                    layers.Dense(512, activation='gelu',),
+                    layers.Dropout(0.4),
+                    layers.Dense(1, activation='sigmoid')
+                    ])
+    elif CLASSIFIER == 'Convolution':
+        cls_model = keras.Sequential([
+                    layers.Conv1D(filters=64, kernel_size=5, activation='gelu'),
+                    layers.MaxPooling1D(pool_size=2),
+                    layers.Flatten(),
+                    layers.Dense(128, activation='relu'),
+                    layers.Dense(1, activation='sigmoid', name='output')
+                    ])
+    else:
+        raise ValueError(f'Unknown classifier type: {CLASSIFIER}')
     
     cls_model.compile(optimizer=keras.optimizers.Adam(learning_rate=0.0001),
                       loss='binary_crossentropy',

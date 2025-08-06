@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
     if USE_CBRAMOD:
         print('>>>> Use Features Extracted from CBraMod')
-        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt')
+        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-2s_balanced.pt')
     else:
         X_input, y, groups = load_OTKA_data('data/OTKA/experiment_EEG_data.nc5',
                                             'data/OTKA/PLB_HYP_data_MASTER.csv',

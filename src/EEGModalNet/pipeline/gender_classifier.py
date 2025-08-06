@@ -46,6 +46,10 @@ def load_OTKA_data(eeg_path: str,
     # X_input
     x = EEG.sel(subject=sub_ids_formatted, channel=channels).to_numpy()
     x = x.reshape(-1, *x.shape[2:])
+    if downsample_data:  # remove NaNs
+        x = np.concatenate([x[:101], x[103:]])
+    else:
+        x = np.concatenate([x[:205], x[207:]])
 
     # Process
     x = preprocess_data(x, sampling_rate=128)
@@ -63,30 +67,24 @@ def load_OTKA_data(eeg_path: str,
     # Classes
     n_subjects = len(sub_ids)
     y = classes.loc[sub_ids].values
-    y = y.repeat(X_input.shape[0] / n_subjects)
+    y = y.repeat(416)  # X_input.shape[0] // n_subjects = 416
 
     # Groups
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(X_input.shape[0] // n_subjects)[:, np.newaxis])
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(416)[:, np.newaxis])
     groups = sub.squeeze().numpy()
+
+    # Remove NaNs
+    y = y[:-208]
+    groups = groups[:-208]
 
     return X_input, y, groups
 
 
-def load_CBraMod_features(feature_path, do_downsample=True):
+def load_CBraMod_features(feature_path):
         cbramod_dict = torch.load(feature_path, weights_only=False)
         X_e = np.asarray(cbramod_dict['features'])
-        y = np.repeat(np.asarray(cbramod_dict['gender']), X_e.shape[0]/51)  # 51 is the number of participants so X_e.shape[0]/51 will be the number of epochs
-        groups = np.repeat(np.asarray(cbramod_dict['subject_ids']), X_e.shape[0]/51)
-        if do_downsample:
-            y_1_idx = np.where(y==1)[0]
-            # we know that there is less male (class 1) than female, so we down sample based on the lenght of data in class 1
-            y_0_idx = np.where(y==0)[0][:len(y_1_idx)]
-            all_idx = np.append(y_0_idx, y_1_idx)
-
-            # now we downsample features, subject ids and gender based on these indeces
-            X_e = X_e[all_idx]
-            y = y[all_idx]
-            groups = groups[all_idx]
+        y = cbramod_dict['gender']
+        groups = cbramod_dict['subject_ids']
         return X_e, y, groups
 
 
@@ -116,7 +114,7 @@ if __name__ == '__main__':
 
     if USE_CBRAMOD:
         print('>>>> Use Features Extracted from CBraMod')
-        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-4s.pt')
+        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt')
     else:
         X_input, y, groups = load_OTKA_data('data/OTKA/experiment_EEG_data.nc5',
                                             'data/OTKA/PLB_HYP_data_MASTER.csv',
@@ -126,25 +124,26 @@ if __name__ == '__main__':
             print('>>>> Use Flattened Signal')
             X_e = X_input.flatten(1, 2)
         else:
-            print('>>>> Use Features Extracted from Yare-GAN')
-            extractor = keras.Sequential([critic.layers[4],
-                                          critic.layers[6]])
+            print('>>>> Use Intermediate Features Extracted from Yare-GAN')
+            extractor = keras.Sequential([
+                                          critic.layers[4],
+                                          critic.layers[6],     
+                                          ])
             X_e = extractor(X_input).detach().cpu()
             X_e = X_e.flatten(1, 2)
 
-    random_state = 2 if USE_CBRAMOD else 8  # to ensure a balanced split
+    random_state = 0 if USE_CBRAMOD else 8  # to ensure a balanced split
     group_shuffle = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=random_state)
     train_idx, val_idx = next(group_shuffle.split(X_e, y, groups=groups))
-    print('Chance level',
-          np.unique(y[train_idx], return_counts=True)[1] / len(y[train_idx]), np.unique(y[val_idx], return_counts=True)[1] / len(y[val_idx]))
+    print('Chance level', y.mean(), y[train_idx].mean(), y[val_idx].mean())
 
     class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y), y=y)
     class_weights = {'0': class_weights[0], '1': class_weights[1]}
 
     ##### Classifier
     cls_model = keras.models.Sequential([   
-                layers.Dense(512, activation='gelu', kernel_regularizer=regularizers.l2(0.001)),
-                layers.Dropout(0.3),
+                layers.Dense(512, activation='gelu',),
+                layers.Dropout(0.4),
                 layers.Dense(1, activation='sigmoid')
                 ])
     

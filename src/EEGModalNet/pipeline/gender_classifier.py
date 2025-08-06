@@ -39,7 +39,7 @@ def load_OTKA_data(eeg_path: str,
         n_subjects = n_min * 2
         y0_sub_ids = classes.query("gender == 0").index[:n_min[0]]
         y1_sub_ids = classes.query("gender == 1").index[:n_min[0]]
-        sub_ids = y0_sub_ids.append(y1_sub_ids)
+        sub_ids = y1_sub_ids.append(y0_sub_ids)
 
     sub_ids_formatted = [format_subject_id(sub_id) for sub_id in sub_ids]
 

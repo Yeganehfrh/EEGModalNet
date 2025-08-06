@@ -13,4 +13,4 @@
 #SBATCH --mail-user=y.farahzadi@gmail.coml
 
 # SECTION Run pipeline
-pixi run python -m src.EEGModalNet.pipeline.gender_classifier --classifier Convolution --model-path 'logs/gender_cls_20250806_OTKA_yaregan_conv'
+pixi run python -m src.EEGModalNet.pipeline.gender_classifier --classifier Convolution --use-raw --model-path 'logs/gender_cls_20250806_OTKA_raw_conv'

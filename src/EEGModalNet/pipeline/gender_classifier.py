@@ -116,8 +116,8 @@ if __name__ == '__main__':
     critic = model.critic.model
 
     if USE_CBRAMOD:
-        print('>>>> Use Features Extracted from CBraMod')
-        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-2s_balanced.pt')
+        print(f'>>>> Use Features Extracted from CBraMod in {CLASSIFIER} Classifier')
+        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt')
         if CLASSIFIER == 'Convolution':
             print('CbraMod Features shape', X_e.shape)
             X_e = X_e.reshape(X_e.shape[0], 200, -1)
@@ -128,14 +128,14 @@ if __name__ == '__main__':
                                             channels=CHANNELS,
                                             time_dim=512)
         if USE_RAW:
-            print('>>>> Use Flattened Signal')
+            print(f'>>>> Use Raw Signal in {CLASSIFIER} Classifier')
             if CLASSIFIER == 'MLP':
                 X_e = X_input.flatten(1, 2)
             elif CLASSIFIER == 'Convolution':
                 X_e = X_input
 
         else:
-            print('>>>> Use Intermediate Features Extracted from Yare-GAN')
+            print(f'>>>> Use Intermediate Features Extracted from Yare-GAN in {CLASSIFIER} Classifier')
             extractor = keras.Sequential([
                                           critic.layers[4],
                                           critic.layers[6],     

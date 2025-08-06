@@ -13,4 +13,4 @@
 #SBATCH --mail-user=y.farahzadi@gmail.coml
 
 # SECTION Run pipeline
-pixi run python -m src.EEGModalNet.pipeline.gender_classifier --classifier Convolution --use-cbramod --model-path 'logs/gender_cls_20250806_OTKA_Cbra-2s_conv'
+pixi run python -m src.EEGModalNet.pipeline.gender_classifier --classifier Convolution --use-cbramod --model-path 'logs/gender_cls_20250806_OTKA_Cbra-4s_conv'

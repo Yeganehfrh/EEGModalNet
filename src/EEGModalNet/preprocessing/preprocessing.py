@@ -7,7 +7,9 @@ from mne.io import read_raw_eeglab
 from sklearn.preprocessing import RobustScaler, StandardScaler
 
 
-def preprocess_data(data, baseline_duration=0.5, sampling_rate=128):
+def preprocess_data(data: np.ndarray,
+                    baseline_duration: float | None = 0.5,
+                    sampling_rate: int = 128) -> np.ndarray:
     # Step 1: Baseline correction (subtract the mean of the first 0.5 seconds for each channel)
     if baseline_duration is not None:
         sample_size = data.shape[0]

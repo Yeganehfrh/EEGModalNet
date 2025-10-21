@@ -9,11 +9,12 @@ from sklearn.preprocessing import RobustScaler, StandardScaler
 
 def preprocess_data(data, baseline_duration=0.5, sampling_rate=128):
     # Step 1: Baseline correction (subtract the mean of the first 0.5 seconds for each channel)
-    sample_size = data.shape[0]
-    baseline_samples = int(baseline_duration * sampling_rate)
-    baseline_mean = np.mean(data[:, :, :baseline_samples], axis=-1, keepdims=True)
-    data_corrected = data - baseline_mean
-    print_stats(data_corrected, 'Corrected')
+    if baseline_duration is not None:
+        sample_size = data.shape[0]
+        baseline_samples = int(baseline_duration * sampling_rate)
+        baseline_mean = np.mean(data[:, :, :baseline_samples], axis=-1, keepdims=True)
+        data_corrected = data - baseline_mean
+        print_stats(data_corrected, 'Corrected')
 
     # Step 2: Normalize using median and IQR
     scaler = RobustScaler()

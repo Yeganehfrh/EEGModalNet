@@ -4,9 +4,14 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 
-from torch.backends.cuda import sdp_kernel
-sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True)  # Force safe attention backend globally
-print("SDPA backend forced to math-only:", torch.__version__)
+torch.backends.cuda.enable_flash_sdp(False)
+torch.backends.cuda.enable_mem_efficient_sdp(False)
+torch.backends.cuda.enable_math_sdp(True)
+
+print("SDP backends:",
+      "flash =", torch.backends.cuda.flash_sdp_enabled(),
+      "mem_efficient =", torch.backends.cuda.mem_efficient_sdp_enabled(),
+      "math =", torch.backends.cuda.math_sdp_enabled())
 
 import keras
 from keras.optimizers.schedules import ExponentialDecay

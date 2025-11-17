@@ -3,6 +3,11 @@ os.environ['KERAS_BACKEND'] = 'torch'
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
+
+from torch.backends.cuda import sdp_kernel
+sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True)  # Force safe attention backend globally
+print("SDPA backend forced to math-only:", torch.__version__)
+
 import keras
 from keras.optimizers.schedules import ExponentialDecay
 from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data, WGAN_GP_V0

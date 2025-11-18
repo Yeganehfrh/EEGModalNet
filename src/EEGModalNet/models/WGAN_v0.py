@@ -231,12 +231,12 @@ class WGAN_GP_V0(keras.Model):
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
         batch_size = real_data.size(0)
-        mean = real_data.mean()
-        std = real_data.std()
+        # mean = real_data.mean()
+        # std = real_data.std()
 
         # train critic
         # for _ in range(2):
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
         random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)
         fake_data = self.generator((noise, random_sub, pos)).detach()  # TODO: consider using random sub
         real_pred = self.critic(data)
@@ -260,7 +260,7 @@ class WGAN_GP_V0(keras.Model):
                 gradient_norms.append(p.grad.norm().item())
 
         # train generator
-        noise = keras.random.normal((batch_size, self.latent_dim), mean=mean, stddev=std, dtype=real_data.dtype)
+        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
 
         self.zero_grad()
         # random_sub = torch.randint(0, sub.max().item(), (batch_size, 1), device=real_data.device)  # TODO: change it back to real labels if necessary

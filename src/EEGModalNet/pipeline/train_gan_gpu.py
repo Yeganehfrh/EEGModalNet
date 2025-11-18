@@ -89,8 +89,8 @@ def run(data,
                        feature_dim=data['x'].shape[-1],
                        latent_dim=latent_dim,
                        n_subjects=n_subjects,
-                       use_sublayer_generator=True,
-                       use_sublayer_critic=True,
+                       use_sublayer_generator=False,  # TODO
+                       use_sublayer_critic=False,
                        use_channel_merger_g=False,
                        use_channel_merger_c=False,
                        interpolation='bilinear')
@@ -149,10 +149,10 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/eo_20251017'
+    OUTPUT_PATH = 'logs/ec_20251118'
     CONDITION = None
 
-    data = load_data('data/LEMON_DATA/EO_ch-8_sf-128.nc5',
+    data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
                      channels='all',
                      n_subjects=N_SUBJECTS,
                      time_dim=512,

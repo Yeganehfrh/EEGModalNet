@@ -4,6 +4,7 @@ os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
 
 from .models.WGAN import WGAN_GP
 from .models.WGAN_v0 import WGAN_GP_V0
+from .models.cGAN_op2 import cGAN
 from .models.TCN_WGAN import TCNWGAN
 from .utils import ProgressBarCallback, CustomModelCheckpoint, StepLossHistory
 from .preprocessing.utils import get_averaged_data
@@ -11,7 +12,7 @@ from .models.common import SubjectLayers_v2, convBlock, ChannelMerger, ResidualB
 from .data.hpc_data_loader import load_data
 from .preprocessing.preprocessing import preprocess_data
 
-__all__ = ['WGAN_GP', 'WGAN_GP_V0', 'TCNWGAN',
+__all__ = ['WGAN_GP', 'WGAN_GP_V0', 'cGAN', 'TCNWGAN',
            'SubjectLayers_v2', 'convBlock', 'ChannelMerger', 'ResidualBlock',
            'build_eeg_transformer', 'ProgressBarCallback', 'CustomModelCheckpoint',
            'get_averaged_data', 'load_data', 'StepLossHistory', 'preprocess_data']

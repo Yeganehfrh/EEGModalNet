@@ -15,7 +15,7 @@ print("SDP backends:",
 
 import keras
 from keras.optimizers.schedules import ExponentialDecay
-from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data, WGAN_GP_V0
+from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data, WGAN_GP_V0, cGAN
 from typing import List, Dict
 import numpy as np
 import xarray as xr
@@ -85,15 +85,15 @@ def run(data,
         reuse_model=False,
         reuse_model_path=None):
 
-    model = WGAN_GP_V0(time_dim=512,
-                       feature_dim=data['x'].shape[-1],
-                       latent_dim=latent_dim,
-                       n_subjects=n_subjects,
-                       use_sublayer_generator=True,
-                       use_sublayer_critic=True,
-                       use_channel_merger_g=False,
-                       use_channel_merger_c=False,
-                       interpolation='bilinear')
+    model = cGAN(time_dim=512,
+                 feature_dim=data['x'].shape[-1],
+                 latent_dim=latent_dim,
+                 n_subjects=n_subjects,
+                 use_sublayer_generator=True,
+                 use_sublayer_critic=True,
+                 use_channel_merger_g=False,
+                 use_channel_merger_c=False,
+                 interpolation='bilinear')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251119'
+    OUTPUT_PATH = 'logs/20251119_op2'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',

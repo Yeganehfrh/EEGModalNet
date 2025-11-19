@@ -237,11 +237,11 @@ class WGAN_GP_V0(keras.Model):
         # train critic
         for _ in range(2):
             noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
-            perm = torch.randperm(batch_size, device=real_data.device)
-            fake_sub = sub[perm].view(-1, 1)
-            fake_data = self.generator((noise, fake_sub, pos)).detach() 
+            # perm = torch.randperm(batch_size, device=real_data.device)
+            # fake_sub = sub[perm].view(-1, 1)
+            fake_data = self.generator((noise, sub, pos)).detach() 
             real_pred = self.critic(data)
-            fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
+            fake_pred = self.critic({'x': fake_data, 'sub': sub, 'pos': pos})
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
@@ -250,9 +250,9 @@ class WGAN_GP_V0(keras.Model):
             # clip gradients
             # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []
@@ -264,8 +264,9 @@ class WGAN_GP_V0(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
 
         self.zero_grad()
-        x_gen = self.generator((noise, fake_sub, pos))
-        fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': pos})
+        random_sub = torch.randint(0, sub.max().item()+1, (batch_size, 1), device=real_data.device)
+        x_gen = self.generator((noise, random_sub, pos))
+        fake_pred = self.critic({'x': x_gen, 'sub': sub, 'pos': pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()
 

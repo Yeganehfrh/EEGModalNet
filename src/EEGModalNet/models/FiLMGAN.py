@@ -1,8 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common_v0 import SubjectLayers, convBlock, ChannelMerger, ResidualBlock, SelfAttention1D, LearnablePositionalEmbedding, ConvBlockResidual, StridedResidualBlock, SubjectLayers_FiLM
-from ..preprocessing.spectral_regularization import spectral_regularization_loss
+from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock
 
 
 @keras.saving.register_keras_serializable()
@@ -17,22 +16,28 @@ class Critic(keras.Model):
         self.input_shape = (time_dim, feature_dim)
         negative_slope = 0.1
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
+        self.d_sub = 32
+        self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
+            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, n_subjects, init_id=True)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim * 8, pos_dim=128, n_subjects=n_subjects, per_subject=True,  # TODO: pos_dim has a temporary value
+                chout=feature_dim * 8, pos_dim=128, n_subjects=n_subjects, per_subject=True,
             )
             self.input_shape = (time_dim, feature_dim * 8)
 
         ks = 5
 
-        self.model = keras.Sequential([
+        self.post_att = keras.Sequential([
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, 8),
-            SelfAttention1D(2, 4),
+            SelfAttention1D(2, 4)])
+        
+        self.film_block = FiLMBlock(8, 32)
+        
+        self.conv_block = keras.Sequential([
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
@@ -54,8 +59,11 @@ class Critic(keras.Model):
             x = self.sub_layer(x, sub_labels)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
-        out = self.model(x)
-        return out
+        x = self.post_att(x)
+        subj_emb = self.sub_emb(sub_labels.view(-1))
+        x = self.film_block(x, subj_emb)
+        x = self.conv_block(x)
+        return x
 
     def get_config(self):
         config = super().get_config()
@@ -87,20 +95,24 @@ class Generator(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers(feature_dim, feature_dim, n_subjects, init_id=True)
+            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, n_subjects, init_id=True)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=False,  # TODO: pos_dim has a temporary value + chout might need to be updated
+                chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=False,
             )
 
-        self.model = keras.Sequential([
-            keras.Input(shape=((latent_dim + self.d_sub,))),
+        self.post_att = keras.Sequential([
+            keras.Input(shape=((latent_dim,))),
             layers.Dense(4096 * 1, kernel_initializer=kernel_initializer, name='gen_layer5'),
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
-            SelfAttention1D(4, 8),
+            SelfAttention1D(4, 8)])
+        
+        self.film_block = FiLMBlock(32, 32)
+
+        self.cov_block = keras.Sequential([
             *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],
@@ -118,13 +130,14 @@ class Generator(keras.Model):
 
     def call(self, inputs):
         noise, sub_labels, positions = inputs
-        subj_emb = self.sub_emb(sub_labels.view(-1))      # (B, d_sub)
-        z_cond = torch.cat([noise, subj_emb], dim=-1)
-        x = self.model(z_cond)
+        x = self.post_att(noise)
+        subj_emb = self.sub_emb(sub_labels.view(-1))
+        x = self.film_block(x, subj_emb)
+        x = self.cov_block(x)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, sub_labels)  # TODO: this layer can be used before or after data generation
+            x = self.sub_layer(x, sub_labels)
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
@@ -143,7 +156,7 @@ class Generator(keras.Model):
 
 
 @keras.saving.register_keras_serializable()
-class cGAN(keras.Model):
+class FiLMGAN(keras.Model):
     def __init__(self,
                  time_dim=100, feature_dim=2, latent_dim=64, n_subjects=1,
                  use_sublayer_generator=False, use_sublayer_critic=False,

@@ -561,6 +561,9 @@ class FiLMBlock(nn.Module):
         film_params = self.film(subj_emb)          # (B, 2*out_ch)
         gamma, beta = film_params.chunk(2, dim=-1) # each (B, out_ch)
 
+        gamma = 1.0 + 0.1 * gamma
+        beta  = 0.1 * beta
+
         gamma = gamma.unsqueeze(1)  # (B, out_ch, 1)
         beta  = beta.unsqueeze(1)   # (B, out_ch, 1)
 

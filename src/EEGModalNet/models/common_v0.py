@@ -555,7 +555,7 @@ class FiLMBlock(nn.Module):
 
         # compute dtype based on x (fp16 or fp32) for mixed precision & # make sure all dtypes matches
         compute_dtype = x.dtype
-        self.linear.to(compute_dtype)
+        self.film.to(compute_dtype)
         subj_emb = subj_emb.to(compute_dtype)
 
         film_params = self.film(subj_emb)          # (B, 2*out_ch)

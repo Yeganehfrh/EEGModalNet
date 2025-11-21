@@ -552,6 +552,12 @@ class FiLMBlock(nn.Module):
         self.film = nn.Linear(d_sub, 2 * n_channels)
 
     def forward(self, x, subj_emb):
+
+        # compute dtype based on x (fp16 or fp32) for mixed precision & # make sure all dtypes matches
+        compute_dtype = x.dtype
+        self.linear.to(compute_dtype)
+        subj_emb = subj_emb.to(compute_dtype)
+
         film_params = self.film(subj_emb)          # (B, 2*out_ch)
         gamma, beta = film_params.chunk(2, dim=-1) # each (B, out_ch)
 

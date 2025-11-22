@@ -121,7 +121,7 @@ class Generator(keras.Model):
                        interpolation=interpolation,
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
-                       batch_norm=True),
+                       batch_norm=False),
             SelfAttention1D(4, 16),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')

@@ -239,10 +239,17 @@ class FiLMGAN(keras.Model):
             create_graph=True,
             retain_graph=True,
         )[0]
-        gradients = gradients.reshape(batch_size, -1)  # TODO: it was view before changed to reshape because of an error
+        gradients = gradients.reshape(batch_size, -1)
         gradient_norm = gradients.norm(2, dim=1)
         gradient_penalty = ((gradient_norm - 1) ** 2).mean()
         return gradient_penalty
+    
+
+    def chk(self, name, t):
+        if not torch.isfinite(t).all():
+            print("NaNs at:", name, "max", t.abs().max().item())
+            raise RuntimeError
+        
 
     def train_step(self, data):
         real_data, sub, pos = data['x'], data['sub'], data['pos']
@@ -258,7 +265,9 @@ class FiLMGAN(keras.Model):
         fake_sub = sub[perm].view(-1, 1)
         fake_data = self.generator((noise, fake_sub, pos)).detach() 
         real_pred = self.critic(data)
+        self.chk("D_real", real_pred)
         fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
+        self.chk("D_fake", fake_pred)
         gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
@@ -283,6 +292,10 @@ class FiLMGAN(keras.Model):
         self.zero_grad()
         # random_sub = torch.randint(0, sub.max().item()+1, (batch_size, 1), device=real_data.device)
         x_gen = self.generator((noise, fake_sub, pos))
+
+        # smoking gun finbder 
+        self.chk("G_out", x_gen)
+
         fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()

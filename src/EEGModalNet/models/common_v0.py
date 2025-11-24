@@ -550,6 +550,9 @@ class FiLMBlock(nn.Module):
         super().__init__()
         
         self.film = nn.Linear(d_sub, 2 * n_channels)
+        # self.built = True
+        self.n_channels = n_channels
+        self.d_sub = d_sub
 
     def forward(self, x, subj_emb):
 
@@ -576,7 +579,14 @@ class FiLMBlock(nn.Module):
         x_f = gamma * x_f + beta
 
         return x_f.to(compute_dtype)
-
+    
+    def config(self):
+        config = super().get_config()
+        config.update({
+            "n_channels": self.n_channels,
+            "d_sub": self.d_sub
+        })
+        return config
 
 def convBlock(filters: List[int],
               kernel_sizes: List[Union[int, tuple]],

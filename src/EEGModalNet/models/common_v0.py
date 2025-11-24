@@ -558,27 +558,24 @@ class FiLMBlock(nn.Module):
 
         # compute dtype based on x (fp16 or fp32) for mixed precision & # make sure all dtypes matches
         compute_dtype = x.dtype
-        # self.film.to(compute_dtype)
-        # subj_emb = subj_emb.to(compute_dtype)
-        x_f = x.float()
+        self.film.to(compute_dtype)
+        subj_emb = subj_emb.to(compute_dtype)
 
-        film_params = self.film(subj_emb.float())          # (B, 2*out_ch)
+        film_params = self.film(subj_emb)          # (B, 2*out_ch)
         gamma, beta = film_params.chunk(2, dim=-1) # each (B, out_ch)
 
-        # gamma = 1.0 + 0.1 * gamma
-        # beta  = 0.1 * beta
+        gamma = 1.0 + 0.1 * gamma
+        beta  = 0.1 * beta
 
-        # soft squash
-        gamma = torch.tanh(gamma)          # in (-1, 1)
-        gamma = 1.0 + 0.5 * gamma          # gamma in (0.5, 1.5) roughly
-        beta  = 0.5 * torch.tanh(beta)
+        # # soft squash
+        # gamma = torch.tanh(gamma)          # in (-1, 1)
+        # gamma = 1.0 + 0.5 * gamma          # gamma in (0.5, 1.5) roughly
+        # beta  = 0.5 * torch.tanh(beta)
 
         gamma = gamma.unsqueeze(1)  # (B, out_ch, 1)
         beta  = beta.unsqueeze(1)   # (B, out_ch, 1)
 
-        x_f = gamma * x_f + beta
-
-        return x_f.to(compute_dtype)
+        return gamma * x + beta
     
     def config(self):
         config = super().get_config()

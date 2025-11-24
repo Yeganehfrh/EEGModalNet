@@ -38,6 +38,7 @@ class Critic(keras.Model):
         self.film_block = FiLMBlock(8, 32)
         
         self.conv_block = keras.Sequential([
+            keras.Input(shape=(512, 8)),
             layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
@@ -113,6 +114,7 @@ class Generator(keras.Model):
         self.film_block = FiLMBlock(32, 32)
 
         self.cov_block = keras.Sequential([
+            keras.Input(shape=(128, 32)),
             *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],
@@ -121,7 +123,7 @@ class Generator(keras.Model):
                        interpolation=interpolation,
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
-                       batch_norm=False),
+                       batch_norm=True),
             SelfAttention1D(4, 16),
             layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
         ], name='generator')

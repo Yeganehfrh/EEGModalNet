@@ -20,7 +20,7 @@ class Critic(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, n_subjects, init_id=True)
+            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
@@ -56,12 +56,12 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         x, sub_labels, positions = inputs['x'], inputs['sub'], inputs['pos']
+        subj_emb = self.sub_emb(sub_labels.view(-1)).to(x.dtype)  # make sure dtypes match for mixed precision
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, sub_labels)
+            x = self.sub_layer(x, subj_emb)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         x = self.post_att(x)
-        subj_emb = self.sub_emb(sub_labels.view(-1))
         x = self.film_block(x, subj_emb)
         x = self.conv_block(x)
         return x
@@ -96,7 +96,7 @@ class Generator(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
 
         if use_sublayer:
-            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, n_subjects, init_id=True)
+            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
 
         if use_channel_merger:
             self.pos_emb = ChannelMerger(
@@ -133,13 +133,13 @@ class Generator(keras.Model):
     def call(self, inputs):
         noise, sub_labels, positions = inputs
         x = self.post_att(noise)
-        subj_emb = self.sub_emb(sub_labels.view(-1))
+        subj_emb = self.sub_emb(sub_labels.view(-1)).to(x.dtype)  # make sure dtypes match for mixed precision
         x = self.film_block(x, subj_emb)
         x = self.cov_block(x)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, sub_labels)
+            x = self.sub_layer(x, subj_emb)
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x

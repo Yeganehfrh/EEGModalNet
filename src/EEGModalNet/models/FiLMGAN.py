@@ -39,20 +39,24 @@ class Critic(keras.Model):
         
         self.conv_block = keras.Sequential([
             keras.Input(shape=(512, 8)),
-            layers.Conv1D(1 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            layers.Conv1D(1 * feature_dim, ks, strides=1, padding='same', name='conv3', kernel_initializer=kernel_initializer),
+            layers.AveragePooling1D(pool_size=2),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.Conv1D(2 * feature_dim, ks, strides=1, padding='same', name='conv4', kernel_initializer=kernel_initializer),
+            layers.AveragePooling1D(pool_size=2),
             layers.LeakyReLU(negative_slope=negative_slope),
-            layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+            layers.Conv1D(4 * feature_dim, ks, strides=1, padding='same', name='conv5', kernel_initializer=kernel_initializer),
+            layers.AveragePooling1D(pool_size=2),
             layers.LeakyReLU(negative_slope=negative_slope),
             SelfAttention1D(4, feature_dim),
-            layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+            layers.Conv1D(16 * feature_dim, ks, strides=1, padding='same', name='conv6', kernel_initializer=kernel_initializer),
+            layers.AveragePooling1D(pool_size=2),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Flatten(name='dis_flatten'),
             layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
         ], name='critic')
 
-        self.built = True
+        self.built = True  
 
     def call(self, inputs):
         x, sub_labels, positions = inputs['x'], inputs['sub'], inputs['pos']

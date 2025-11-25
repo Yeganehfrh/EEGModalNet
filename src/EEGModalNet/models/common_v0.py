@@ -7,6 +7,7 @@ import torch
 from torch import nn
 import keras
 from keras import layers, regularizers, ops
+import torch.nn.functional as F
 
 
 class ResidualBlock(layers.Layer):
@@ -227,6 +228,28 @@ class CustomUpSampling1D(layers.Layer):
             "method": self.method,
         })
         return config
+
+
+class TorchLinearUpsample1D(layers.Layer):
+    """1D linear interpolation using torch.nn.functional.interpolate."""
+
+    def __init__(self, scale_factor=2, **kwargs):
+        super().__init__(**kwargs)
+        self.scale_factor = scale_factor
+
+    def call(self, x):
+        x = x.permute(0, 2, 1)  #(B, C, T)
+
+        # Linear 1D interpolation
+        x = F.interpolate(
+            x,
+            scale_factor=self.scale_factor,
+            mode="linear",
+            align_corners=False
+        )
+
+        return x.permute(0, 2, 1)  #(B, T', C)
+
 
 
 class ChannelAttention(layers.Layer):
@@ -579,7 +602,7 @@ def convBlock(filters: List[int],
     lyrs = []
     for i, (filter, kernel_size) in enumerate(zip(filters, kernel_sizes), 1):
         if upsampling[i - 1]:
-            lyrs.append(CustomUpSampling1D(2, method=interpolation))
+            lyrs.append(TorchLinearUpsample1D(2))
         lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer, name=f'conv_{i}'))
         if batch_norm:
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))

@@ -535,6 +535,7 @@ class SubjectLayers_FiLM(nn.Module):
 
     def forward(self, x, subj_emb):
         
+        self.linear.to(x.dtype)
         gamma_beta = self.linear(subj_emb.to(x.dtype))             # (B, 2C)
         gamma, beta = gamma_beta.chunk(2, dim=-1)      # (B, C), (B, C)
 
@@ -570,6 +571,7 @@ class FiLMBlock(nn.Module):
 
     def forward(self, x, subj_emb):
 
+        self.film.to(x.dtype)
         film_params = self.film(subj_emb.to(x.dtype))          # (B, 2*C)
         gamma, beta = film_params.chunk(2, dim=-1) # each (B, C)
 

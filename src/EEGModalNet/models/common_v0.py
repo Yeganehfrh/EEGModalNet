@@ -535,7 +535,7 @@ class SubjectLayers_FiLM(nn.Module):
 
     def forward(self, x, subj_emb):
         
-        gamma_beta = self.linear(subj_emb).to(x.dtype)             # (B, 2C)
+        gamma_beta = self.linear(subj_emb.to(x.dtype))             # (B, 2C)
         gamma, beta = gamma_beta.chunk(2, dim=-1)      # (B, C), (B, C)
 
         # residual, small-gain FiLM
@@ -570,7 +570,7 @@ class FiLMBlock(nn.Module):
 
     def forward(self, x, subj_emb):
 
-        film_params = self.film(subj_emb).to(x.dtype)          # (B, 2*C)
+        film_params = self.film(subj_emb.to(x.dtype))          # (B, 2*C)
         gamma, beta = film_params.chunk(2, dim=-1) # each (B, C)
 
         # bounded residual FiLM

@@ -60,7 +60,7 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         x, sub_labels, positions = inputs['x'], inputs['sub'], inputs['pos']
-        subj_emb = self.sub_emb(sub_labels.view(-1)).to(x.dtype)  # make sure dtypes match for mixed precision
+        subj_emb = self.sub_emb(sub_labels.view(-1))
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb)
         if hasattr(self, 'pos_emb'):
@@ -137,7 +137,7 @@ class Generator(keras.Model):
     def call(self, inputs):
         noise, sub_labels, positions = inputs
         x = self.post_att(noise)
-        subj_emb = self.sub_emb(sub_labels.view(-1)).to(x.dtype)  # make sure dtypes match for mixed precision
+        subj_emb = self.sub_emb(sub_labels.view(-1))
         x = self.film_block(x, subj_emb)
         x = self.cov_block(x)
         if hasattr(self, 'pos_emb'):

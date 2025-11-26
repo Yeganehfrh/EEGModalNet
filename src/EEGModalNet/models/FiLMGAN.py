@@ -310,7 +310,7 @@ class FiLMGAN(keras.Model):
         psd_loss = torch.mean((log_psd_fake - log_psd_real) ** 2)
 
         λ_psd = 1e-5
-        g_loss =+ λ_psd * psd_loss
+        g_loss = g_loss + λ_psd * psd_loss
         g_loss.backward()
 
         grads = [v.value.grad for v in self.generator.trainable_weights]
@@ -332,4 +332,5 @@ class FiLMGAN(keras.Model):
             '7 real_pred_std': real_pred.std().item(),
             '8 fake_pred_std': fake_pred.std().item(),
             'loss': total_loss,
+            'psd_loss': psd_loss.item() * λ_psd,
         }

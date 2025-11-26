@@ -39,3 +39,31 @@ def spectral_regularization_loss(real_data, fake_data, lambda_smooth=1.0, lambda
 
     else:
         return spectral_match_loss_value
+
+
+def batch_psd(x, fs, fmin=1., fmax=45.):
+    """
+    x: (B, T, C) torch, real-valued
+    returns: psd_mean (C, F), freqs (F,)
+    """
+    B, T, C = x.shape
+    # move channels to last, flatten batch
+    x_flat = x.reshape(B * C, T)  # (B*C, T)
+
+    # rFFT: (B*C, F_complex)
+    Xf = torch.fft.rfft(x_flat, dim=-1)
+    psd = (Xf.abs() ** 2) / (fs * T)  # simple periodogram
+
+    freqs = torch.fft.rfftfreq(T, d=1.0/fs).to(x.device)  # (F,)
+
+    # select freq band
+    mask = (freqs >= fmin) & (freqs <= fmax)
+    psd = psd[:, mask]      # (B*C, F_band)
+    freqs = freqs[mask]     # (F_band,)
+
+    # reshape back to (B, C, F_band)
+    psd = psd.view(B, C, -1)
+    # average across batch
+    psd_mean = psd.mean(dim=0)   # (C, F_band)
+
+    return psd_mean, freqs

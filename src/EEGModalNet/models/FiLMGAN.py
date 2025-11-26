@@ -2,6 +2,7 @@ import torch
 from keras import layers
 import keras
 from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock
+from ..preprocessing.spectral_regularization import batch_psd
 
 
 @keras.saving.register_keras_serializable()
@@ -261,11 +262,8 @@ class FiLMGAN(keras.Model):
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
         batch_size = real_data.size(0)
-        # mean = real_data.mean()
-        # std = real_data.std()
 
         # train critic
-        # for _ in range(2):
         noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
         perm = torch.randperm(batch_size, device=real_data.device)
         fake_sub = sub[perm].view(-1, 1)
@@ -278,9 +276,6 @@ class FiLMGAN(keras.Model):
         self.zero_grad()
         d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
         d_loss.backward()
-
-        # clip gradients
-        # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=10.0)
 
         grads = [v.value.grad for v in self.critic.trainable_weights]
         with torch.no_grad():
@@ -296,7 +291,6 @@ class FiLMGAN(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
 
         self.zero_grad()
-        # random_sub = torch.randint(0, sub.max().item()+1, (batch_size, 1), device=real_data.device)
         x_gen = self.generator((noise, fake_sub, pos))
 
         # smoking gun finbder 
@@ -304,6 +298,19 @@ class FiLMGAN(keras.Model):
 
         fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': pos})
         g_loss = -fake_pred.mean()
+
+        # PSD regularizer
+        with torch.no_grad():
+            psd_real, freqs = batch_psd(real_data, fs=128, fmin=8., fmax=45.)
+        psd_fake, _ = batch_psd(x_gen, fs=128, fmin=8., fmax=45.)
+
+        log_psd_real = psd_real.clamp_min(1e-12).log()
+        log_psd_fake = psd_fake.clamp_min(1e-12).log()
+
+        psd_loss = torch.mean((log_psd_fake - log_psd_real) ** 2)
+
+        λ_psd = 1e-5
+        g_loss =+ λ_psd * psd_loss
         g_loss.backward()
 
         grads = [v.value.grad for v in self.generator.trainable_weights]

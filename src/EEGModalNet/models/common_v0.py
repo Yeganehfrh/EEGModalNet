@@ -251,6 +251,34 @@ class TorchLinearUpsample1D(layers.Layer):
         return x.permute(0, 2, 1)  #(B, T', C)
 
 
+class HighPass1D(layers.Layer):
+    def __init__(self, n_channels, **kwargs):
+        super().__init__(**kwargs)
+        self.n_channels = n_channels
+        # depthwise Conv1D: one filter per channel
+        self.conv = layers.Conv1D(
+            filters=n_channels,
+            kernel_size=3,
+            padding="same",
+            groups=n_channels,
+            use_bias=False,
+            trainable=False,
+            name="highpass_conv"
+        )
+
+    def build(self, input_shape):
+        super().build(input_shape)
+         # kernel shape: (kernel_size, in_ch/groups=1, filters=n_channels)
+        base = np.array([-1.0, 2.0, -1.0], dtype="float32") / 2.0
+        base = base.reshape(3, 1, 1)
+        kernel = np.repeat(base, self.n_channels, axis=2)  # (3, 1, C)
+        w = torch.tensor(kernel).permute(2,1,0).contiguous()  
+        self.conv.module.weight.data = w
+
+    def call(self, x):
+        # x: (B, T, C)
+        return self.conv(x)
+    
 
 class ChannelAttention(layers.Layer):
     def __init__(self, num_heads, key_dim, num_ch, use_norm=True, **kwargs):
@@ -547,6 +575,41 @@ class SubjectLayers_FiLM(nn.Module):
         beta  = beta.unsqueeze(1)   # (B, 1, C)
 
         return gamma * x + beta
+
+# class SubjectLayers_FiLM(nn.Module):
+#     """FiLM-style subject layer."""
+#     def __init__(self, in_channels: int, out_channels: int, n_subjects: int, init_id: bool = False):
+#         super().__init__()
+#         assert in_channels == out_channels, "FiLM version expects C_in == C_out"
+
+#         d_sub = 32  # subject embedding dim
+#         self.emb = nn.Embedding(n_subjects, d_sub)
+#         self.linear = nn.Linear(d_sub, 2 * in_channels)
+
+#         if init_id:
+#             # start near identity (γ≈1, β≈0)
+#             with torch.no_grad():
+#                 self.linear.weight.zero_()
+#                 self.linear.bias.zero_()
+
+#     def forward(self, x, subjects):
+#         """
+#         x: (B, T, C)
+#         """
+#         if x.dim() == 3 and x.shape[1] == x.shape[1]:  # (B, T, C)
+#             x = x.permute(0, 2, 1)  # (B, C, T)
+
+#         subj_emb = self.emb(subjects.view(-1))         # (B, d_sub)
+#         gamma_beta = self.linear(subj_emb)             # (B, 2C)
+#         gamma, beta = gamma_beta.chunk(2, dim=-1)      # (B, C), (B, C)
+
+#         gamma = gamma.unsqueeze(-1)  # (B, C, 1)
+#         beta  = beta.unsqueeze(-1)   # (B, C, 1)
+
+#         x = gamma * x + beta         # FiLM modulation
+
+#         x = x.permute(0, 2, 1)       # back to (B, T, C)
+#         return x
 
 
 class SubjectLayers_v2(nn.Module):

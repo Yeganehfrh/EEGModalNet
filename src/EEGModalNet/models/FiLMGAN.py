@@ -1,7 +1,8 @@
 import torch
 from keras import layers
 import keras
-from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock
+from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D
+from keras import ops
 
 
 @keras.saving.register_keras_serializable()
@@ -18,6 +19,7 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
+        self.highpass = HighPass1D(feature_dim)
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
@@ -38,9 +40,8 @@ class Critic(keras.Model):
         self.film_block = FiLMBlock(8, 32)
         
         self.conv_block = keras.Sequential([
-            keras.Input(shape=(512, 8)),
+            keras.Input(shape=(512, 2 * feature_dim)),
             layers.Conv1D(1 * feature_dim, ks, strides=1, padding='same', name='conv3', kernel_initializer=kernel_initializer),
-            layers.AveragePooling1D(pool_size=2),
             layers.LeakyReLU(negative_slope=negative_slope),
             layers.Conv1D(2 * feature_dim, ks, strides=1, padding='same', name='conv4', kernel_initializer=kernel_initializer),
             layers.AveragePooling1D(pool_size=2),
@@ -67,8 +68,12 @@ class Critic(keras.Model):
             x = self.pos_emb(x, sub_labels, positions)
         x = self.post_att(x)
         x = self.film_block(x, subj_emb)
-        x = self.conv_block(x)
-        return x
+
+        x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
+        x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
+
+        out = self.conv_block(x_cat)
+        return out
 
     def get_config(self):
         config = super().get_config()

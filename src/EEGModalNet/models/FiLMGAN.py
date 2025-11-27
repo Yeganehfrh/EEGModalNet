@@ -2,7 +2,6 @@ import torch
 from keras import layers
 import keras
 from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock
-from ..preprocessing.spectral_regularization import batch_psd
 
 
 @keras.saving.register_keras_serializable()
@@ -298,19 +297,6 @@ class FiLMGAN(keras.Model):
 
         fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': pos})
         g_loss = -fake_pred.mean()
-
-        # PSD regularizer
-        with torch.no_grad():
-            psd_real, freqs = batch_psd(real_data, fs=128, fmin=8., fmax=45.)
-        psd_fake, _ = batch_psd(x_gen, fs=128, fmin=8., fmax=45.)
-
-        log_psd_real = psd_real.clamp_min(1e-12).log()
-        log_psd_fake = psd_fake.clamp_min(1e-12).log()
-
-        psd_loss = torch.mean((log_psd_fake - log_psd_real) ** 2)
-
-        λ_psd = 1e-5
-        g_loss = g_loss + λ_psd * psd_loss
         g_loss.backward()
 
         grads = [v.value.grad for v in self.generator.trainable_weights]
@@ -332,5 +318,4 @@ class FiLMGAN(keras.Model):
             '7 real_pred_std': real_pred.std().item(),
             '8 fake_pred_std': fake_pred.std().item(),
             'loss': total_loss,
-            'psd_loss': psd_loss.item() * λ_psd,
         }

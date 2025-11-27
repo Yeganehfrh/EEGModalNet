@@ -252,33 +252,31 @@ class TorchLinearUpsample1D(layers.Layer):
 
 
 class HighPass1D(layers.Layer):
-    def __init__(self, n_channels, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.n_channels = n_channels
-        # depthwise Conv1D: one filter per channel
-        self.conv = layers.Conv1D(
-            filters=n_channels,
-            kernel_size=3,
-            padding="same",
-            groups=n_channels,
-            use_bias=False,
-            trainable=False,
-            name="highpass_conv"
-        )
-
-    def build(self, input_shape):
-        super().build(input_shape)
-         # kernel shape: (kernel_size, in_ch/groups=1, filters=n_channels)
-        base = np.array([-1.0, 2.0, -1.0], dtype="float32") / 2.0
-        base = base.reshape(3, 1, 1)
-        kernel = np.repeat(base, self.n_channels, axis=2)  # (3, 1, C)
-        w = torch.tensor(kernel).permute(2,1,0).contiguous()  
-        self.conv.module.weight.data = w
 
     def call(self, x):
-        # x: (B, T, C)
-        return self.conv(x)
-    
+        x_t = x.permute(0, 2, 1)
+        B, C, T = x_t.shape
+
+        # Fixed high-pass kernel [-1, 2, -1] / 2
+        k = torch.tensor([-1.0, 2.0, -1.0],
+                         device=x_t.device,
+                         dtype=x_t.dtype) / 2.0
+        k = k.view(1, 1, 3)           # (out_ch=1, in_ch=1, k)
+        k = k.repeat(C, 1, 1)         # (out_ch=C, in_ch=1, k) for depthwise
+
+        # Depthwise conv: groups=C
+        y_t = torch.nn.functional.conv1d(
+            x_t,
+            k,
+            bias=None,
+            padding=1,
+            groups=C,
+        )
+        y = y_t.permute(0, 2, 1)
+        return y
+
 
 class ChannelAttention(layers.Layer):
     def __init__(self, num_heads, key_dim, num_ch, use_norm=True, **kwargs):

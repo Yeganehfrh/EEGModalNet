@@ -63,6 +63,7 @@ def load_data(data_path: str,
 
 def run(data,
         n_subjects,
+        channels,
         max_epochs=100_000,
         latent_dim=64,
         batch_size=64,
@@ -73,7 +74,7 @@ def run(data,
         shuffle=False):
 
     model = FiLMGAN(time_dim=512,
-                    feature_dim=data['x'].shape[-1],
+                    feature_dim=len(channels),
                     latent_dim=latent_dim,
                     n_subjects=n_subjects,
                     use_sublayer_generator=True,
@@ -180,6 +181,7 @@ if __name__ == '__main__':
 
     model = run(train_loader,
                 n_subjects=N_SUBJECTS,
+                channels=CHANNELS[8],
                 max_epochs=5000,
                 latent_dim=LATENT_DIM,
                 batch_size=BATCH_SIZE,

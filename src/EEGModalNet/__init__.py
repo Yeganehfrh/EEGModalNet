@@ -9,10 +9,10 @@ from .models.FiLMGAN import FiLMGAN
 from .utils import ProgressBarCallback, CustomModelCheckpoint, StepLossHistory
 from .preprocessing.utils import get_averaged_data
 from .models.common import SubjectLayers_v2, convBlock, ChannelMerger, ResidualBlock, build_eeg_transformer
-from .data.hpc_data_loader import load_data
+from .data.hpc_data_loader import load_data, RandomCropEEGDataset
 from .preprocessing.preprocessing import preprocess_data
 
-__all__ = ['WGAN_GP', 'WGAN_GP_V0', 'TCNWGAN', 'FiLMGAN',
+__all__ = ['WGAN_GP', 'WGAN_GP_V0', 'TCNWGAN', 'FiLMGAN', 'RandomCropEEGDataset',
            'SubjectLayers_v2', 'convBlock', 'ChannelMerger', 'ResidualBlock',
            'build_eeg_transformer', 'ProgressBarCallback', 'CustomModelCheckpoint',
            'get_averaged_data', 'load_data', 'StepLossHistory', 'preprocess_data']

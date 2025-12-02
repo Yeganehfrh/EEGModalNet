@@ -80,3 +80,35 @@ def load_data(eeg_data_path,
     y = torch.tensor(y).reshape(-1, 1).repeat(1, X_input.shape[1])
 
     return X_input, y, train_val_splits, channels
+
+
+class RandomCropEEGDataset(torch.utils.data.Dataset):
+    def __init__(self, x_cont, sub_ids, pos, seg_len=512, n_samples=200_000):
+        self.x_cont = x_cont
+        self.sub_ids = sub_ids
+        self.pos = pos
+        self.seg_len = seg_len
+        self.n_subjects, self.n_channels, self.T = x_cont.shape
+
+        # n_samples = virtual dataset length (how many random crops per epoch)
+        self.n_samples = n_samples
+
+    def __len__(self):
+        return self.n_samples
+
+    def __getitem__(self, idx):
+        # randomly pick a subject
+        s = torch.randint(0, self.n_subjects, (1,)).item()
+
+        # randomly pick a starting index
+        max_start = self.T - self.seg_len
+        st = torch.randint(0, max_start + 1, (1,)).item()
+
+        # slice the segment
+        segment = self.x_cont[s, :, st:st+self.seg_len]
+
+        # labels for FiLM
+        sub = self.sub_ids[s]
+        pos = self.pos[s]
+
+        return segment, sub, pos

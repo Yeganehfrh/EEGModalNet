@@ -82,6 +82,8 @@ def run(data,
                     use_channel_merger_g=False,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
+    
+    gen = random_crop_generator(data['x'], data['sub'], data['pos'], seg_len=512, batch_size=128)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -102,7 +104,7 @@ def run(data,
 
     # step_loss_history = StepLossHistory()
 
-    _ = model.fit(data,
+    _ = model.fit(gen,
                   batch_size=batch_size,
                   epochs=max_epochs,
                   shuffle=shuffle,
@@ -134,7 +136,7 @@ if __name__ == '__main__':
              'C1', 'C2', 'C6', 'TP7', 'CP3', 'CPz', 'CP4', 'TP8', 'P5', 'P1', 'P2',
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
-    N_SUBJECTS = 202
+    N_SUBJECTS = 10  ########################## TODO ###############!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     LATENT_DIM = 128
     BATCH_SIZE = 128
     OUTPUT_PATH = 'logs/20251202'
@@ -147,6 +149,37 @@ if __name__ == '__main__':
                      preprocess=True,
                      highpass=True,
                      remove_line_noise=True)
+    
+
+    # train_loader = torch.utils.data.DataLoader(
+    # RandomCropEEGDataset(
+    #     data['x'], data['sub'], data['pos'],
+    #     seg_len=512,
+    #     n_samples=200_000   # 200k random crops per epoch
+    # ),
+    # batch_size=128,
+    # shuffle=False,
+    # num_workers=0,
+    # drop_last=True)
+
+    def random_crop_generator(x_cont, sub_ids, pos, seg_len, batch_size):
+        S, C, T = x_cont.shape
+        while True:
+            batch_x = []
+            batch_sub = []
+            batch_pos = []
+            for _ in range(batch_size):
+                s = np.random.randint(0, S)
+                st = np.random.randint(0, T - seg_len + 1)
+                batch_x.append(x_cont[s, :, st:st+seg_len])
+                batch_sub.append(sub_ids[s])
+                batch_pos.append(pos[s])
+            yield (
+                np.stack(batch_x, axis=0),
+                np.stack(batch_sub, axis=0),
+                np.stack(batch_pos, axis=0)
+            )
+
 
     if torch.cuda.is_available():
         print('GPU is available')
@@ -168,18 +201,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    train_loader = torch.utils.data.DataLoader(
-    RandomCropEEGDataset(
-        data['x'], data['sub'], data['pos'],
-        seg_len=512,
-        n_samples=200_000   # 200k random crops per epoch
-    ),
-    batch_size=128,
-    shuffle=False,
-    num_workers=4,
-    drop_last=True)
-
-    model = run(train_loader,
+    model = run(data,
                 n_subjects=N_SUBJECTS,
                 channels=CHANNELS[8],
                 max_epochs=5000,

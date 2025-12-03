@@ -291,6 +291,13 @@ class FiLMGAN(keras.Model):
     def train_step(self, data):
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
+        print(f'>>>> Sanity check 3 (inside train step): {self.x_cont.device}')
+
+        device = next(self.parameters()).device
+        real_data = real_data.to(device)
+        sub = sub.to(device)
+        pos = pos.to(device)
+
         batch_size = real_data.size(0)
 
         # train critic

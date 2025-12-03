@@ -31,7 +31,7 @@ def load_data(data_path: str,
               highpass=False,
               remove_line_noise=True) -> Dict:
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
 
@@ -54,14 +54,14 @@ def load_data(data_path: str,
         x, _ = dss.dss_line(x.T, fline=50, sfreq=128, nremove=1)
         x = x.T
 
-    x = torch.tensor(x.copy(), device=device)
-    sub = torch.arange(n_subjects, device=device)[:, None]
-    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], axis=0), device=device)
+    x = torch.tensor(x.copy(), dtype=torch.float32)
+    sub = torch.arange(n_subjects)[:, None]
+    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], axis=0), dtype=torch.float32)
 
     return {'x': x, 'sub': sub, 'pos': pos}
 
 
-def run(data,
+def run(train_loader,
         n_subjects,
         channels,
         max_epochs=100_000,
@@ -83,7 +83,9 @@ def run(data,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
     
-    gen = random_crop_generator(data['x'], data['sub'], data['pos'], seg_len=512, batch_size=128)
+    # gen = random_crop_generator(data['x'], data['sub'], data['pos'], seg_len=512, batch_size=128)
+
+    print(f'>>>> Sanity check 2 (inside run model): {self.x_cont.device}')
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -104,7 +106,7 @@ def run(data,
 
     # step_loss_history = StepLossHistory()
 
-    _ = model.fit(gen,
+    _ = model.fit(train_loader,
                   batch_size=batch_size,
                   epochs=max_epochs,
                   shuffle=shuffle,
@@ -151,34 +153,34 @@ if __name__ == '__main__':
                      remove_line_noise=True)
     
 
-    # train_loader = torch.utils.data.DataLoader(
-    # RandomCropEEGDataset(
-    #     data['x'], data['sub'], data['pos'],
-    #     seg_len=512,
-    #     n_samples=200_000   # 200k random crops per epoch
-    # ),
-    # batch_size=128,
-    # shuffle=False,
-    # num_workers=0,
-    # drop_last=True)
+    train_loader = torch.utils.data.DataLoader(
+    RandomCropEEGDataset(
+        data['x'], data['sub'], data['pos'],
+        seg_len=512,
+        n_samples=200_000   # 200k random crops per epoch
+    ),
+    batch_size=128,
+    shuffle=False,
+    num_workers=0,
+    drop_last=True)
 
-    def random_crop_generator(x_cont, sub_ids, pos, seg_len, batch_size):
-        S, C, T = x_cont.shape
-        while True:
-            batch_x = []
-            batch_sub = []
-            batch_pos = []
-            for _ in range(batch_size):
-                s = np.random.randint(0, S)
-                st = np.random.randint(0, T - seg_len + 1)
-                batch_x.append(x_cont[s, :, st:st+seg_len])
-                batch_sub.append(sub_ids[s])
-                batch_pos.append(pos[s])
-            yield (
-                np.stack(batch_x, axis=0),
-                np.stack(batch_sub, axis=0),
-                np.stack(batch_pos, axis=0)
-            )
+    # def random_crop_generator(x_cont, sub_ids, pos, seg_len, batch_size):
+    #     S, C, T = x_cont.shape
+    #     while True:
+    #         batch_x = []
+    #         batch_sub = []
+    #         batch_pos = []
+    #         for _ in range(batch_size):
+    #             s = np.random.randint(0, S)
+    #             st = np.random.randint(0, T - seg_len + 1)
+    #             batch_x.append(x_cont[s, :, st:st+seg_len])
+    #             batch_sub.append(sub_ids[s])
+    #             batch_pos.append(pos[s])
+    #         yield (
+    #             np.stack(batch_x, axis=0),
+    #             np.stack(batch_sub, axis=0),
+    #             np.stack(batch_pos, axis=0)
+    #         )
 
 
     if torch.cuda.is_available():
@@ -201,7 +203,7 @@ if __name__ == '__main__':
     keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
-    model = run(data,
+    model = run(train_loader,
                 n_subjects=N_SUBJECTS,
                 channels=CHANNELS[8],
                 max_epochs=5000,

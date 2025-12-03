@@ -85,8 +85,6 @@ def run(train_loader,
     
     # gen = random_crop_generator(data['x'], data['sub'], data['pos'], seg_len=512, batch_size=128)
 
-    print(f'>>>> Sanity check 2 (inside run model): {self.x_cont.device}')
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print(f'>>>> Model is on {device}')

@@ -291,7 +291,7 @@ class FiLMGAN(keras.Model):
     def train_step(self, data):
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
-        print(f'>>>> Sanity check 3 (inside train step): {self.x_cont.device}')
+        print(f'>>>> Sanity check 3 (inside train step): {real_data.device}')
 
         device = next(self.parameters()).device
         real_data = real_data.to(device)

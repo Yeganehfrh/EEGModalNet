@@ -108,8 +108,9 @@ def run(train_loader,
                   batch_size=batch_size,
                   epochs=max_epochs,
                   shuffle=shuffle,
+                  steps_per_epoch=500,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=50),
+                      CustomModelCheckpoint(model_path, save_freq=20),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True, mode='min'),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True, mode='min'),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -136,10 +137,10 @@ if __name__ == '__main__':
              'C1', 'C2', 'C6', 'TP7', 'CP3', 'CPz', 'CP4', 'TP8', 'P5', 'P1', 'P2',
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
-    N_SUBJECTS = 202  ########################## TODO ###############!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251202'
+    OUTPUT_PATH = 'logs/20251204'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
@@ -155,31 +156,12 @@ if __name__ == '__main__':
     RandomCropEEGDataset(
         data['x'], data['sub'], data['pos'],
         seg_len=512,
-        n_samples=200_000   # 200k random crops per epoch
+        n_samples=100_000   # 100k random crops per epoch
     ),
     batch_size=128,
     shuffle=False,
-    num_workers=0,
+    num_workers=0,  # TODO: consider increasing this
     drop_last=True)
-
-    # def random_crop_generator(x_cont, sub_ids, pos, seg_len, batch_size):
-    #     S, C, T = x_cont.shape
-    #     while True:
-    #         batch_x = []
-    #         batch_sub = []
-    #         batch_pos = []
-    #         for _ in range(batch_size):
-    #             s = np.random.randint(0, S)
-    #             st = np.random.randint(0, T - seg_len + 1)
-    #             batch_x.append(x_cont[s, :, st:st+seg_len])
-    #             batch_sub.append(sub_ids[s])
-    #             batch_pos.append(pos[s])
-    #         yield (
-    #             np.stack(batch_x, axis=0),
-    #             np.stack(batch_sub, axis=0),
-    #             np.stack(batch_pos, axis=0)
-    #         )
-
 
     if torch.cuda.is_available():
         print('GPU is available')
@@ -204,7 +186,7 @@ if __name__ == '__main__':
     model = run(train_loader,
                 n_subjects=N_SUBJECTS,
                 channels=CHANNELS[8],
-                max_epochs=5000,
+                max_epochs=1000,
                 latent_dim=LATENT_DIM,
                 batch_size=BATCH_SIZE,
                 cvloger_path=f'{OUTPUT_PATH}.csv',

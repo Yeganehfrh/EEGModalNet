@@ -15,4 +15,4 @@
 git pull
 
 # SECTION Run pipeline
-pixi run python -m src.EEGModalNet.pipeline.train_gan_gpu
+pixi run python -m src.EEGModalNet.pipeline.train_gan_con

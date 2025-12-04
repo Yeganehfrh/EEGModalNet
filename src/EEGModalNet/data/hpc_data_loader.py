@@ -98,7 +98,6 @@ class RandomCropEEGDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         # randomly pick a subject
-        print(f'>>>> Sanity check: {self.x_cont.device}')
         s = torch.randint(0, self.n_subjects, (1,)).item()
 
         # randomly pick a starting index
@@ -112,4 +111,4 @@ class RandomCropEEGDataset(torch.utils.data.Dataset):
         sub = self.sub_ids[s]
         pos = self.pos[s]
 
-        return segment, sub, pos
+        return {"x": segment.permute(1, 0), "sub": sub, "pos": pos}

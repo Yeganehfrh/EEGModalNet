@@ -291,8 +291,6 @@ class FiLMGAN(keras.Model):
     def train_step(self, data):
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
-        print(f'>>>> Sanity check 3 (inside train step): {real_data.device}')
-
         device = next(self.parameters()).device
         real_data = real_data.to(device)
         sub = sub.to(device)
@@ -305,7 +303,7 @@ class FiLMGAN(keras.Model):
         perm = torch.randperm(batch_size, device=real_data.device)
         fake_sub = sub[perm].view(-1, 1)
         fake_data = self.generator((noise, fake_sub, pos)).detach() 
-        real_pred = self.critic(data)
+        real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
         self.chk("D_real", real_pred)
         fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
         self.chk("D_fake", fake_pred)

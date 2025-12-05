@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D
+from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev
 from keras import ops
 
 
@@ -38,24 +38,6 @@ class Critic(keras.Model):
             SelfAttention1D(2, 4)])
         
         self.film_block = FiLMBlock(8, 32)
-        
-        # self.conv_block = keras.Sequential([
-        #     keras.Input(shape=(512, 2 * feature_dim)),
-        #     layers.Conv1D(1 * feature_dim, ks, strides=1, padding='same', name='conv3', kernel_initializer=kernel_initializer),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Conv1D(2 * feature_dim, ks, strides=1, padding='same', name='conv4', kernel_initializer=kernel_initializer),
-        #     layers.AveragePooling1D(pool_size=2),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Conv1D(4 * feature_dim, ks, strides=1, padding='same', name='conv5', kernel_initializer=kernel_initializer),
-        #     layers.AveragePooling1D(pool_size=2),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     SelfAttention1D(4, feature_dim),
-        #     layers.Conv1D(16 * feature_dim, ks, strides=1, padding='same', name='conv6', kernel_initializer=kernel_initializer),
-        #     layers.AveragePooling1D(pool_size=2),
-        #     layers.LeakyReLU(negative_slope=negative_slope),
-        #     layers.Flatten(name='dis_flatten'),
-        #     layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer),
-        # ], name='critic')
     
         self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
@@ -71,6 +53,8 @@ class Critic(keras.Model):
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
+
+        self.mbsdv = MinibatchStdDev(name="mbstd")
 
         self.built = True  
 
@@ -92,6 +76,8 @@ class Critic(keras.Model):
         h  = self.act3(self.pool3(self.conv3(h)))
         h  = self.att2(h)
         h  = self.act4(self.pool4(self.conv4(h)))
+
+        h = self.mbsdv(h)
         
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features

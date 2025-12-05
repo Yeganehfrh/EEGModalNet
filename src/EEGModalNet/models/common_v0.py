@@ -653,6 +653,27 @@ class FiLMBlock(nn.Module):
         })
         return config
 
+
+class MinibatchStdDev(layers.Layer):
+    def __init__(self, eps=1e-8, **kwargs):
+        super().__init__(**kwargs)
+        self.eps = eps
+
+    def call(self, x):
+        # x: [B, T, C]
+        B, T, C = x.shape
+
+        # std over batch, then average over (T, C) → scalar
+        mean = x.mean(dim=0, keepdim=True)                 # [1, T, C]
+        var  = ((x - mean) ** 2).mean(dim=0, keepdim=True) # [1, T, C]
+        std  = torch.sqrt(var + self.eps)                  # [1, T, C]
+        std_mean = std.mean(dim=(1, 2), keepdim=True)      # [1, 1, 1]
+
+        # a full [B, T, 1] feature map and concat
+        std_map = std_mean.repeat(B, T, 1)                 # [B, T, 1]
+        return torch.cat([x, std_map], dim=-1)             # [B, T, C+1]
+
+
 def convBlock(filters: List[int],
               kernel_sizes: List[Union[int, tuple]],
               upsampling: List[Union[bool, int]],

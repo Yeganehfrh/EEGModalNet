@@ -653,15 +653,19 @@ class FiLMBlock(nn.Module):
         })
         return config
 
-
-class MinibatchStdDev(layers.Layer):
-    def __init__(self, eps=1e-8, **kwargs):
-        super().__init__(**kwargs)
+class MinibatchStdDev(nn.Module):
+    def __init__(self, eps=1e-8):
+        super().__init__()
         self.eps = eps
 
-    def call(self, x):
+    def forward(self, x):
         # x: [B, T, C]
         B, T, C = x.shape
+
+        if B == 1:
+            # no variance with batch size 1 → just add zeros
+            std_map = x.new_zeros(B, T, 1)
+            return torch.cat([x, std_map], dim=-1)
 
         # std over batch, then average over (T, C) → scalar
         mean = x.mean(dim=0, keepdim=True)                 # [1, T, C]

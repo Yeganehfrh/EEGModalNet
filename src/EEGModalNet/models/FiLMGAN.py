@@ -54,7 +54,7 @@ class Critic(keras.Model):
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
-        self.mbsdv = MinibatchStdDev(name="mbstd")
+        self.mbsdv = MinibatchStdDev()
 
         self.built = True  
 

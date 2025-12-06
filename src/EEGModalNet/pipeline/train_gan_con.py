@@ -4,14 +4,14 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
 
-torch.backends.cuda.enable_flash_sdp(False)
-torch.backends.cuda.enable_mem_efficient_sdp(False)
-torch.backends.cuda.enable_math_sdp(True)
+# torch.backends.cuda.enable_flash_sdp(False)
+# torch.backends.cuda.enable_mem_efficient_sdp(False)
+# torch.backends.cuda.enable_math_sdp(True)
 
-print("SDP backends:",
-      "flash =", torch.backends.cuda.flash_sdp_enabled(),
-      "mem_efficient =", torch.backends.cuda.mem_efficient_sdp_enabled(),
-      "math =", torch.backends.cuda.math_sdp_enabled())
+# print("SDP backends:",
+#       "flash =", torch.backends.cuda.flash_sdp_enabled(),
+#       "mem_efficient =", torch.backends.cuda.mem_efficient_sdp_enabled(),
+#       "math =", torch.backends.cuda.math_sdp_enabled())
 
 import keras
 from keras.optimizers.schedules import ExponentialDecay
@@ -100,7 +100,7 @@ def run(train_loader,
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
                   gradient_penalty_weight=5.0)
 
-    torch.cuda.synchronize()  # wait for model to be loaded
+    # torch.cuda.synchronize()  # wait for model to be loaded
 
     # step_loss_history = StepLossHistory()
 
@@ -163,25 +163,25 @@ if __name__ == '__main__':
     num_workers=0,  # TODO: consider increasing this
     drop_last=True)
 
-    if torch.cuda.is_available():
-        print('GPU is available')
-        # torch.cuda.current_device()
-    else:
-        print('GPU is not available!!')
-        exit()
+    # if torch.cuda.is_available():
+    #     print('GPU is available')
+    #     # torch.cuda.current_device()
+    # else:
+    #     print('GPU is not available!!')
+    #     exit()
 
-    print(f'Running on {torch.cuda.device_count()} GPUs')
-    # print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
+    # print(f'Running on {torch.cuda.device_count()} GPUs')
+    # # print(f'Using CUDA device: {torch.cuda.get_device_name(0)}')
 
-    # Explicitly set the CUDA device
-    torch.cuda.set_device(0)
+    # # Explicitly set the CUDA device
+    # torch.cuda.set_device(0)
 
-    # preload CUDA libraries with a dummy tensor
-    _ = torch.randn(1, device="cuda")
+    # # preload CUDA libraries with a dummy tensor
+    # _ = torch.randn(1, device="cuda")
 
-    # Apply mixed precision policy
-    keras.mixed_precision.set_global_policy('mixed_float16')
-    print(f'Global policy is {keras.mixed_precision.global_policy().name}')
+    # # Apply mixed precision policy
+    # keras.mixed_precision.set_global_policy('mixed_float16')
+    # print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
     model = run(train_loader,
                 n_subjects=N_SUBJECTS,

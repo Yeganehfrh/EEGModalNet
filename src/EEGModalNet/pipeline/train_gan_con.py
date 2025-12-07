@@ -82,8 +82,6 @@ def run(train_loader,
                     use_channel_merger_g=False,
                     use_channel_merger_c=False,
                     interpolation='bilinear')
-    
-    gen = random_crop_generator(data['x'], data['sub'], data['pos'], seg_len=512, batch_size=128)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)

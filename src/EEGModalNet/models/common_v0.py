@@ -675,7 +675,7 @@ class MinibatchStdDev(nn.Module):
 
         # a full [B, T, 1] feature map and concat
         std_map = std_mean.repeat(B, T, 1)                 # [B, T, 1]
-        return torch.cat([x, std_map], dim=-1)             # [B, T, C+1]
+        return torch.cat([x, std_map], dim=-1).to(x.device).to(x.dtype)             # [B, T, C+1]
 
 
 def convBlock(filters: List[int],

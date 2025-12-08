@@ -668,7 +668,7 @@ class MinibatchStdDev(nn.Module):
             return torch.cat([x, std_map], dim=-1)
 
         # flatten spatial dims, compute std over batch only
-        y = x.view(B, -1)                          # [B, T*C]
+        y = x.reshape(B, -1)                          # [B, T*C]
         y = y - y.mean(dim=0, keepdim=True)        # center
         var = (y ** 2).mean(dim=0, keepdim=True)   # [1, T*C]
         std = torch.sqrt(var + self.eps)           # [1, T*C]

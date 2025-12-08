@@ -653,30 +653,64 @@ class FiLMBlock(nn.Module):
         })
         return config
 
-class MinibatchStdDev(nn.Module):
-    def __init__(self, eps=1e-8):
-        super().__init__()
+# class MinibatchStdDev(nn.Module):
+#     def __init__(self, eps=1e-8):
+#         super().__init__()
+#         self.eps = eps
+
+#     def forward(self, x):
+#         # x: [B, T, C]
+#         B, T, C = x.shape
+
+#         if B <= 1:
+#             # no variance with batch size 1 → just add zeros
+#             std_map = x.new_zeros(B, T, 1, device=x.device, dtype=x.dtype)
+#             return torch.cat([x, std_map], dim=-1)
+
+#         # flatten spatial dims, compute std over batch only
+#         y = x.reshape(B, -1)                          # [B, T*C]
+#         y = y - y.mean(dim=0, keepdim=True)        # center
+#         var = (y ** 2).mean(dim=0, keepdim=True)   # [1, T*C]
+#         std = torch.sqrt(var + self.eps)           # [1, T*C]
+#         std_mean = std.mean()
+
+#         std_map = std_mean.view(1, 1, 1).repeat(B, T, 1)  # [B, T, 1]
+#         return ops.concatenate([x, std_map], axis=-1)
+
+
+class MinibatchStdDev(layers.Layer):
+    def __init__(self, eps=1e-8, **kwargs):
+        super().__init__(**kwargs)
         self.eps = eps
 
-    def forward(self, x):
+    def call(self, x):
         # x: [B, T, C]
-        B, T, C = x.shape
+        shape = ops.shape(x)
+        B, T, C = shape[0], shape[1], shape[2]
 
-        if B <= 1:
-            # no variance with batch size 1 → just add zeros
-            std_map = x.new_zeros(B, T, 1, device=x.device, dtype=x.dtype)
-            return torch.cat([x, std_map], dim=-1)
+        # If batch = 1 → no variance possible
+        def no_batch_var():
+            zeros = ops.zeros((B, T, 1), dtype=x.dtype)
+            return ops.concatenate([x, zeros], axis=-1)
 
-        # flatten spatial dims, compute std over batch only
-        y = x.reshape(B, -1)                          # [B, T*C]
-        y = y - y.mean(dim=0, keepdim=True)        # center
-        var = (y ** 2).mean(dim=0, keepdim=True)   # [1, T*C]
-        std = torch.sqrt(var + self.eps)           # [1, T*C]
-        std_mean = std.mean()
+        def compute_mbstd():
+            # mean over batch
+            mean = ops.mean(x, axis=0, keepdims=True)       # [1, T, C]
+            var  = ops.mean((x - mean)**2, axis=0, keepdims=True)
+            std  = ops.sqrt(var + self.eps)                 # [1, T, C]
 
-        std_map = std_mean.view(1, 1, 1).repeat(B, T, 1)  # [B, T, 1]
-        return torch.cat([x, std_map], dim=-1)
+            # scalar std
+            std_mean = ops.mean(std)                        # scalar
 
+            # expand to [B, T, 1]
+            std_map = ops.expand_dims(std_mean, axis=0)     # [1]
+            std_map = ops.reshape(std_map, (1, 1, 1))        # [1,1,1]
+            std_map = ops.broadcast_to(std_map, (B, T, 1))   # [B,T,1]
+
+            # concat with original features
+            return ops.concatenate([x, std_map], axis=-1)
+
+        return ops.cond(B <= 1, no_batch_var, compute_mbstd)
 
 
 def convBlock(filters: List[int],

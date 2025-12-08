@@ -138,7 +138,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251208_v2'
+    OUTPUT_PATH = 'logs/20251208_v3'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',

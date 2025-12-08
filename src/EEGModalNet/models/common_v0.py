@@ -662,20 +662,21 @@ class MinibatchStdDev(nn.Module):
         # x: [B, T, C]
         B, T, C = x.shape
 
-        if B == 1:
+        if B <= 1:
             # no variance with batch size 1 → just add zeros
-            std_map = x.new_zeros(B, T, 1)
+            std_map = x.new_zeros(B, T, 1, device=x.device, dtype=x.dtype)
             return torch.cat([x, std_map], dim=-1)
 
-        # std over batch, then average over (T, C) → scalar
-        mean = x.mean(dim=0, keepdim=True)                 # [1, T, C]
-        var  = ((x - mean) ** 2).mean(dim=0, keepdim=True) # [1, T, C]
-        std  = torch.sqrt(var + self.eps)                  # [1, T, C]
-        std_mean = std.mean(dim=(1, 2), keepdim=True)      # [1, 1, 1]
+        # flatten spatial dims, compute std over batch only
+        y = x.view(B, -1)                          # [B, T*C]
+        y = y - y.mean(dim=0, keepdim=True)        # center
+        var = (y ** 2).mean(dim=0, keepdim=True)   # [1, T*C]
+        std = torch.sqrt(var + self.eps)           # [1, T*C]
+        std_mean = std.mean()
 
-        # a full [B, T, 1] feature map and concat
-        std_map = std_mean.repeat(B, T, 1)                 # [B, T, 1]
-        return torch.cat([x, std_map], dim=-1).to(x.device).to(x.dtype)             # [B, T, C+1]
+        std_map = std_mean.view(1, 1, 1).repeat(B, T, 1)  # [B, T, 1]
+        return torch.cat([x, std_map], dim=-1)
+
 
 
 def convBlock(filters: List[int],

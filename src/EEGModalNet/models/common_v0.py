@@ -695,8 +695,10 @@ class MinibatchStdDev(layers.Layer):
 
         def compute_mbstd():
             # mean over batch
-            mean = ops.mean(x, axis=0, keepdims=True)       # [1, T, C]
-            var  = ops.mean((x - mean)**2, axis=0, keepdims=True)
+            x_ng = ops.stop_gradient(x)
+
+            mean = ops.mean(x_ng, axis=0, keepdims=True)       # [1, T, C]
+            var  = ops.mean((x_ng - mean)**2, axis=0, keepdims=True)
             std  = ops.sqrt(var + self.eps)                 # [1, T, C]
 
             # scalar std

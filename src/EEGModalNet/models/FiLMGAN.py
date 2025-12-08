@@ -139,15 +139,30 @@ class Generator(keras.Model):
             *convBlock(filters=2 * [8 * feature_dim],
                        kernel_sizes= 2 * [3],
                        upsampling=[1, 1],
+                       noiseinjection=[1, 0],
                        stride=1,
                        padding='same',
                        interpolation=interpolation,
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
-            SelfAttention1D(4, 16),
-            layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer),
-        ], name='generator')
+        ], name='conv_block')
+        
+        self.att2 = SelfAttention1D(4, 16)
+        self.final_conv = layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer)
+
+        self.dil_block = keras.Sequential([
+            keras.Input(shape=(512, 8)),
+            layers.Conv1D(feature_dim, 3, padding='same',
+                            dilation_rate=2,
+                            kernel_initializer=kernel_initializer),
+            layers.LeakyReLU(negative_slope=0.2),
+            layers.Conv1D(feature_dim, 3, padding='same',
+                            dilation_rate=4,
+                            kernel_initializer=kernel_initializer),
+            layers.LeakyReLU(negative_slope=0.2),
+        ], name="g_dilated_block")
+
 
         self.built = True
 
@@ -157,6 +172,9 @@ class Generator(keras.Model):
         subj_emb = self.sub_emb(sub_labels.view(-1))
         x = self.film_block(x, subj_emb)
         x = self.cov_block(x)
+        x = self.att2(x)
+        x = self.final_conv(x)
+        x = self.dil_block(x)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
@@ -285,22 +303,23 @@ class FiLMGAN(keras.Model):
         batch_size = real_data.size(0)
 
         # train critic
-        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
-        perm = torch.randperm(batch_size, device=real_data.device)
-        fake_sub = sub[perm].view(-1, 1)
-        fake_data = self.generator((noise, fake_sub, pos)).detach() 
-        real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
-        self.chk("D_real", real_pred)
-        fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
-        self.chk("D_fake", fake_pred)
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-        self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()
+        for _ in range(2):
+            noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
+            perm = torch.randperm(batch_size, device=real_data.device)
+            fake_sub = sub[perm].view(-1, 1)
+            fake_data = self.generator((noise, fake_sub, pos)).detach() 
+            real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
+            self.chk("D_real", real_pred)
+            fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
+            self.chk("D_fake", fake_pred)
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.zero_grad()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss.backward()
 
-        grads = [v.value.grad for v in self.critic.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.critic.trainable_weights)
+            grads = [v.value.grad for v in self.critic.trainable_weights]
+            with torch.no_grad():
+                self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

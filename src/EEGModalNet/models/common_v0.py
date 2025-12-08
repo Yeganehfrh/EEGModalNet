@@ -653,29 +653,31 @@ class FiLMBlock(nn.Module):
         })
         return config
 
-# class MinibatchStdDev(nn.Module):
-#     def __init__(self, eps=1e-8):
-#         super().__init__()
-#         self.eps = eps
 
-#     def forward(self, x):
-#         # x: [B, T, C]
-#         B, T, C = x.shape
+class NoiseInjection(layers.Layer):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.weight = None
 
-#         if B <= 1:
-#             # no variance with batch size 1 → just add zeros
-#             std_map = x.new_zeros(B, T, 1, device=x.device, dtype=x.dtype)
-#             return torch.cat([x, std_map], dim=-1)
+    def build(self, input_shape):
+        # input: [B, T, C]
+        C = input_shape[-1]
+        self.weight = self.add_weight(
+            name="noise_weight",
+            shape=(1, 1, C),
+            initializer="zeros",
+            trainable=True,
+        )
 
-#         # flatten spatial dims, compute std over batch only
-#         y = x.reshape(B, -1)                          # [B, T*C]
-#         y = y - y.mean(dim=0, keepdim=True)        # center
-#         var = (y ** 2).mean(dim=0, keepdim=True)   # [1, T*C]
-#         std = torch.sqrt(var + self.eps)           # [1, T*C]
-#         std_mean = std.mean()
+    def call(self, x, noise=None):
+        shape = ops.shape(x)
+        B, T, _ = shape[0], shape[1], shape[2]
 
-#         std_map = std_mean.view(1, 1, 1).repeat(B, T, 1)  # [B, T, 1]
-#         return ops.concatenate([x, std_map], axis=-1)
+        if noise is None:
+            noise = keras.random.normal((B, T, 1), dtype=x.dtype)
+
+        # broadcast noise over channels and scale
+        return x + self.weight * noise
 
 
 class MinibatchStdDev(layers.Layer):
@@ -718,6 +720,7 @@ class MinibatchStdDev(layers.Layer):
 def convBlock(filters: List[int],
               kernel_sizes: List[Union[int, tuple]],
               upsampling: List[Union[bool, int]],
+              noiseinjection: List[Union[bool, int]],
               stride: int,
               padding: str,
               interpolation: str,
@@ -729,6 +732,8 @@ def convBlock(filters: List[int],
         if upsampling[i - 1]:
             lyrs.append(TorchLinearUpsample1D(2))
         lyrs.append(layers.Conv1D(filter, kernel_size, stride, padding, kernel_initializer=kernel_initializer, name=f'conv_{i}'))
+        if noiseinjection[i - 1]:
+            lyrs.append(NoiseInjection(name=f"g_noise_{i}"))
         if batch_norm:
             lyrs.append(layers.BatchNormalization(name=f'bn_{i}'))
         lyrs.append(layers.LeakyReLU(negative_slope=negative_slope, name=f'leaky_relu_{i}'))

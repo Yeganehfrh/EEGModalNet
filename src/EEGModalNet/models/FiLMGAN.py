@@ -177,7 +177,7 @@ class Generator(keras.Model):
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
                        SelfAttention1D(4, 16),
-                       layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
+                    #    layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
                     #    layers.LeakyReLU(negative_slope=0.2),
         ], name='conv_block')
 
@@ -193,16 +193,20 @@ class Generator(keras.Model):
                             kernel_initializer=kernel_initializer,
                             name='dil_2_conv'),
             layers.LeakyReLU(negative_slope=0.2),
+            layers.Conv1D(feature_dim, 5, padding='same',
+                            dilation_rate=8,
+                            kernel_initializer=kernel_initializer,
+                            name='dil_3_conv'),
         ], name="g_dilated_block")
 
-        self.out_conv = layers.Conv1D(
-                filters=feature_dim,
-                kernel_size=5,        # or 7 for a stronger smoothing
-                padding='same',
-                activation=None,
-                kernel_initializer=kernel_initializer,
-                name='g_out_conv',
-            )
+        # self.out_conv = layers.Conv1D(
+        #         filters=feature_dim,
+        #         kernel_size=5,        # or 7 for a stronger smoothing
+        #         padding='same',
+        #         activation=None,
+        #         kernel_initializer=kernel_initializer,
+        #         name='g_out_conv',
+        #     )
 
         self.built = True
 
@@ -213,7 +217,7 @@ class Generator(keras.Model):
         x = self.film_block(x, subj_emb)
         x = self.cov_block(x)
         x = self.dil_block(x)
-        x = self.out_conv(x)
+        # x = self.out_conv(x)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):

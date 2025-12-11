@@ -177,12 +177,12 @@ class Generator(keras.Model):
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
                        SelfAttention1D(4, 16),
-                    #    layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
-                    #    layers.LeakyReLU(negative_slope=0.2),
+                       layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
+                       layers.LeakyReLU(negative_slope=0.2),
         ], name='conv_block')
 
         self.dil_block = keras.Sequential([
-            keras.Input(shape=(512, 64)),
+            keras.Input(shape=(512, 8)),
             layers.Conv1D(feature_dim, 3, padding='same',
                             dilation_rate=2,
                             kernel_initializer=kernel_initializer,
@@ -193,7 +193,7 @@ class Generator(keras.Model):
                             kernel_initializer=kernel_initializer,
                             name='dil_2_conv'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Conv1D(feature_dim, 5, padding='same',
+            layers.Conv1D(feature_dim, 7, padding='same',
                             dilation_rate=8,
                             kernel_initializer=kernel_initializer,
                             name='dil_3_conv'),
@@ -269,7 +269,7 @@ class FiLMGAN(keras.Model):
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 30
+        self.warmup_epochs = 50
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,

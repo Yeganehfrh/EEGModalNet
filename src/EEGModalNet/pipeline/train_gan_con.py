@@ -98,7 +98,7 @@ def run(train_loader,
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.0, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
-                  gradient_penalty_weight=0.5)
+                  gradient_penalty_weight=1)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251211_v2'
+    OUTPUT_PATH = 'logs/20251211'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',

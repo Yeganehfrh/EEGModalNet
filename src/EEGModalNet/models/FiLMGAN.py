@@ -182,7 +182,7 @@ class Generator(keras.Model):
         ], name='conv_block')
 
         self.dil_block = keras.Sequential([
-            keras.Input(shape=(512, 64)),
+            keras.Input(shape=(512, 8)),
             layers.Conv1D(feature_dim, 3, padding='same',
                             dilation_rate=2,
                             kernel_initializer=kernel_initializer,

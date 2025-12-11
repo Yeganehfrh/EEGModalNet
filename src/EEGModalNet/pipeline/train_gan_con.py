@@ -71,7 +71,8 @@ def run(train_loader,
         model_path='tmp/tmp/wgan_v2.model.keras',
         reuse_model=False,
         reuse_model_path=None,
-        shuffle=False):
+        shuffle=False,
+        steps_per_epoch=500):
 
     model = FiLMGAN(time_dim=512,
                     feature_dim=len(channels),
@@ -81,7 +82,8 @@ def run(train_loader,
                     use_sublayer_critic=True,
                     use_channel_merger_g=False,
                     use_channel_merger_c=False,
-                    interpolation='bilinear')
+                    interpolation='bilinear',
+                    steps_per_epoch=steps_per_epoch)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
@@ -94,9 +96,9 @@ def run(train_loader,
     lr_schedule_g = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
     lr_schedule_d = ExponentialDecay(0.0006, decay_steps=100000, decay_rate=0.90, staircase=True)
 
-    model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.5, beta_2=0.9),
-                  g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.5, beta_2=0.9),
-                  gradient_penalty_weight=1.0)
+    model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.0, beta_2=0.9),
+                  g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
+                  gradient_penalty_weight=0.5)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -106,9 +108,9 @@ def run(train_loader,
                   batch_size=batch_size,
                   epochs=max_epochs,
                   shuffle=shuffle,
-                  steps_per_epoch=500,
+                  steps_per_epoch=steps_per_epoch,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=20),
+                      CustomModelCheckpoint(model_path, save_freq=10),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True, mode='min'),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True, mode='min'),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -138,7 +140,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251208_v3'
+    OUTPUT_PATH = 'logs/20251211'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',

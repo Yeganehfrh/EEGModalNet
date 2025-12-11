@@ -20,6 +20,7 @@ class Critic(keras.Model):
         self.d_sub = 32
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.highpass = HighPass1D()
+        self.output_features = False
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
@@ -81,11 +82,40 @@ class Critic(keras.Model):
         
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features
-        
         h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+
+        if self.output_features:
+            return h_final
+
         out = self.final_dense(h_final)
-        # out = self.conv_block(x_cat)
         return out
+        
+        # out = self.final_dense(h_final)
+        # return out
+    
+    def extract_features(self, x, sub_labels, positions):
+        subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
+        x = self.sub_layer(x, subj_emb)
+        x = self.post_att(x)
+        x = self.film_block(x, subj_emb)
+
+        x_hp = self.highpass(x)
+        x_cat = ops.concatenate([x, x_hp], axis=-1)
+
+        h1 = self.act1(self.conv1(x_cat))
+        h  = self.act2(self.pool2(self.conv2(h1)))
+        h  = self.act3(self.pool3(self.conv3(h)))
+        h  = self.att2(h)
+        h  = self.act4(self.pool4(self.conv4(h)))
+
+        # DCGAN-style pooling (global average here)
+        pooled_h1 = ops.mean(h1, axis=1)
+        pooled_h  = ops.mean(h,  axis=1)
+
+        # you can also keep multiple stages if you like:
+        feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
+        return feats  # shape (B, D_feat)
+
 
     def get_config(self):
         config = super().get_config()
@@ -147,24 +177,32 @@ class Generator(keras.Model):
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
                        SelfAttention1D(4, 16),
-                       layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer)
+                       layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
+                       layers.LeakyReLU(negative_slope=0.2),
         ], name='conv_block')
-        
-        # self.att2 = SelfAttention1D(4, 16)
-        # self.final_conv = layers.Conv1D(feature_dim, 3, padding='same', name='conv_lyr_1', kernel_initializer=kernel_initializer)
 
         self.dil_block = keras.Sequential([
             keras.Input(shape=(512, 8)),
             layers.Conv1D(feature_dim, 3, padding='same',
                             dilation_rate=2,
-                            kernel_initializer=kernel_initializer),
+                            kernel_initializer=kernel_initializer,
+                            name='dil_1_conv'),
             layers.LeakyReLU(negative_slope=0.2),
             layers.Conv1D(feature_dim, 3, padding='same',
                             dilation_rate=4,
-                            kernel_initializer=kernel_initializer),
+                            kernel_initializer=kernel_initializer,
+                            name='dil_2_conv'),
             layers.LeakyReLU(negative_slope=0.2),
         ], name="g_dilated_block")
 
+        self.out_conv = layers.Conv1D(
+                filters=feature_dim,
+                kernel_size=5,        # or 7 for a stronger smoothing
+                padding='same',
+                activation=None,
+                kernel_initializer=kernel_initializer,
+                name='g_out_conv',
+            )
 
         self.built = True
 
@@ -174,9 +212,8 @@ class Generator(keras.Model):
         subj_emb = self.sub_emb(sub_labels.view(-1))
         x = self.film_block(x, subj_emb)
         x = self.cov_block(x)
-        # x = self.att2(x)
-        # x = self.final_conv(x)
         x = self.dil_block(x)
+        x = self.out_conv(x)
         if hasattr(self, 'pos_emb'):
             x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
@@ -184,6 +221,7 @@ class Generator(keras.Model):
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
+
 
     def get_config(self):
         config = super().get_config()

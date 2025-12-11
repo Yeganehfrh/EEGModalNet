@@ -244,6 +244,7 @@ class FiLMGAN(keras.Model):
                  use_channel_merger_g=False,
                  use_channel_merger_c=False,
                  interpolation='bilinear',
+                 steps_per_epoch = 500,
                  **kwargs):
         super().__init__(**kwargs)
         self.time_dim = time_dim
@@ -260,6 +261,11 @@ class FiLMGAN(keras.Model):
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
         self.seed_generator = keras.random.SeedGenerator(42)
+
+        # Training step counts
+        self.global_step = 0        # counts train_step calls
+        self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
+        self.warmup_epochs = 30
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -342,24 +348,27 @@ class FiLMGAN(keras.Model):
 
         batch_size = real_data.size(0)
 
-        # train critic
-        # for _ in range(2):
-        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
-        perm = torch.randperm(batch_size, device=real_data.device)
-        fake_sub = sub[perm].view(-1, 1)
-        fake_data = self.generator((noise, fake_sub, pos)).detach() 
-        real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
-        self.chk("D_real", real_pred)
-        fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
-        self.chk("D_fake", fake_pred)
-        gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-        self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
-        d_loss.backward()
+        warmup_steps = self.warmup_epochs * self.steps_per_epoch
+        n_critic = 3 if self.global_step < warmup_steps else 1
 
-        grads = [v.value.grad for v in self.critic.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        # train critic
+        for _ in range(n_critic):
+            noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
+            perm = torch.randperm(batch_size, device=real_data.device)
+            fake_sub = sub[perm].view(-1, 1)
+            fake_data = self.generator((noise, fake_sub, pos)).detach() 
+            real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
+            self.chk("D_real", real_pred)
+            fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
+            self.chk("D_fake", fake_pred)
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.zero_grad()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss.backward()
+
+            grads = [v.value.grad for v in self.critic.trainable_weights]
+            with torch.no_grad():
+                self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []
@@ -386,9 +395,11 @@ class FiLMGAN(keras.Model):
 
         total_loss = g_loss + d_loss
 
-        # Update metrics and return their value.
+        # Update metrics and return their value
         self.d_loss_tracker.update_state(d_loss)
         self.g_loss_tracker.update_state(g_loss)
+        # Update globa step
+        self.global_step += 1
         return {
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),

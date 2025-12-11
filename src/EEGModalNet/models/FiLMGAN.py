@@ -193,7 +193,7 @@ class Generator(keras.Model):
                             kernel_initializer=kernel_initializer,
                             name='dil_2_conv'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Conv1D(feature_dim, 7, padding='same',
+            layers.Conv1D(feature_dim, 1, padding='same',
                             dilation_rate=8,
                             kernel_initializer=kernel_initializer,
                             name='dil_3_conv'),

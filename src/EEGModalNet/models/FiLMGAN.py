@@ -18,10 +18,9 @@ class Critic(keras.Model):
         negative_slope = 0.1
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
-        self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
-        self.highpass = HighPass1D()
         self.output_features = False
 
+        self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         if use_sublayer:
             self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
 
@@ -39,16 +38,17 @@ class Critic(keras.Model):
             SelfAttention1D(2, 4)])
         
         self.film_block = FiLMBlock(8, 32)
+        self.highpass = HighPass1D()
     
         self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv2 = layers.Conv1D(2 * feature_dim, ks, padding='same', name='conv4', kernel_initializer=kernel_initializer)
         self.pool2 = layers.AveragePooling1D(pool_size=2)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv3 = layers.Conv1D(4 * feature_dim, ks, padding='same', name='conv5', kernel_initializer=kernel_initializer)
+        self.conv3 = layers.Conv1D(8 * feature_dim, ks, padding='same', name='conv5', kernel_initializer=kernel_initializer)
         self.pool3 = layers.AveragePooling1D(pool_size=2)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.att2  = SelfAttention1D(4, feature_dim)
+        self.att2  = SelfAttention1D(8, feature_dim)
         self.conv4 = layers.Conv1D(16 * feature_dim, ks, padding='same', name='conv6', kernel_initializer=kernel_initializer)
         self.pool4 = layers.AveragePooling1D(pool_size=2)
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)

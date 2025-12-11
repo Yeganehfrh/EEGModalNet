@@ -177,8 +177,8 @@ class Generator(keras.Model):
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
                        SelfAttention1D(4, 16),
-                       layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
-                       layers.LeakyReLU(negative_slope=0.2),
+                    #    layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
+                    #    layers.LeakyReLU(negative_slope=0.2),
         ], name='conv_block')
 
         self.dil_block = keras.Sequential([

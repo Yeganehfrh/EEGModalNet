@@ -140,10 +140,10 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251211_v6'
+    OUTPUT_PATH = 'logs/20251212_eo'
     CONDITION = None
 
-    data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
+    data = load_data('data/LEMON_DATA/EO_ch-8_sf-128.nc5',
                      channels='all',
                      n_subjects=N_SUBJECTS,
                      exclude_sub_ids=None,

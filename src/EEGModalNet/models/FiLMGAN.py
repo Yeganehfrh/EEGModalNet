@@ -178,7 +178,7 @@ class Generator(keras.Model):
                        batch_norm=True),
                        SelfAttention1D(4, 16),
                        layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
-                       layers.LeakyReLU(negative_slope=0.2),
+                    #    layers.LeakyReLU(negative_slope=0.2),
         ], name='conv_block')
 
         self.dil_block = keras.Sequential([
@@ -193,10 +193,10 @@ class Generator(keras.Model):
                             kernel_initializer=kernel_initializer,
                             name='dil_2_conv'),
             layers.LeakyReLU(negative_slope=0.2),
-            layers.Conv1D(feature_dim, 1, padding='same',
-                            dilation_rate=8,
-                            kernel_initializer=kernel_initializer,
-                            name='dil_3_conv'),
+            # layers.Conv1D(feature_dim, 1, padding='same',
+            #                 dilation_rate=8,
+            #                 kernel_initializer=kernel_initializer,
+            #                 name='dil_3_conv'),
         ], name="g_dilated_block")
 
         # self.out_conv = layers.Conv1D(

@@ -26,6 +26,7 @@ from scipy.signal import butter, sosfiltfilt
 def load_data(data_path: str,
               channels: List[str] | str = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
+              condition: str | None = None,
               exclude_sub_ids=None,
               preprocess=False,
               highpass=False,
@@ -34,6 +35,11 @@ def load_data(data_path: str,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
+
+    if condition == 'EO-EC':
+        data_path_EC = data_path.replace('EC', 'EO') if 'EC' in data_path else data_path.replace('EO', 'EC')
+        xarray_EC = xr.open_dataarray(data_path_EC, engine='h5netcdf')
+        xarray = xr.concat([xarray, xarray_EC], dim='subject')
 
     if channels != 'all':
         xarray = xarray.sel(channel=channels)
@@ -57,6 +63,9 @@ def load_data(data_path: str,
     x = torch.tensor(x.copy(), dtype=torch.float32)
     sub = torch.arange(n_subjects)[:, None]
     pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], axis=0), dtype=torch.float32)
+
+    if condition == 'EO-EC':
+        sub = sub.repeat(2, 1)
 
     return {'x': x, 'sub': sub, 'pos': pos}
 
@@ -140,12 +149,13 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251212_eo'
+    OUTPUT_PATH = 'logs/20251213_eo-ec'
     CONDITION = None
 
-    data = load_data('data/LEMON_DATA/EO_ch-8_sf-128.nc5',
+    data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
                      channels='all',
                      n_subjects=N_SUBJECTS,
+                     condition='EO-EC',
                      exclude_sub_ids=None,
                      preprocess=True,
                      highpass=True,

@@ -89,12 +89,9 @@ class Critic(keras.Model):
 
         out = self.final_dense(h_final)
         return out
-        
-        # out = self.final_dense(h_final)
-        # return out
     
-    def extract_features(self, x, sub_labels, positions):
-        subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
+    def extract_features(self, x, subj_emb):
+        # subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
         x = self.sub_layer(x, subj_emb)
         x = self.post_att(x)
         x = self.film_block(x, subj_emb)
@@ -103,18 +100,29 @@ class Critic(keras.Model):
         x_cat = ops.concatenate([x, x_hp], axis=-1)
 
         h1 = self.act1(self.conv1(x_cat))
-        h  = self.act2(self.pool2(self.conv2(h1)))
-        h  = self.act3(self.pool3(self.conv3(h)))
-        h  = self.att2(h)
-        h  = self.act4(self.pool4(self.conv4(h)))
-
-        # DCGAN-style pooling (global average here)
-        pooled_h1 = ops.mean(h1, axis=1)
-        pooled_h  = ops.mean(h,  axis=1)
-
-        # you can also keep multiple stages if you like:
+        pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//4))(h1)
+        pooled_h1 = layers.Flatten()(pooled_h1)
+        h = self.act2(self.pool2(self.conv2(h1)))
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
-        return feats  # shape (B, D_feat)
+        h = self.act3(self.pool3(self.conv3(h)))
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        pooled_h = layers.Flatten()(pooled_h)
+        feats = ops.concatenate([feats, pooled_h], axis=-1)
+
+        h = self.att2(h)
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        pooled_h = layers.Flatten()(pooled_h)
+        feats = ops.concatenate([feats, pooled_h], axis=-1)
+        h = self.act4(self.pool4(self.conv4(h)))
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        # print(h.shape, pooled_h.shape)
+        pooled_h = layers.Flatten()(pooled_h)
+        # pooled_h = ops.mean(h, axis=1)
+        feats = ops.concatenate([feats, pooled_h], axis=-1)
+
+        return feats, subj_emb  # shape (B, D_feat)
 
 
     def get_config(self):
@@ -269,7 +277,7 @@ class FiLMGAN(keras.Model):
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 50
+        self.warmup_epochs = 100
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,

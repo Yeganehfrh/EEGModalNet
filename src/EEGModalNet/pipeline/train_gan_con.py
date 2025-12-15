@@ -1,8 +1,24 @@
+## Fix the the seed for ablation experiment
+SEED = 42
 import os
+import random
+import numpy as np
+
+os.environ["PYTHONHASHSEED"] = str(SEED)
+random.seed(SEED)
+np.random.seed(SEED)
+
+## Setting Keras backend to PyTorch and configuring CUDA devices
 os.environ['KERAS_BACKEND'] = 'torch'
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import torch
+
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 torch.backends.cuda.enable_flash_sdp(False)
 torch.backends.cuda.enable_mem_efficient_sdp(False)
@@ -14,6 +30,8 @@ print("SDP backends:",
       "math =", torch.backends.cuda.math_sdp_enabled())
 
 import keras
+keras.utils.set_random_seed(SEED)
+
 from keras.optimizers.schedules import ExponentialDecay
 from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data, WGAN_GP_V0, FiLMGAN, RandomCropEEGDataset
 from typing import List, Dict
@@ -149,19 +167,23 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251213_eo-ec'
+    OUTPUT_PATH = 'logs/20251214'
     CONDITION = None
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
                      channels='all',
                      n_subjects=N_SUBJECTS,
-                     condition='EO-EC',
+                     condition=CONDITION,
                      exclude_sub_ids=None,
                      preprocess=True,
                      highpass=True,
                      remove_line_noise=True)
     
 
+    # Set random generator for DataLoader
+    g = torch.Generator()
+    g.manual_seed(SEED)
+    
     train_loader = torch.utils.data.DataLoader(
     RandomCropEEGDataset(
         data['x'], data['sub'], data['pos'],
@@ -170,8 +192,10 @@ if __name__ == '__main__':
     ),
     batch_size=128,
     shuffle=False,
-    num_workers=0,  # TODO: consider increasing this
-    drop_last=True)
+    num_workers=0,
+    drop_last=True,
+    generator=g
+    )
 
     if torch.cuda.is_available():
         print('GPU is available')

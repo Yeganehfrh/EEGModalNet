@@ -19,6 +19,7 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.output_features = False
+        disable_attention = True
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         if use_sublayer:
@@ -35,7 +36,7 @@ class Critic(keras.Model):
         self.post_att = keras.Sequential([
             keras.Input(shape=self.input_shape),
             LearnablePositionalEmbedding(512, 8),
-            SelfAttention1D(2, 4)])
+            SelfAttention1D(2, 4, disable_attention=disable_attention)])
         
         self.film_block = FiLMBlock(8, 32)
         self.highpass = HighPass1D()
@@ -48,7 +49,7 @@ class Critic(keras.Model):
         self.conv3 = layers.Conv1D(8 * feature_dim, ks, padding='same', name='conv5', kernel_initializer=kernel_initializer)
         self.pool3 = layers.AveragePooling1D(pool_size=2)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.att2  = SelfAttention1D(8, feature_dim)
+        self.att2  = SelfAttention1D(8, feature_dim, disable_attention=disable_attention)
         self.conv4 = layers.Conv1D(16 * feature_dim, ks, padding='same', name='conv6', kernel_initializer=kernel_initializer)
         self.pool4 = layers.AveragePooling1D(pool_size=2)
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
@@ -153,6 +154,7 @@ class Generator(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
+        disable_attention = True
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
@@ -168,7 +170,7 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=self.negative_slope, name='gen_layer6'),
             layers.Reshape((128, 32), name='gen_layer9'),
             LearnablePositionalEmbedding(128, 32),
-            SelfAttention1D(4, 8)])
+            SelfAttention1D(4, 8, disable_attention=disable_attention)])
         
         self.film_block = FiLMBlock(32, 32)
 
@@ -184,7 +186,7 @@ class Generator(keras.Model):
                        negative_slope=0.2,
                        kernel_initializer=kernel_initializer,
                        batch_norm=True),
-                       SelfAttention1D(4, 16),
+                       SelfAttention1D(4, 16, disable_attention=disable_attention),
                        layers.Conv1D(feature_dim, 3, padding='same', name='intermediate_conv', kernel_initializer=kernel_initializer),
                     #    layers.LeakyReLU(negative_slope=0.2),
         ], name='conv_block')

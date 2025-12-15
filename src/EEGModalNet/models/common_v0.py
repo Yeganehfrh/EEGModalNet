@@ -165,11 +165,12 @@ class SinePositionalEncoding(layers.Layer):
 
 
 class SelfAttention1D(layers.Layer):
-    def __init__(self, num_heads, key_dim, use_ffn=False, ffn_inner_d=64, **kwargs):
+    def __init__(self, num_heads, key_dim, use_ffn=False, fn_inner_d=64, disable_attention=False, **kwargs):
         super(SelfAttention1D, self).__init__(**kwargs)
 
         self.num_heads = num_heads
         self.key_dim = key_dim
+        self.disable_attention = disable_attention
 
         self.attention = layers.MultiHeadAttention(num_heads=num_heads, key_dim=key_dim)
         self.layer_norm = layers.LayerNormalization()
@@ -187,6 +188,9 @@ class SelfAttention1D(layers.Layer):
         super(SelfAttention1D, self).build(input_shape)
 
     def call(self, inputs):
+        if self.disable_attention:
+            return inputs
+    
         attn_output = self.attention(inputs, inputs)  # (query=x, value=x)
         x = self.layer_norm(inputs + attn_output)
         if hasattr(self, 'ffn'):

@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev
+from .common_v0 import convBlock, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev
 from keras import ops
 
 
@@ -24,12 +24,6 @@ class Critic(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         if use_sublayer:
             self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
-
-        if use_channel_merger:
-            self.pos_emb = ChannelMerger(
-                chout=feature_dim * 8, pos_dim=128, n_subjects=n_subjects, per_subject=True,
-            )
-            self.input_shape = (time_dim, feature_dim * 8)
 
         ks = 5
 
@@ -65,8 +59,6 @@ class Critic(keras.Model):
         subj_emb = self.sub_emb(sub_labels.view(-1))
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb)
-        if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x, sub_labels, positions)
         x = self.post_att(x)
         x = self.film_block(x, subj_emb)
 
@@ -100,30 +92,32 @@ class Critic(keras.Model):
         x_hp = self.highpass(x)
         x_cat = ops.concatenate([x, x_hp], axis=-1)
 
+        pooled_size = 4
+
         h1 = self.act1(self.conv1(x_cat))
-        pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//4))(h1)
+        pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//pooled_size))(h1)
         pooled_h1 = layers.Flatten()(pooled_h1)
         h = self.act2(self.pool2(self.conv2(h1)))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
         h = self.act3(self.pool3(self.conv3(h)))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
 
         h = self.att2(h)
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
         h = self.act4(self.pool4(self.conv4(h)))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         # print(h.shape, pooled_h.shape)
         pooled_h = layers.Flatten()(pooled_h)
         # pooled_h = ops.mean(h, axis=1)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
 
-        return feats, subj_emb  # shape (B, D_feat)
+        return feats  # shape (B, D_feat)
 
 
     def get_config(self):
@@ -158,11 +152,6 @@ class Generator(keras.Model):
 
         if use_sublayer:
             self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
-
-        if use_channel_merger:
-            self.pos_emb = ChannelMerger(
-                chout=feature_dim, pos_dim=32, n_subjects=n_subjects, per_subject=False,
-            )
 
         self.post_att = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
@@ -203,20 +192,7 @@ class Generator(keras.Model):
                             kernel_initializer=kernel_initializer,
                             name='dil_2_conv'),
             layers.LeakyReLU(negative_slope=0.2),
-            # layers.Conv1D(feature_dim, 1, padding='same',
-            #                 dilation_rate=8,
-            #                 kernel_initializer=kernel_initializer,
-            #                 name='dil_3_conv'),
         ], name="g_dilated_block")
-
-        # self.out_conv = layers.Conv1D(
-        #         filters=feature_dim,
-        #         kernel_size=5,        # or 7 for a stronger smoothing
-        #         padding='same',
-        #         activation=None,
-        #         kernel_initializer=kernel_initializer,
-        #         name='g_out_conv',
-        #     )
 
         self.built = True
 
@@ -227,9 +203,6 @@ class Generator(keras.Model):
         x = self.film_block(x, subj_emb)
         x = self.cov_block(x)
         x = self.dil_block(x)
-        # x = self.out_conv(x)
-        if hasattr(self, 'pos_emb'):
-            x = self.pos_emb(x, sub_labels, positions)
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb)
         if keras.mixed_precision.global_policy().name == 'mixed_float16':

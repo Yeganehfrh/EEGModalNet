@@ -54,9 +54,14 @@ def load_data(data_path: str,
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
 
+    if n_subjects < xarray.sizes['subject']:
+        xarray = xarray.sel(subject=xarray.subject[:n_subjects])
+
     if condition == 'both':
         data_path_2 = data_path.replace('EC', 'EO') if 'EC' in data_path else data_path.replace('EO', 'EC')
         xarray_2 = xr.open_dataarray(data_path_2, engine='h5netcdf')
+        if n_subjects < xarray.sizes['subject']:
+            xarray_2 = xarray_2.sel(subject=xarray.subject[:n_subjects])
         xarray_2  = xarray_2.rename({"time": "timestep"}) # we know that the naming of the time dimensions are not the same
         xarray = xr.concat([xarray, xarray_2], dim='subject')
 
@@ -169,7 +174,7 @@ if __name__ == '__main__':
              'C1', 'C2', 'C6', 'TP7', 'CP3', 'CPz', 'CP4', 'TP8', 'P5', 'P1', 'P2',
              'P6', 'PO7', 'PO3', 'POz', 'PO4', 'PO8']
     }
-    N_SUBJECTS = 202
+    N_SUBJECTS = 10
     LATENT_DIM = 128
     BATCH_SIZE = 128
     OUTPUT_PATH = 'logs/20251219'

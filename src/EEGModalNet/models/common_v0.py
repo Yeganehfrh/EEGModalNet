@@ -578,52 +578,91 @@ class SubjectLayers_FiLM(nn.Module):
 
         return gamma * x + beta
 
-# class SubjectLayers_FiLM(nn.Module):
-#     """FiLM-style subject layer."""
-#     def __init__(self, in_channels: int, out_channels: int, n_subjects: int, init_id: bool = False):
-#         super().__init__()
-#         assert in_channels == out_channels, "FiLM version expects C_in == C_out"
 
-#         d_sub = 32  # subject embedding dim
-#         self.emb = nn.Embedding(n_subjects, d_sub)
-#         self.linear = nn.Linear(d_sub, 2 * in_channels)
-
-#         if init_id:
-#             # start near identity (γ≈1, β≈0)
-#             with torch.no_grad():
-#                 self.linear.weight.zero_()
-#                 self.linear.bias.zero_()
-
-#     def forward(self, x, subjects):
-#         """
-#         x: (B, T, C)
-#         """
-#         if x.dim() == 3 and x.shape[1] == x.shape[1]:  # (B, T, C)
-#             x = x.permute(0, 2, 1)  # (B, C, T)
-
-#         subj_emb = self.emb(subjects.view(-1))         # (B, d_sub)
-#         gamma_beta = self.linear(subj_emb)             # (B, 2C)
-#         gamma, beta = gamma_beta.chunk(2, dim=-1)      # (B, C), (B, C)
-
-#         gamma = gamma.unsqueeze(-1)  # (B, C, 1)
-#         beta  = beta.unsqueeze(-1)   # (B, C, 1)
-
-#         x = gamma * x + beta         # FiLM modulation
-
-#         x = x.permute(0, 2, 1)       # back to (B, T, C)
-#         return x
-
-
-class SubjectLayers_v2(nn.Module):
-    """Per subject linear layer."""
-    def __init__(self, n_subjects: int, emb_dim: int):
+class DualFiLMBlock(nn.Module):
+    def __init__(self, n_channels: int, d_sub: int, d_state: int = 16, init_id: bool = True):
         super().__init__()
-        self.sub_emb = nn.Embedding(n_subjects, emb_dim)
+        self.n_channels = n_channels
+        self.d_sub = d_sub
+        self.d_state = d_state
 
-    def forward(self, x, subjects):
-        weights = self.sub_emb(subjects)
-        x_ = torch.einsum("btc,bcd->btc", x, weights)
-        return x_
+        self.sub_film   = nn.Linear(d_sub,   2 * n_channels)
+        self.state_film = nn.Linear(d_state, 2 * n_channels)
+
+        # Optional learnable gates (lets the model downweight a conditioner if noisy)
+        self.g_sub  = nn.Parameter(torch.tensor(1.0))
+        self.g_state = nn.Parameter(torch.tensor(1.0))
+
+        if init_id:
+            with torch.no_grad():
+                self.sub_film.weight.zero_();   self.sub_film.bias.zero_()
+                self.state_film.weight.zero_(); self.state_film.bias.zero_()
+
+    def forward(self, x, subj_emb, state_emb):
+        """
+        x:        (B, T, C)
+        subj_emb: (B, d_sub)
+        state_emb:(B, d_state)
+        """
+        dtype = x.dtype
+        device = x.device
+
+        subj_emb  = subj_emb.to(device=device, dtype=dtype)
+        state_emb = state_emb.to(device=device, dtype=dtype)
+
+        sub_params   = self.sub_film(subj_emb)      # (B, 2C)
+        state_params = self.state_film(state_emb)   # (B, 2C)
+
+        g_sub, b_sub       = sub_params.chunk(2, dim=-1)    # (B,C)
+        g_state, b_state   = state_params.chunk(2, dim=-1)  # (B,C)
+
+        # bounded residual FiLM (your style)
+        gamma = 1.0 + 0.1 * (self.g_sub * g_sub + self.g_state * g_state)
+        beta  = 0.1 * (self.g_sub * b_sub + self.g_state * b_state)
+
+        gamma = gamma.unsqueeze(1)  # (B,1,C)
+        beta  = beta.unsqueeze(1)   # (B,1,C)
+        return gamma * x + beta
+    
+
+class SubjectStateLayers_FiLM(nn.Module):
+    """FiLM-style subject layer with additional EO/EC state conditioning."""
+    def __init__(self, channels: int, d_sub: int, d_state: int = 16, init_id: bool = True):
+        super().__init__()
+        self.channels = channels
+        self.d_sub = d_sub
+        self.d_state = d_state
+
+        self.sub_linear   = nn.Linear(d_sub,   2 * channels)
+        self.state_linear = nn.Linear(d_state, 2 * channels)
+
+        self.g_sub   = nn.Parameter(torch.tensor(1.0))
+        self.g_state = nn.Parameter(torch.tensor(1.0))
+
+        if init_id:
+            with torch.no_grad():
+                self.sub_linear.weight.zero_();   self.sub_linear.bias.zero_()
+                self.state_linear.weight.zero_(); self.state_linear.bias.zero_()
+
+    def forward(self, x, subj_emb, state_emb):
+        dtype = x.dtype
+        device = x.device
+
+        subj_emb  = subj_emb.to(device=device, dtype=dtype)
+        state_emb = state_emb.to(device=device, dtype=dtype)
+
+        sub_gb   = self.sub_linear(subj_emb)        # (B,2C)
+        st_gb    = self.state_linear(state_emb)     # (B,2C)
+
+        g_sub, b_sub = sub_gb.chunk(2, dim=-1)
+        g_st,  b_st  = st_gb.chunk(2, dim=-1)
+
+        gamma = 1.0 + 0.1 * (self.g_sub * g_sub + self.g_state * g_st)
+        beta  = 0.1 * (self.g_sub * b_sub + self.g_state * b_st)
+
+        gamma = gamma.unsqueeze(1)
+        beta  = beta.unsqueeze(1)
+        return gamma * x + beta
     
 
 class FiLMBlock(nn.Module):
@@ -656,6 +695,18 @@ class FiLMBlock(nn.Module):
             "d_sub": self.d_sub
         })
         return config
+
+
+class SubjectLayers_v2(nn.Module):
+    """Per subject linear layer."""
+    def __init__(self, n_subjects: int, emb_dim: int):
+        super().__init__()
+        self.sub_emb = nn.Embedding(n_subjects, emb_dim)
+
+    def forward(self, x, subjects):
+        weights = self.sub_emb(subjects)
+        x_ = torch.einsum("btc,bcd->btc", x, weights)
+        return x_
 
 
 class NoiseInjection(layers.Layer):

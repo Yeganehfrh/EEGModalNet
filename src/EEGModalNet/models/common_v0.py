@@ -607,6 +607,9 @@ class DualFiLMBlock(nn.Module):
         dtype = x.dtype
         device = x.device
 
+        self.sub_film.to(dtype)
+        self.state_film.to(dtype)
+
         subj_emb  = subj_emb.to(device=device, dtype=dtype)
         state_emb = state_emb.to(device=device, dtype=dtype)
 
@@ -647,6 +650,9 @@ class SubjectStateLayers_FiLM(nn.Module):
     def forward(self, x, subj_emb, state_emb):
         dtype = x.dtype
         device = x.device
+
+        self.sub_linear.to(dtype)
+        self.state_linear.to(dtype)
 
         subj_emb  = subj_emb.to(device=device, dtype=dtype)
         state_emb = state_emb.to(device=device, dtype=dtype)

@@ -54,10 +54,11 @@ def load_data(data_path: str,
 
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
 
-    if condition == 'EO-EC':
-        data_path_EC = data_path.replace('EC', 'EO') if 'EC' in data_path else data_path.replace('EO', 'EC')
-        xarray_EC = xr.open_dataarray(data_path_EC, engine='h5netcdf')
-        xarray = xr.concat([xarray, xarray_EC], dim='subject')
+    if condition == 'both':
+        data_path_2 = data_path.replace('EC', 'EO') if 'EC' in data_path else data_path.replace('EO', 'EC')
+        xarray_2 = xr.open_dataarray(data_path_2, engine='h5netcdf')
+        xarray_2  = xarray_2.rename({"time": "timestep"}) # we know that the naming of the time dimensions are not the same
+        xarray = xr.concat([xarray, xarray_2], dim='subject')
 
     if channels != 'all':
         xarray = xarray.sel(channel=channels)
@@ -82,10 +83,14 @@ def load_data(data_path: str,
     sub = torch.arange(n_subjects)[:, None]
     pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], axis=0), dtype=torch.float32)
 
-    if condition == 'EO-EC':
+    if condition == 'both':
         sub = sub.repeat(2, 1)
+        state_ids = torch.cat([
+            torch.zeros(n_subjects, dtype=torch.long),
+            torch.ones(n_subjects, dtype=torch.long)
+        ], dim=0)[:, None]
 
-    return {'x': x, 'sub': sub, 'pos': pos}
+    return {'x': x, 'sub': sub, 'pos': state_ids if condition == 'both' else pos}
 
 
 def run(train_loader,
@@ -137,7 +142,7 @@ def run(train_loader,
                   shuffle=shuffle,
                   steps_per_epoch=steps_per_epoch,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=10),
+                      CustomModelCheckpoint(model_path, save_freq=20),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True, mode='min'),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True, mode='min'),
                       keras.callbacks.CSVLogger(cvloger_path),
@@ -167,8 +172,8 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251214'
-    CONDITION = None
+    OUTPUT_PATH = 'logs/20251219'
+    CONDITION = 'both' #TODO currently it only work with two conditions
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
                      channels='all',

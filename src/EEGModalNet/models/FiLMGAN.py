@@ -24,7 +24,7 @@ class Critic(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
 
         ks = 5
 
@@ -33,7 +33,7 @@ class Critic(keras.Model):
         #     LearnablePositionalEmbedding(512, 8),
         #     SelfAttention1D(2, 4, disable_attention=disable_attention)])
         
-        self.film_block = FiLMBlock(8, 32)
+        self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
         self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer)
@@ -58,11 +58,11 @@ class Critic(keras.Model):
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
         subj_emb = self.sub_emb(sub_labels.view(-1))
-        # state_emb = self.state_emb(state_id.view(-1))
+        state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, subj_emb)
+            x = self.sub_layer(x, subj_emb, state_emb)
         # x = self.post_att(x)
-        x = self.film_block(x, subj_emb)
+        x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
@@ -154,7 +154,7 @@ class Generator(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
 
         self.post_att = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
@@ -165,7 +165,7 @@ class Generator(keras.Model):
             # SelfAttention1D(4, 8, disable_attention=disable_attention)
             ])
         
-        self.film_block = FiLMBlock(32, 32)
+        self.film_block = DualFiLMBlock(32, 32)
 
         self.cov_block = keras.Sequential([
             keras.Input(shape=(128, 32)),
@@ -204,12 +204,12 @@ class Generator(keras.Model):
         noise, sub_labels, state_id = inputs
         x = self.post_att(noise)
         subj_emb = self.sub_emb(sub_labels.view(-1))
-        # state_emb = self.state_emb(state_id.view(-1))
-        x = self.film_block(x, subj_emb)
+        state_emb = self.state_emb(state_id.view(-1))
+        x = self.film_block(x, subj_emb, state_emb)
         x = self.cov_block(x)
         x = self.dil_block(x)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, subj_emb)
+            x = self.sub_layer(x, subj_emb, state_emb)
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
@@ -390,10 +390,10 @@ class FiLMGAN(keras.Model):
         total_loss = g_loss + d_loss
 
         # # Log FiLM params for later troubleshooting
-        # g_sub_0   = float(self.generator.layers[2].module.g_sub.detach().cpu())
-        # g_state_0 = float(self.generator.layers[2].module.g_state.detach().cpu())
-        # g_sub_1   = float(self.generator.layers[4].module.g_sub.detach().cpu())
-        # g_state_1 = float(self.generator.layers[4].module.g_state.detach().cpu())
+        g_sub_0   = float(self.generator.layers[2].module.g_sub.detach().cpu())
+        g_state_0 = float(self.generator.layers[2].module.g_state.detach().cpu())
+        g_sub_1   = float(self.generator.layers[4].module.g_sub.detach().cpu())
+        g_state_1 = float(self.generator.layers[4].module.g_state.detach().cpu())
 
         # Update metrics and return their value
         self.d_loss_tracker.update_state(d_loss)
@@ -409,9 +409,9 @@ class FiLMGAN(keras.Model):
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),
             '8 fake_pred_std': fake_pred.std().item(),
-            # '9 g_sub_subject': g_sub_0,
-            # '10 g_state_subject': g_state_0,
-            # '11 g_sub_mid': g_sub_1,
-            # '12 g_state_mid': g_state_1,
+            '9 g_sub_subject': g_sub_0,
+            '10 g_state_subject': g_state_0,
+            '11 g_sub_mid': g_sub_1,
+            '12 g_state_mid': g_state_1,
             'loss': total_loss,
         }

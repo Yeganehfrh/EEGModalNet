@@ -177,8 +177,8 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251219'
-    CONDITION = 'both' #TODO currently it only work with two conditions
+    OUTPUT_PATH = 'logs/20251228'
+    CONDITION = 'both' #FIX currently it only work with two conditions
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
                      channels='all',

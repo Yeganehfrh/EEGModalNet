@@ -564,17 +564,18 @@ class SubjectLayers_FiLM(nn.Module):
                 self.linear.bias.zero_()
 
     def forward(self, x, subj_emb):
-        
-        self.linear.to(x.dtype)
-        gamma_beta = self.linear(subj_emb.to(x.dtype))             # (B, 2C)
+        w_dtype = self.linear.weight.dtype
+
+        subj_emb = subj_emb.to(device=x.device, dtype=w_dtype)
+        gamma_beta = self.linear(subj_emb)             # (B, 2C)
         gamma, beta = gamma_beta.chunk(2, dim=-1)      # (B, C), (B, C)
 
         # residual, small-gain FiLM
         gamma = 1.0 + 0.1 * gamma
         beta  = 0.1 * beta
 
-        gamma = gamma.unsqueeze(1)  # (B, 1, C)
-        beta  = beta.unsqueeze(1)   # (B, 1, C)
+        gamma = gamma.to(x.dtype).unsqueeze(1)  # (B, 1, C)
+        beta  = beta.to(x.dtype).unsqueeze(1)   # (B, 1, C)
 
         return gamma * x + beta
 
@@ -604,14 +605,14 @@ class DualFiLMBlock(nn.Module):
         subj_emb: (B, d_sub)
         state_emb:(B, d_state)
         """
-        dtype = x.dtype
+        xdtype = x.dtype
         device = x.device
 
-        self.sub_film.to(dtype)
-        self.state_film.to(dtype)
+        w_sub_dtype = self.sub_film.weight.dtype
+        w_state_dtype = self.state_film.weight.dtype
 
-        subj_emb  = subj_emb.to(device=device, dtype=dtype)
-        state_emb = state_emb.to(device=device, dtype=dtype)
+        subj_emb  = subj_emb.to(device=device, dtype=w_sub_dtype)
+        state_emb = state_emb.to(device=device, dtype=w_state_dtype)
 
         sub_params   = self.sub_film(subj_emb)      # (B, 2C)
         state_params = self.state_film(state_emb)   # (B, 2C)
@@ -619,12 +620,15 @@ class DualFiLMBlock(nn.Module):
         g_sub, b_sub       = sub_params.chunk(2, dim=-1)    # (B,C)
         g_state, b_state   = state_params.chunk(2, dim=-1)  # (B,C)
 
-        # bounded residual FiLM (your style)
-        gamma = 1.0 + 0.1 * (self.g_sub * g_sub + self.g_state * g_state)
-        beta  = 0.1 * (self.g_sub * b_sub + self.g_state * b_state)
+        gsub = self.g_sub.to(device=device, dtype=w_sub_dtype)
+        gst  = self.g_state.to(device=device, dtype=w_sub_dtype)
 
-        gamma = gamma.unsqueeze(1)  # (B,1,C)
-        beta  = beta.unsqueeze(1)   # (B,1,C)
+        # bounded residual FiLM (your style)
+        gamma = 1.0 + 0.1 * (gsub * g_sub + gst * g_state)
+        beta  = 0.1 * (gsub * b_sub + gst * b_state)
+
+        gamma = gamma.to(xdtype).unsqueeze(1)  # (B,1,C)
+        beta  = beta.to(xdtype).unsqueeze(1)   # (B,1,C)
         return gamma * x + beta
     
 
@@ -648,14 +652,14 @@ class SubjectStateLayers_FiLM(nn.Module):
                 self.state_linear.weight.zero_(); self.state_linear.bias.zero_()
 
     def forward(self, x, subj_emb, state_emb):
-        dtype = x.dtype
+        xdtype = x.dtype
         device = x.device
 
-        self.sub_linear.to(dtype)
-        self.state_linear.to(dtype)
+        w_sub_dtype = self.sub_linear.weight.dtype
+        w_state_dtype = self.state_linear.weight.dtype
 
-        subj_emb  = subj_emb.to(device=device, dtype=dtype)
-        state_emb = state_emb.to(device=device, dtype=dtype)
+        subj_emb  = subj_emb.to(device=device, dtype=w_sub_dtype)
+        state_emb = state_emb.to(device=device, dtype=w_state_dtype)
 
         sub_gb   = self.sub_linear(subj_emb)        # (B,2C)
         st_gb    = self.state_linear(state_emb)     # (B,2C)
@@ -663,11 +667,14 @@ class SubjectStateLayers_FiLM(nn.Module):
         g_sub, b_sub = sub_gb.chunk(2, dim=-1)
         g_st,  b_st  = st_gb.chunk(2, dim=-1)
 
-        gamma = 1.0 + 0.1 * (self.g_sub * g_sub + self.g_state * g_st)
-        beta  = 0.1 * (self.g_sub * b_sub + self.g_state * b_st)
+        gsub = self.g_sub.to(device=device, dtype=w_sub_dtype)
+        gst  = self.g_state.to(device=device, dtype=w_sub_dtype)
+        
+        gamma = 1.0 + 0.1 * (gsub * g_sub + gst * g_st)
+        beta  = 0.1 * (gsub * b_sub + gst * b_st)
 
-        gamma = gamma.unsqueeze(1)
-        beta  = beta.unsqueeze(1)
+        gamma = gamma.to(xdtype).unsqueeze(1)
+        beta  = beta.to(xdtype).unsqueeze(1)
         return gamma * x + beta
     
 

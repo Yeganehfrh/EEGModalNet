@@ -143,7 +143,7 @@ def run(train_loader,
     def infinite_loader(loader):
         while True:
             for batch in loader:
-                yield batch
+                yield (batch,)
 
     _ = model.fit(infinite_loader(train_loader),
                   batch_size=batch_size,

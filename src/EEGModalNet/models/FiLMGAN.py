@@ -27,26 +27,20 @@ class Critic(keras.Model):
             self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
 
         ks = 5
-
-        # self.post_att = keras.Sequential([
-        #     keras.Input(shape=self.input_shape),
-        #     LearnablePositionalEmbedding(512, 8),
-        #     SelfAttention1D(2, 4, disable_attention=disable_attention)])
         
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
         self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv2 = layers.Conv1D(2 * feature_dim, ks, padding='same', name='conv4', kernel_initializer=kernel_initializer)
-        self.pool2 = layers.AveragePooling1D(pool_size=2)
+        self.conv2 = layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer)
+        # self.pool2 = layers.AveragePooling1D(pool_size=2)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv3 = layers.Conv1D(8 * feature_dim, ks, padding='same', name='conv5', kernel_initializer=kernel_initializer)
-        self.pool3 = layers.AveragePooling1D(pool_size=2)
+        self.conv3 = layers.Conv1D(8 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
+        # self.pool3 = layers.AveragePooling1D(pool_size=2)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.att2  = SelfAttention1D(8, feature_dim, disable_attention=disable_attention)
-        self.conv4 = layers.Conv1D(16 * feature_dim, ks, padding='same', name='conv6', kernel_initializer=kernel_initializer)
-        self.pool4 = layers.AveragePooling1D(pool_size=2)
+        self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
+        # self.pool4 = layers.AveragePooling1D(pool_size=2)
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
@@ -61,17 +55,15 @@ class Critic(keras.Model):
         state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb, state_emb)
-        # x = self.post_att(x)
         x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
 
         h1 = self.act1(self.conv1(x_cat))    # (B, 512, C1) HF-rich
-        h  = self.act2(self.pool2(self.conv2(h1)))
-        h  = self.act3(self.pool3(self.conv3(h)))
-        # h  = self.att2(h)
-        h  = self.act4(self.pool4(self.conv4(h)))
+        h  = self.act2(self.conv2(h1))
+        h  = self.act3(self.conv3(h))
+        h  = self.act4(self.conv4(h))
 
         h = self.mbsdv(h)
         
@@ -85,11 +77,12 @@ class Critic(keras.Model):
         out = self.final_dense(h_final)
         return out
     
-    def extract_features(self, x, subj_emb):
-        # subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
-        x = self.sub_layer(x, subj_emb)
+    def extract_features(self, x, sub_labels, state_ids):
+        subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
+        state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
+        x = self.sub_layer(x, subj_emb, state_emb)
         # x = self.post_att(x)
-        x = self.film_block(x, subj_emb)
+        x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)
         x_cat = ops.concatenate([x, x_hp], axis=-1)
@@ -257,7 +250,7 @@ class FiLMGAN(keras.Model):
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 500
+        self.warmup_epochs = 300
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -345,7 +338,7 @@ class FiLMGAN(keras.Model):
         batch_size = real_data.size(0)
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        n_critic = 2 if self.global_step < warmup_steps else 1
+        n_critic = 3 if self.global_step < warmup_steps else 1
 
         # train critic
         for _ in range(n_critic):

@@ -314,9 +314,10 @@ class FiLMGAN(keras.Model):
         gradients = torch.autograd.grad(
             outputs=prob_interpolated,
             inputs=interpolated,
-            grad_outputs=torch.ones(prob_interpolated.size(), device=real_data.device),
+            grad_outputs=torch.ones_like(prob_interpolated),
             create_graph=True,
             retain_graph=True,
+            only_inputs=True,
         )[0]
 
         gradients = gradients.reshape(batch_size, -1)

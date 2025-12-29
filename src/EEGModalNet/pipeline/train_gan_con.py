@@ -131,17 +131,21 @@ def run(train_loader,
         model.load_weights(reuse_model_path)
 
     lr_schedule_g = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0004, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0006, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.0, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
-                  gradient_penalty_weight=10)
+                  gradient_penalty_weight=5)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
     # step_loss_history = StepLossHistory()
+    def infinite_loader(loader):
+        while True:
+            for batch in loader:
+                yield batch
 
-    _ = model.fit(train_loader,
+    _ = model.fit(infinite_loader(train_loader),
                   batch_size=batch_size,
                   epochs=max_epochs,
                   shuffle=shuffle,
@@ -177,7 +181,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251229'
+    OUTPUT_PATH = 'logs/20251229_v2'
     CONDITION = 'both' #FIX currently it only work with two conditions
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
@@ -198,7 +202,7 @@ if __name__ == '__main__':
     RandomCropEEGDataset(
         data['x'], data['sub'], data['pos'],
         seg_len=512,
-        n_samples=500_000   # 100k random crops per epoch
+        n_samples=100_000   # 100k random crops per epoch
     ),
     batch_size=128,
     shuffle=False,

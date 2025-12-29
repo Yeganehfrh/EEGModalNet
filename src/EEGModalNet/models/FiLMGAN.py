@@ -318,6 +318,7 @@ class FiLMGAN(keras.Model):
             create_graph=True,
             retain_graph=True,
         )[0]
+
         gradients = gradients.reshape(batch_size, -1)
         gradient_norm = gradients.norm(2, dim=1)
         gradient_penalty = ((gradient_norm - 1) ** 2).mean()
@@ -343,17 +344,18 @@ class FiLMGAN(keras.Model):
         batch_size = real_data.size(0)
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        n_critic = 3 if self.global_step < warmup_steps else 1
+        n_critic = 2 if self.global_step < warmup_steps else 1
 
         # train critic
         for _ in range(n_critic):
             noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
             perm = torch.randperm(batch_size, device=real_data.device)
             fake_sub = sub[perm].view(-1, 1)
-            fake_data = self.generator((noise, fake_sub, pos)).detach() 
+            fake_pos = pos[perm].view(-1, 1)
+            fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
             real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
             self.chk("D_real", real_pred)
-            fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': pos})
+            fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
@@ -374,12 +376,12 @@ class FiLMGAN(keras.Model):
         noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
 
         self.zero_grad()
-        x_gen = self.generator((noise, fake_sub, pos))
+        x_gen = self.generator((noise, fake_sub, fake_pos))
 
         # smoking gun finbder 
         self.chk("G_out", x_gen)
 
-        fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': pos})
+        fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': fake_pos})
         g_loss = -fake_pred.mean()
         g_loss.backward()
 

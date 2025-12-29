@@ -42,8 +42,15 @@ class Critic(keras.Model):
         self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
         # self.pool4 = layers.AveragePooling1D(pool_size=2)
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.flatten = layers.Flatten(name='dis_flatten')
-        self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
+        # self.flatten = layers.Flatten(name='dis_flatten')
+        # self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
+
+        # new pooled head (replaces flatten head)
+        self.gap = layers.GlobalAveragePooling1D(name="d_gap")  # (B, T, C) -> (B, C)
+        mlp_dim = 256
+        self.head_fc1 = layers.Dense(mlp_dim, name="d_head_fc1", kernel_initializer=kernel_initializer)
+        self.head_act1 = layers.LeakyReLU(negative_slope=negative_slope)
+        self.head_fc2 = layers.Dense(1, name="d_head_out", dtype="float32", kernel_initializer=kernel_initializer)
 
         self.mbsdv = MinibatchStdDev()
 
@@ -67,21 +74,29 @@ class Critic(keras.Model):
 
         h = self.mbsdv(h)
         
-        h_flat   = self.flatten(h)          # coarse features
-        h1_flat  = self.flatten(h1)         # early HF features
-        h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+        # h_flat   = self.flatten(h)          # coarse features
+        # h1_flat  = self.flatten(h1)         # early HF features
+        # h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+
+        # pooled summaries (per-channel) ---
+        # Using mean(abs) is often a better "energy" summary than mean()
+        h_pool  = self.gap(ops.abs(h))      # (B, C4+1 as mbsdv adds a channel))
+        h1_pool = self.gap(ops.abs(h1))     # (B, C1)
+
+        h_final = ops.concatenate([h_pool, h1_pool], axis=-1)  # (B, C4 + C1)
 
         if self.output_features:
             return h_final
 
-        out = self.final_dense(h_final)
+        # MLP head
+        y = self.head_act1(self.head_fc1(h_final))
+        out = self.head_fc2(y)
         return out
     
-    def extract_features(self, x, sub_labels, state_ids):
-        subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
+    def extract_features(self, x, subj_emb, state_ids):
+        # subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
         state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
         x = self.sub_layer(x, subj_emb, state_emb)
-        # x = self.post_att(x)
         x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)
@@ -92,20 +107,15 @@ class Critic(keras.Model):
         h1 = self.act1(self.conv1(x_cat))
         pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//pooled_size))(h1)
         pooled_h1 = layers.Flatten()(pooled_h1)
-        h = self.act2(self.pool2(self.conv2(h1)))
+        h = self.act2(self.conv2(h1))
         pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
-        h = self.act3(self.pool3(self.conv3(h)))
+        h = self.act3(self.conv3(h))
         pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
-
-        # h = self.att2(h)
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([feats, pooled_h], axis=-1)
-        h = self.act4(self.pool4(self.conv4(h)))
+        h = self.act4(self.conv4(h))
         pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         # print(h.shape, pooled_h.shape)
         pooled_h = layers.Flatten()(pooled_h)
@@ -113,6 +123,29 @@ class Critic(keras.Model):
         feats = ops.concatenate([feats, pooled_h], axis=-1)
 
         return feats  # shape (B, D_feat)
+
+    # def extract_features(self, x, sub_labels, state_ids):
+    #     subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
+    #     state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
+    #     x = self.sub_layer(x, subj_emb, state_emb)
+    #     x = self.film_block(x, subj_emb, state_emb)
+
+    #     x_hp = self.highpass(x)
+    #     x_cat = ops.concatenate([x, x_hp], axis=-1)
+
+    #     h1 = self.act1(self.conv1(x_cat))
+    #     pooled_h1 = ops.mean(ops.abs(h1), axis=1)
+    #     h = self.act2(self.conv2(h1))
+    #     pooled_h = ops.mean(ops.abs(h), axis=1)
+    #     feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
+    #     h = self.act3(self.conv3(h))
+    #     pooled_h = ops.mean(ops.abs(h), axis=1)
+    #     feats = ops.concatenate([feats, pooled_h], axis=-1)
+    #     h = self.act4(self.conv4(h))
+    #     pooled_h = ops.mean(ops.abs(h), axis=1)
+    #     feats = ops.concatenate([feats, pooled_h], axis=-1)
+
+    #     return feats  # shape (B, D_feat)
 
 
     def get_config(self):

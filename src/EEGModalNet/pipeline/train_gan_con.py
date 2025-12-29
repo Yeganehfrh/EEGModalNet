@@ -181,7 +181,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20251229_v2'
+    OUTPUT_PATH = 'logs/20251229_v3'
     CONDITION = 'both' #FIX currently it only work with two conditions
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
@@ -210,10 +210,6 @@ if __name__ == '__main__':
     drop_last=True,
     generator=g
     )
-
-    print("len(dataset):", len(train_loader.dataset))
-    print("len(loader):", len(train_loader))
-    print("type passed to fit:", type(train_loader))
 
     if torch.cuda.is_available():
         print('GPU is available')

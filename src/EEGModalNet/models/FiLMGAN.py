@@ -93,37 +93,6 @@ class Critic(keras.Model):
         out = self.head_fc2(y)
         return out
     
-    def extract_features(self, x, subj_emb, state_ids):
-        # subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
-        state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
-        x = self.sub_layer(x, subj_emb, state_emb)
-        x = self.film_block(x, subj_emb, state_emb)
-
-        x_hp = self.highpass(x)
-        x_cat = ops.concatenate([x, x_hp], axis=-1)
-
-        pooled_size = 4
-
-        h1 = self.act1(self.conv1(x_cat))
-        pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//pooled_size))(h1)
-        pooled_h1 = layers.Flatten()(pooled_h1)
-        h = self.act2(self.conv2(h1))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
-        h = self.act3(self.conv3(h))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([feats, pooled_h], axis=-1)
-        h = self.act4(self.conv4(h))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        # print(h.shape, pooled_h.shape)
-        pooled_h = layers.Flatten()(pooled_h)
-        # pooled_h = ops.mean(h, axis=1)
-        feats = ops.concatenate([feats, pooled_h], axis=-1)
-
-        return feats  # shape (B, D_feat)
-
     # def extract_features(self, x, sub_labels, state_ids):
     #     subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
     #     state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
@@ -133,19 +102,50 @@ class Critic(keras.Model):
     #     x_hp = self.highpass(x)
     #     x_cat = ops.concatenate([x, x_hp], axis=-1)
 
+    #     pooled_size = 4
+
     #     h1 = self.act1(self.conv1(x_cat))
-    #     pooled_h1 = ops.mean(ops.abs(h1), axis=1)
+    #     pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//pooled_size))(h1)
+    #     pooled_h1 = layers.Flatten()(pooled_h1)
     #     h = self.act2(self.conv2(h1))
-    #     pooled_h = ops.mean(ops.abs(h), axis=1)
+    #     pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
+    #     pooled_h = layers.Flatten()(pooled_h)
     #     feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
     #     h = self.act3(self.conv3(h))
-    #     pooled_h = ops.mean(ops.abs(h), axis=1)
+    #     pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
+    #     pooled_h = layers.Flatten()(pooled_h)
     #     feats = ops.concatenate([feats, pooled_h], axis=-1)
     #     h = self.act4(self.conv4(h))
-    #     pooled_h = ops.mean(ops.abs(h), axis=1)
+    #     pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
+    #     # print(h.shape, pooled_h.shape)
+    #     pooled_h = layers.Flatten()(pooled_h)
+    #     # pooled_h = ops.mean(h, axis=1)
     #     feats = ops.concatenate([feats, pooled_h], axis=-1)
 
     #     return feats  # shape (B, D_feat)
+
+    def extract_features(self, x, sub_labels, state_ids):
+        subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
+        state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
+        x = self.sub_layer(x, subj_emb, state_emb)
+        x = self.film_block(x, subj_emb, state_emb)
+
+        x_hp = self.highpass(x)
+        x_cat = ops.concatenate([x, x_hp], axis=-1)
+
+        h1 = self.act1(self.conv1(x_cat))
+        pooled_h1 = ops.mean(ops.abs(h1), axis=1)
+        h = self.act2(self.conv2(h1))
+        pooled_h = ops.mean(ops.abs(h), axis=1)
+        feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
+        h = self.act3(self.conv3(h))
+        pooled_h = ops.mean(ops.abs(h), axis=1)
+        feats = ops.concatenate([feats, pooled_h], axis=-1)
+        h = self.act4(self.conv4(h))
+        pooled_h = ops.mean(ops.abs(h), axis=1)
+        feats = ops.concatenate([feats, pooled_h], axis=-1)
+
+        return feats  # shape (B, D_feat)
 
 
     def get_config(self):

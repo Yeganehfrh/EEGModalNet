@@ -388,7 +388,12 @@ class FiLMGAN(keras.Model):
             self.chk("D_fake", fake_pred)
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+
+            # --- Drift penalty ---
+            drift_weight = 1e-3
+            drift = (real_pred ** 2).mean()
+
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + drift_weight * drift
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]

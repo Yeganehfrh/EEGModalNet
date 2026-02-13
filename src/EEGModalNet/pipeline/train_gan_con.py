@@ -41,6 +41,17 @@ from meegkit import dss
 from scipy.signal import butter, sosfiltfilt
 
 
+def _resolve_condition_path(data_path: str, target_condition: str) -> str:
+    """Return a path matching target_condition by swapping EC/EO tokens when needed."""
+    target = target_condition.upper()
+    other = 'EO' if target == 'EC' else 'EC'
+    if target in data_path:
+        return data_path
+    if other in data_path:
+        return data_path.replace(other, target)
+    return data_path
+
+
 def load_data(data_path: str,
               channels: List[str] | str = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2'],
               n_subjects: int = 202,
@@ -51,17 +62,29 @@ def load_data(data_path: str,
               remove_line_noise=True) -> Dict:
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    del device  # kept for parity with sibling pipelines
 
+    condition = condition.lower() if isinstance(condition, str) else None
+    if condition not in {None, 'both', 'ec', 'eo'}:
+        raise ValueError(f"Unsupported condition={condition!r}. Use one of: 'both', 'EC', 'EO', or None.")
+
+    if condition in {'ec', 'eo'}:
+        data_path = _resolve_condition_path(data_path, condition)
     xarray = xr.open_dataarray(data_path, engine='h5netcdf')
 
     if n_subjects < xarray.sizes['subject']:
         xarray = xarray.sel(subject=xarray.subject[:n_subjects])
 
     if condition == 'both':
-        data_path_2 = data_path.replace('EC', 'EO') if 'EC' in data_path else data_path.replace('EO', 'EC')
+        if 'EC' in data_path:
+            data_path_2 = data_path.replace('EC', 'EO')
+        elif 'EO' in data_path:
+            data_path_2 = data_path.replace('EO', 'EC')
+        else:
+            raise ValueError("For condition='both', data_path must include either 'EC' or 'EO'.")
         xarray_2 = xr.open_dataarray(data_path_2, engine='h5netcdf')
-        if n_subjects < xarray.sizes['subject']:
-            xarray_2 = xarray_2.sel(subject=xarray.subject[:n_subjects])
+        if n_subjects < xarray_2.sizes['subject']:
+            xarray_2 = xarray_2.sel(subject=xarray_2.subject[:n_subjects])
         xarray_2  = xarray_2.rename({"time": "timestep"}) # we know that the naming of the time dimensions are not the same
         xarray = xr.concat([xarray, xarray_2], dim='subject')
 
@@ -85,17 +108,21 @@ def load_data(data_path: str,
         x = x.T
 
     x = torch.tensor(x.copy(), dtype=torch.float32)
-    sub = torch.arange(n_subjects)[:, None]
-    pos = torch.tensor(xarray.ch_positions[None].repeat(x.shape[0], axis=0), dtype=torch.float32)
-
     if condition == 'both':
-        sub = sub.repeat(2, 1)
+        if x.shape[0] % 2 != 0:
+            raise ValueError("Expected an even number of subjects for condition='both'.")
+        n_per_condition = x.shape[0] // 2
+        sub = torch.arange(n_per_condition, dtype=torch.long)[:, None].repeat(2, 1)
         state_ids = torch.cat([
-            torch.zeros(n_subjects, dtype=torch.long),
-            torch.ones(n_subjects, dtype=torch.long)
+            torch.zeros(n_per_condition, dtype=torch.long),
+            torch.ones(n_per_condition, dtype=torch.long)
         ], dim=0)[:, None]
+    else:
+        sub = torch.arange(x.shape[0], dtype=torch.long)[:, None]
+        state_value = 0 if condition != 'eo' else 1
+        state_ids = torch.full((x.shape[0], 1), state_value, dtype=torch.long)
 
-    return {'x': x, 'sub': sub, 'pos': state_ids if condition == 'both' else pos}
+    return {'x': x, 'sub': sub, 'pos': state_ids}
 
 
 def run(train_loader,
@@ -182,7 +209,7 @@ if __name__ == '__main__':
     LATENT_DIM = 128
     BATCH_SIZE = 128
     OUTPUT_PATH = 'logs/20260213_v2'
-    CONDITION = 'both' #FIX currently it only work with two conditions
+    CONDITION = 'both'  # supported: 'both', 'EC', or 'EO'
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
                      channels='all',

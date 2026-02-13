@@ -40,6 +40,7 @@ class Critic(keras.Model):
         self.conv4 = SpectralNormalization(layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer))
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
+        self.gap = layers.GlobalAveragePooling1D()
         self.hidd_dense = SpectralNormalization(layers.Dense(128, name='hidd_dense', kernel_initializer=kernel_initializer))
         self.final_dense = SpectralNormalization(layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer))
 
@@ -69,9 +70,8 @@ class Critic(keras.Model):
         # h1_flat  = self.flatten(h1)         # early HF features
         # h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
 
-
-        h_pool  = GlobalAveragePooling1D()(h)
-        h1_pool = GlobalAveragePooling1D()(h1)
+        h_pool  = self.gap(h)
+        h1_pool = self.gap(h1)
         feat = ops.concatenate([h_pool, h1_pool], axis=-1)
 
         out = self.hidd_dense(feat)

@@ -50,11 +50,11 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
-        # subj_emb = self.sub_emb(sub_labels.view(-1))
-        # state_emb = self.state_emb(state_id.view(-1))
-        # if hasattr(self, 'sub_layer'):
-        #     x = self.sub_layer(x, subj_emb, state_emb)
-        # x = self.film_block(x, subj_emb, state_emb)
+        subj_emb = self.sub_emb(sub_labels.view(-1))
+        state_emb = self.state_emb(state_id.view(-1))
+        if hasattr(self, 'sub_layer'):
+            x = self.sub_layer(x, subj_emb, state_emb)
+        x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
@@ -64,7 +64,7 @@ class Critic(keras.Model):
         h  = self.act3(self.conv3(h))
         h  = self.act4(self.conv4(h))
 
-        # h = self.mbsdv(h)
+        h = self.mbsdv(h)
         
         # h_flat   = self.flatten(h)          # coarse features
         # h1_flat  = self.flatten(h1)         # early HF features
@@ -80,7 +80,7 @@ class Critic(keras.Model):
             return feat
 
         out = self.final_dense(out)
-        return out
+        return out.float()
     
     def extract_features(self, x, sub_labels, state_ids):
         subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
@@ -112,7 +112,6 @@ class Critic(keras.Model):
         pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
         pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
-
         return feats  # shape (B, D_feat)
 
 
@@ -250,7 +249,7 @@ class FiLMGAN(keras.Model):
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 300
+        self.warmup_epochs = 1
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -353,19 +352,19 @@ class FiLMGAN(keras.Model):
             self.chk("D_real", real_pred)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
-            
-            # make sure the loss computation is in float
-            print(real_pred.dtype, fake_pred.dtype)
-            real_pred = real_pred.float()
-            fake_pred = fake_pred.float()
-            if torch.isinf(real_pred).any():
-                print("INF in real_pred")
-            if torch.isinf(fake_pred).any():
-                print("INF in fake_pred")
+
+            # # make sure the loss computation is in float
+            # print(real_pred.dtype, fake_pred.dtype)
+            # real_pred = real_pred.float()
+            # fake_pred = fake_pred.float()
+            # if torch.isinf(real_pred).any():
+            #     print("INF in real_pred")
+            # if torch.isinf(fake_pred).any():
+            #     print("INF in fake_pred")
 
 
             self.zero_grad()
-            drift_weight = 1e-3
+            drift_weight = 1e-4
             drift = (real_pred ** 2).mean()
             d_loss = (fake_pred.mean() - real_pred.mean()) + drift_weight * drift
             d_loss.backward()

@@ -48,11 +48,11 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
-        subj_emb = self.sub_emb(sub_labels.view(-1))
-        state_emb = self.state_emb(state_id.view(-1))
-        if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, subj_emb, state_emb)
-        x = self.film_block(x, subj_emb, state_emb)
+        # subj_emb = self.sub_emb(sub_labels.view(-1))
+        # state_emb = self.state_emb(state_id.view(-1))
+        # if hasattr(self, 'sub_layer'):
+        #     x = self.sub_layer(x, subj_emb, state_emb)
+        # x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
@@ -62,7 +62,7 @@ class Critic(keras.Model):
         h  = self.act3(self.conv3(h))
         h  = self.act4(self.conv4(h))
 
-        h = self.mbsdv(h)
+        # h = self.mbsdv(h)
         
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features

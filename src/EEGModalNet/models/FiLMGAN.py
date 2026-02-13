@@ -1,7 +1,7 @@
 import torch
 from keras import layers
 import keras
-from keras.layers import SpectralNormalization
+from keras.layers import SpectralNormalization, GlobalAveragePooling1D
 from .common_v0 import convBlock, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev, SubjectStateLayers_FiLM, DualFiLMBlock
 from keras import ops
 
@@ -40,7 +40,8 @@ class Critic(keras.Model):
         self.conv4 = SpectralNormalization(layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer))
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
-        self.final_dense = SpectralNormalization(layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer))
+        self.hidd_dense = SpectralNormalization(layers.Dense(128, name='hidd_dense', kernel_initializer=kernel_initializer))
+        self.final_dense = SpectralNormalization(layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer))
 
         self.mbsdv = MinibatchStdDev()
 
@@ -64,14 +65,21 @@ class Critic(keras.Model):
 
         # h = self.mbsdv(h)
         
-        h_flat   = self.flatten(h)          # coarse features
-        h1_flat  = self.flatten(h1)         # early HF features
-        h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+        # h_flat   = self.flatten(h)          # coarse features
+        # h1_flat  = self.flatten(h1)         # early HF features
+        # h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+
+
+        h_pool  = GlobalAveragePooling1D()(h)
+        h1_pool = GlobalAveragePooling1D()(h1)
+        feat = ops.concatenate([h_pool, h1_pool], axis=-1)
+
+        out = self.hidd_dense(feat)
 
         if self.output_features:
-            return h_final
+            return feat
 
-        out = self.final_dense(h_final)
+        out = self.final_dense(out)
         return out
     
     def extract_features(self, x, sub_labels, state_ids):

@@ -346,7 +346,9 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
             self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean())
+            drift_weight = 1e-3
+            drift = (real_pred ** 2).mean()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + drift_weight * drift
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]

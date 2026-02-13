@@ -1,6 +1,7 @@
 import torch
 from keras import layers
 import keras
+from keras.layers import SpectralNormalization
 from .common_v0 import convBlock, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev, SubjectStateLayers_FiLM, DualFiLMBlock
 from keras import ops
 
@@ -19,7 +20,6 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.output_features = False
-        # disable_attention = True
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
@@ -31,26 +31,16 @@ class Critic(keras.Model):
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
-        self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer)
+        self.conv1 = SpectralNormalization(layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer))
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv2 = layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer)
-        # self.pool2 = layers.AveragePooling1D(pool_size=2)
+        self.conv2 = SpectralNormalization(layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer))
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv3 = layers.Conv1D(8 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
-        # self.pool3 = layers.AveragePooling1D(pool_size=2)
+        self.conv3 = SpectralNormalization(layers.Conv1D(8 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer))
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
-        # self.pool4 = layers.AveragePooling1D(pool_size=2)
+        self.conv4 = SpectralNormalization(layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer))
         self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.flatten = layers.Flatten(name='dis_flatten')
-        # self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
-
-        # new pooled head (replaces flatten head)
-        self.gap = layers.GlobalAveragePooling1D(name="d_gap")  # (B, T, C) -> (B, C)
-        mlp_dim = 256
-        self.head_fc1 = layers.Dense(mlp_dim, name="d_head_fc1", kernel_initializer=kernel_initializer)
-        self.head_act1 = layers.LeakyReLU(negative_slope=negative_slope)
-        self.head_fc2 = layers.Dense(1, name="d_head_out", dtype="float32", kernel_initializer=kernel_initializer)
+        self.flatten = layers.Flatten(name='dis_flatten')
+        self.final_dense = SpectralNormalization(layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer))
 
         self.mbsdv = MinibatchStdDev()
 
@@ -74,56 +64,16 @@ class Critic(keras.Model):
 
         h = self.mbsdv(h)
         
-        # h_flat   = self.flatten(h)          # coarse features
-        # h1_flat  = self.flatten(h1)         # early HF features
-        # h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
-
-        # pooled summaries (per-channel) ---
-        # Using mean(abs) is often a better "energy" summary than mean()
-        h_pool  = self.gap(ops.abs(h))      # (B, C4+1 as mbsdv adds a channel))
-        h1_pool = self.gap(ops.abs(h1))     # (B, C1)
-
-        h_final = ops.concatenate([h_pool, h1_pool], axis=-1)  # (B, C4 + C1)
+        h_flat   = self.flatten(h)          # coarse features
+        h1_flat  = self.flatten(h1)         # early HF features
+        h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
 
         if self.output_features:
             return h_final
 
-        # MLP head
-        y = self.head_act1(self.head_fc1(h_final))
-        out = self.head_fc2(y)
+        out = self.final_dense(h_final)
         return out
     
-    # def extract_features(self, x, sub_labels, state_ids):
-    #     subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
-    #     state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
-    #     x = self.sub_layer(x, subj_emb, state_emb)
-    #     x = self.film_block(x, subj_emb, state_emb)
-
-    #     x_hp = self.highpass(x)
-    #     x_cat = ops.concatenate([x, x_hp], axis=-1)
-
-    #     pooled_size = 4
-
-    #     h1 = self.act1(self.conv1(x_cat))
-    #     pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//pooled_size))(h1)
-    #     pooled_h1 = layers.Flatten()(pooled_h1)
-    #     h = self.act2(self.conv2(h1))
-    #     pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-    #     pooled_h = layers.Flatten()(pooled_h)
-    #     feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
-    #     h = self.act3(self.conv3(h))
-    #     pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-    #     pooled_h = layers.Flatten()(pooled_h)
-    #     feats = ops.concatenate([feats, pooled_h], axis=-1)
-    #     h = self.act4(self.conv4(h))
-    #     pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-    #     # print(h.shape, pooled_h.shape)
-    #     pooled_h = layers.Flatten()(pooled_h)
-    #     # pooled_h = ops.mean(h, axis=1)
-    #     feats = ops.concatenate([feats, pooled_h], axis=-1)
-
-    #     return feats  # shape (B, D_feat)
-
     def extract_features(self, x, sub_labels, state_ids):
         subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
         state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
@@ -133,16 +83,26 @@ class Critic(keras.Model):
         x_hp = self.highpass(x)
         x_cat = ops.concatenate([x, x_hp], axis=-1)
 
+        pooled_size = 4
+
         h1 = self.act1(self.conv1(x_cat))
-        pooled_h1 = ops.mean(ops.abs(h1), axis=1)
-        h = self.act2(self.conv2(h1))
-        pooled_h = ops.mean(ops.abs(h), axis=1)
+        pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//pooled_size))(h1)
+        pooled_h1 = layers.Flatten()(pooled_h1)
+        h = self.act2(self.pool2(self.conv2(h1)))
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
+        pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
-        h = self.act3(self.conv3(h))
-        pooled_h = ops.mean(ops.abs(h), axis=1)
+        h = self.act3(self.pool3(self.conv3(h)))
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
+        pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
-        h = self.act4(self.conv4(h))
-        pooled_h = ops.mean(ops.abs(h), axis=1)
+
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
+        pooled_h = layers.Flatten()(pooled_h)
+        feats = ops.concatenate([feats, pooled_h], axis=-1)
+        h = self.act4(self.pool4(self.conv4(h)))
+        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
+        pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
 
         return feats  # shape (B, D_feat)
@@ -175,7 +135,6 @@ class Generator(keras.Model):
         self.input_shape = (time_dim, feature_dim)
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
-        # disable_attention = True
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
@@ -361,8 +320,6 @@ class FiLMGAN(keras.Model):
         return default if x is None else float(x.detach().cpu())
 
     def train_step(self, data):
-        if isinstance(data, (tuple, list)):
-            data = data[0]
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
         device = next(self.parameters()).device
@@ -386,14 +343,8 @@ class FiLMGAN(keras.Model):
             self.chk("D_real", real_pred)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
-
-            # --- Drift penalty ---
-            drift_weight = 1e-3
-            drift = (real_pred ** 2).mean()
-
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + drift_weight * drift
+            d_loss = (fake_pred.mean() - real_pred.mean())
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
@@ -440,7 +391,6 @@ class FiLMGAN(keras.Model):
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
-            '4 gp': gp.item(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

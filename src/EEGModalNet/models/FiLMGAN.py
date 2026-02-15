@@ -325,6 +325,22 @@ class FiLMGAN(keras.Model):
     
     def safe_scalar(x, default=float("nan")):
         return default if x is None else float(x.detach().cpu())
+    
+    def r1_penalty(self, real_data, sub, pos):
+        real_data.requires_grad_(True)
+
+        real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
+
+        gradients = torch.autograd.grad(
+            outputs=real_pred.sum(),
+            inputs=real_data,
+            create_graph=True,
+        )[0]
+
+        gradients = gradients.reshape(real_data.size(0), -1)
+        penalty = gradients.pow(2).sum(dim=1).mean()
+
+        return penalty
 
     def train_step(self, data):
         if isinstance(data, (tuple, list)):
@@ -353,15 +369,12 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            if self.global_step % 2 == 0:
-                gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            else:
-                gp = torch.tensor(0.0, device=real_data.device)
+            r1 = self.r1_penalty(real_data, sub, pos)
             
             # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 
             self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss = (fake_pred.mean() - real_pred.mean()) + r1 * self.gradient_penalty_weight
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
@@ -408,7 +421,7 @@ class FiLMGAN(keras.Model):
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
-            '4 gp': gp.item(),
+            '4 gp': r1.item(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

@@ -19,6 +19,12 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.output_features = False
+        self.res_scale = self.add_weight(
+                              name="res_scale",
+                              shape=(),
+                              initializer=keras.initializers.Constant(0.1),
+                              trainable=True)
+
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
@@ -34,10 +40,10 @@ class Critic(keras.Model):
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv2 = layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
+        self.conv3 = layers.Conv1D(8 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
-        # self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
+        self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
+        self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
@@ -62,14 +68,14 @@ class Critic(keras.Model):
         # print('conv1', ops.mean(h), ops.std(h))
         h  = self.act3(self.conv3(h))
         # print('conv1', ops.mean(h), ops.std(h))
-        # h  = self.act4(self.conv4(h))
+        h  = self.act4(self.conv4(h))
         # print('conv1', ops.mean(h), ops.std(h))
 
         h = self.mbsdv(h)
         
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features
-        h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+        h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
         if self.output_features:
             return h_final
@@ -347,12 +353,12 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            # if self.global_step % 2 == 0:
-            #     gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            # else:
-            #     gp = 0
+            if self.global_step % 2 == 0:
+                gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            else:
+                gp = 0
             
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight

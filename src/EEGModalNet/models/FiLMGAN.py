@@ -356,7 +356,7 @@ class FiLMGAN(keras.Model):
             if self.global_step % 2 == 0:
                 gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             else:
-                gp = 0
+                gp = torch.tensor(0.0, device=real_data.device)
             
             # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 

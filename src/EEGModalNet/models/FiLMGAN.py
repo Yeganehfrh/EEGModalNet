@@ -50,6 +50,12 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
+
+        # z-transform inputs
+        mean = ops.mean(x, axis=1, keepdims=True)
+        std  = ops.std(x, axis=1, keepdims=True) + 1e-6
+        x = (x - mean) / std
+
         subj_emb = self.sub_emb(sub_labels.view(-1))
         state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):

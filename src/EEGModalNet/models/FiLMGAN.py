@@ -40,11 +40,12 @@ class Critic(keras.Model):
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv2 = layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv3 = layers.Conv1D(8 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
+        self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
-        self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.flatten = layers.Flatten(name='dis_flatten')
+        # self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
+        # self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
+        self.gap = layers.GlobalAveragePooling1D(name="d_gap")
+        # self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
         self.mbsdv = MinibatchStdDev()
@@ -68,13 +69,16 @@ class Critic(keras.Model):
         # print('conv1', ops.mean(h), ops.std(h))
         h  = self.act3(self.conv3(h))
         # print('conv1', ops.mean(h), ops.std(h))
-        h  = self.act4(self.conv4(h))
+        # h  = self.act4(self.conv4(h))
         # print('conv1', ops.mean(h), ops.std(h))
 
         h = self.mbsdv(h)
         
-        h_flat   = self.flatten(h)          # coarse features
-        h1_flat  = self.flatten(h1)         # early HF features
+        # h_flat   = self.flatten(h)          # coarse features
+        # h1_flat  = self.flatten(h1)         # early HF features
+        h_flat = self.gap(h)
+        h1_flat = self.gap(h1)
+
         h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
         if self.output_features:

@@ -60,26 +60,33 @@ class Critic(keras.Model):
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
 
         h1 = self.act1(self.conv1(x_cat))    # (B, 512, C1) HF-rich
+        # print('conv1', ops.mean(abs(h1)), ops.std(h1))
         h  = self.act2(self.conv2(h1))
+        # print('conv2', ops.mean(abs(h)), ops.std(h))
         h  = self.act3(self.conv3(h))
+        # print('conv3', ops.mean(abs(h)), ops.std(h))
         h  = self.act4(self.conv4(h))
-
+        # print('conv4', ops.mean(abs(h)), ops.std(h))
         h = self.mbsdv(h)
+        # print('mbsdv', ops.mean(abs(h)), ops.std(h))
         
-        # h_flat   = self.flatten(h)          # coarse features
-        # h1_flat  = self.flatten(h1)         # early HF features
-        # h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+        h_flat   = self.flatten(h)          # coarse features
+        h1_flat  = self.flatten(h1)         # early HF features
+        h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
 
-        h_pool  = self.gap(h)
-        h1_pool = self.gap(h1)
-        feat = ops.concatenate([h_pool, h1_pool], axis=-1)
+        # h_pool  = self.gap(h)
+        # h1_pool = self.gap(h1)
+        # feat = ops.concatenate([h_pool, h1_pool], axis=-1)
+        # print('feat', ops.mean(abs(feat)), ops.std(feat))
 
-        out = self.hidd_dense(feat)
+        # out = self.hidd_dense(feat)
+        # print('out', ops.mean(abs(out)), ops.std(out))
 
         if self.output_features:
-            return feat
+            return h_final
 
-        out = self.final_dense(out)
+        out = self.final_dense(h_final)
+        # print('final', ops.mean(abs(out)), ops.std(out))
         return out.float()
     
     def extract_features(self, x, sub_labels, state_ids):
@@ -91,28 +98,39 @@ class Critic(keras.Model):
         x_hp = self.highpass(x)
         x_cat = ops.concatenate([x, x_hp], axis=-1)
 
-        pooled_size = 4
-
         h1 = self.act1(self.conv1(x_cat))
-        pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//pooled_size))(h1)
-        pooled_h1 = layers.Flatten()(pooled_h1)
-        h = self.act2(self.pool2(self.conv2(h1)))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
+        pooled_h1  = self.pool_and_flat(h1)
+
+        h = self.act2(self.conv2(h1))
+        pooled_h  = self.pool_and_flat(h)
+
         feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
-        h = self.act3(self.pool3(self.conv3(h)))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
+
+        h = self.act3(self.conv3(h))
+        pooled_h = self.pool_and_flat(h)
+
         feats = ops.concatenate([feats, pooled_h], axis=-1)
 
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
+        h = self.act4(self.conv4(h))  
+        pooled_h = self.pool_and_flat(h)
+
         feats = ops.concatenate([feats, pooled_h], axis=-1)
-        h = self.act4(self.pool4(self.conv4(h)))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([feats, pooled_h], axis=-1)
+
+        # h = self.mbsdv(h)
+        # h = self.gap(h)
+        # h1 = self.gap(h1)
+        # h_h1 = ops.concatenate([h, h1], axis=-1)
+        # h_h1 = self.hidd_dense(h_h1)
+        # pooled_h = self.pool_and_flat(h_h1)
+
+        # feats = ops.concatenate([feats, pooled_h], axis=-1)
+
         return feats  # shape (B, D_feat)
+    
+
+    def pool_and_flat(self, x, ps=4):
+        pooled = layers.MaxPool1D(pool_size=max(1, x.shape[1]//ps))(x)
+        return layers.Flatten()(pooled)
 
 
     def get_config(self):

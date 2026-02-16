@@ -44,8 +44,8 @@ class Critic(keras.Model):
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
         # self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
         # self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.gap = layers.GlobalAveragePooling1D(name="d_gap")
-        # self.flatten = layers.Flatten(name='dis_flatten')
+        # self.gap = layers.GlobalAveragePooling1D(name="d_gap")
+        self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
         self.mbsdv = MinibatchStdDev()
@@ -74,10 +74,10 @@ class Critic(keras.Model):
 
         h = self.mbsdv(h)
         
-        # h_flat   = self.flatten(h)          # coarse features
-        # h1_flat  = self.flatten(h1)         # early HF features
-        h_flat = self.gap(h)
-        h1_flat = self.gap(h1)
+        h_flat   = self.flatten(h)          # coarse features
+        h1_flat  = self.flatten(h1)         # early HF features
+        # h_flat = self.gap(h)
+        # h1_flat = self.gap(h1)
 
         h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
@@ -358,32 +358,35 @@ class FiLMGAN(keras.Model):
 
         batch_size = real_data.size(0)
 
-        warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        n_critic = 3 if self.global_step < warmup_steps else 1
+        # warmup_steps = self.warmup_epochs * self.steps_per_epoch
+        # n_critic = 3 if self.global_step < warmup_steps else 1
 
         # train critic
-        for _ in range(n_critic):
-            noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
-            perm = torch.randperm(batch_size, device=real_data.device)
-            fake_sub = sub[perm].view(-1, 1)
-            fake_pos = pos[perm].view(-1, 1)
-            fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
-            real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
-            self.chk("D_real", real_pred)
-            fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
-            self.chk("D_fake", fake_pred)
+        # for _ in range(n_critic):
+        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
+        perm = torch.randperm(batch_size, device=real_data.device)
+        fake_sub = sub[perm].view(-1, 1)
+        fake_pos = pos[perm].view(-1, 1)
+        fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
+        real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
+        self.chk("D_real", real_pred)
+        fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
+        self.chk("D_fake", fake_pred)
 
+        if self.global_step % 2 == 0:
             r1 = self.r1_penalty(real_data, sub, pos)
-            
-            # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+        else:
+            r1 = torch.tensor(0.0, device=real_data.device)
+        
+        # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 
-            self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + r1 * self.gradient_penalty_weight
-            d_loss.backward()
+        self.zero_grad()
+        d_loss = (fake_pred.mean() - real_pred.mean()) + r1 * self.gradient_penalty_weight
+        d_loss.backward()
 
-            grads = [v.value.grad for v in self.critic.trainable_weights]
-            with torch.no_grad():
-                self.d_optimizer.apply(grads, self.critic.trainable_weights)
+        grads = [v.value.grad for v in self.critic.trainable_weights]
+        with torch.no_grad():
+            self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []

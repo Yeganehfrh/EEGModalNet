@@ -110,14 +110,6 @@ class Critic(keras.Model):
         pooled_h = layers.Flatten()(pooled_h)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
 
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([feats, pooled_h], axis=-1)
-        h = self.act4(self.conv4(h))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//pooled_size))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([feats, pooled_h], axis=-1)
-
         return feats  # shape (B, D_feat)
 
 
@@ -358,35 +350,38 @@ class FiLMGAN(keras.Model):
 
         batch_size = real_data.size(0)
 
-        # warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        # n_critic = 3 if self.global_step < warmup_steps else 1
+        warmup_steps = self.warmup_epochs * self.steps_per_epoch
+        n_critic = 3 if self.global_step < warmup_steps else 1
 
         # train critic
-        # for _ in range(n_critic):
-        noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
-        perm = torch.randperm(batch_size, device=real_data.device)
-        fake_sub = sub[perm].view(-1, 1)
-        fake_pos = pos[perm].view(-1, 1)
-        fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
-        real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
-        self.chk("D_real", real_pred)
-        fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
-        self.chk("D_fake", fake_pred)
+        for _ in range(n_critic):
+            noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
+            perm = torch.randperm(batch_size, device=real_data.device)
+            fake_sub = sub[perm].view(-1, 1)
+            fake_pos = pos[perm].view(-1, 1)
+            fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
+            real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
+            self.chk("D_real", real_pred)
+            fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
+            self.chk("D_fake", fake_pred)
 
-        if self.global_step % 2 == 0:
-            r1 = self.r1_penalty(real_data, sub, pos)
-        else:
-            r1 = torch.tensor(0.0, device=real_data.device)
+            if self.global_step % 4 == 0:
+                gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            else:
+                gp = torch.tensor(0.0, device=real_data.device)
+
+            drift = (real_pred**2).mean()
+            drift_weight = 1e-3
         
-        # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 
-        self.zero_grad()
-        d_loss = (fake_pred.mean() - real_pred.mean()) + r1 * self.gradient_penalty_weight
-        d_loss.backward()
+            self.zero_grad()
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + drift_weight * drift
+            d_loss.backward()
 
-        grads = [v.value.grad for v in self.critic.trainable_weights]
-        with torch.no_grad():
-            self.d_optimizer.apply(grads, self.critic.trainable_weights)
+            grads = [v.value.grad for v in self.critic.trainable_weights]
+            with torch.no_grad():
+                self.d_optimizer.apply(grads, self.critic.trainable_weights)
 
         # Monitor gradient norms
         gradient_norms = []
@@ -428,7 +423,7 @@ class FiLMGAN(keras.Model):
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
-            '4 gp': r1.item(),
+            '4 gp': gp.item(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

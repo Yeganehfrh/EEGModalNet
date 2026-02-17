@@ -351,7 +351,7 @@ class FiLMGAN(keras.Model):
         batch_size = real_data.size(0)
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        n_critic = 3 if self.global_step < warmup_steps else 1
+        n_critic = 5 if self.global_step < warmup_steps else 1
 
         # train critic
         for _ in range(n_critic):
@@ -365,13 +365,13 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            if self.global_step % 4 == 0:
+            if self.global_step % 10 == 0:
                 gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             else:
                 gp = torch.tensor(0.0, device=real_data.device)
 
             drift = (real_pred**2).mean()
-            drift_weight = 1e-3
+            drift_weight = 1e-4
         
             # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 

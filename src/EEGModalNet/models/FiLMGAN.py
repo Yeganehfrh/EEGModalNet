@@ -38,7 +38,7 @@ class Critic(keras.Model):
     
         self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.conv2 = layers.Conv1D(2 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer)
+        self.conv2 = layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv4', kernel_initializer=kernel_initializer)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
@@ -239,7 +239,7 @@ class FiLMGAN(keras.Model):
         self.input_shape = (time_dim, feature_dim)
         self.d_loss_tracker = keras.metrics.Mean(name='d_loss')
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
-        self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
+        self.gp_tracker = keras.metrics.Mean(name="gp")
         self.seed_generator = keras.random.SeedGenerator(42)
 
         # Training step counts
@@ -265,8 +265,7 @@ class FiLMGAN(keras.Model):
 
     @property
     def metrics(self):
-        return [self.d_loss_tracker, self.g_loss_tracker,
-                self.accuracy_tracker]
+        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker]
 
     def get_config(self):
         config = super().get_config()
@@ -351,7 +350,7 @@ class FiLMGAN(keras.Model):
         batch_size = real_data.size(0)
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        n_critic = 5 if self.global_step < warmup_steps else 1
+        n_critic = 3 if self.global_step < warmup_steps else 1
 
         # train critic
         for _ in range(n_critic):
@@ -365,8 +364,9 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            if self.global_step % 10 == 0:
+            if self.global_step % 4 == 0:
                 gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+                self.gp_tracker.update_state(gp.detach())
             else:
                 gp = torch.tensor(0.0, device=real_data.device)
 
@@ -423,7 +423,7 @@ class FiLMGAN(keras.Model):
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
-            '4 gp': gp.item(),
+            '4 gp': self.gp_tracker.result(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

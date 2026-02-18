@@ -80,7 +80,8 @@ class Critic(keras.Model):
         h_norm = h_flat / norm
 
         # Energy awareness
-        amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))  # (B,1)
+        amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))
+        amp = ops.reshape(amp, (-1, 1))  # (B,1)
 
         h_final = ops.concatenate([h_norm, amp], axis=-1)
 

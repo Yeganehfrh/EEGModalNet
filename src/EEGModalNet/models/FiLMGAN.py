@@ -44,7 +44,6 @@ class Critic(keras.Model):
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
         # self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
         # self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.gap = layers.GlobalAveragePooling1D(name="d_gap")
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
@@ -69,17 +68,21 @@ class Critic(keras.Model):
         # print('conv1', ops.mean(h), ops.std(h))
         h  = self.act3(self.conv3(h))
         # print('conv1', ops.mean(h), ops.std(h))
-        # h  = self.act4(self.conv4(h))
-        # print('conv1', ops.mean(h), ops.std(h))
 
         h = self.mbsdv(h)
         
         h_flat   = self.flatten(h)          # coarse features
-        h1_flat  = self.flatten(h1)         # early HF features
-        # h_flat = self.gap(h)
-        # h1_flat = self.gap(h1)
+        # h1_flat  = self.flatten(h1)         # early HF features
+        # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
-        h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
+        # L2 normalize features
+        norm = ops.sqrt(ops.sum(h_flat * h_flat, axis=-1, keepdims=True) + 1e-8)
+        h_norm = h_flat / norm
+
+        # Energy awareness
+        amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))  # (B,1)
+
+        h_final = ops.concatenate([h_norm, amp], axis=-1)
 
         if self.output_features:
             return h_final
@@ -244,8 +247,11 @@ class FiLMGAN(keras.Model):
 
         # Training step counts
         self.global_step = 0        # counts train_step calls
+        self.critic_step = 0
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
         self.warmup_epochs = 300
+        self.gp_ema = 0.0
+        self.gp_beta = 0.98
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -349,8 +355,19 @@ class FiLMGAN(keras.Model):
 
         batch_size = real_data.size(0)
 
+        ### frequency of updates
+        # Critic
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
         n_critic = 3 if self.global_step < warmup_steps else 1
+        # # GP
+        # if self.gp_ema > 10.0:
+        #     gp_every = 1      # unstable → strong control
+        # elif self.gp_ema > 5.0:
+        #     gp_every = 2
+        # elif self.gp_ema > 2.0:
+        #     gp_every = 4
+        # else:
+        #     gp_every = 10      # stable → let D breathe
 
         # train critic
         for _ in range(n_critic):
@@ -364,16 +381,17 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            if self.global_step % 4 == 0:
+            # do_gp = (self.critic_step % gp_every == 0)
+            if self.global_step % 4 == 0 :
                 gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
                 self.gp_tracker.update_state(gp.detach())
+                # self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
             else:
                 gp = torch.tensor(0.0, device=real_data.device)
 
+            # drift penalty
             drift = (real_pred**2).mean()
             drift_weight = 1e-4
-        
-            # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
 
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + drift_weight * drift
@@ -382,6 +400,8 @@ class FiLMGAN(keras.Model):
             grads = [v.value.grad for v in self.critic.trainable_weights]
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
+            
+            # self.critic_step +=1
 
         # Monitor gradient norms
         gradient_norms = []

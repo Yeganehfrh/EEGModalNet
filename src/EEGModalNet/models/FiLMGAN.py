@@ -76,8 +76,9 @@ class Critic(keras.Model):
         # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
         # L2 normalize features
-        norm = ops.sqrt(ops.sum(h_flat * h_flat, axis=-1, keepdims=True) + 1e-8)
-        h_norm = h_flat / norm
+        norm = ops.sqrt(ops.sum(h_flat * h_flat, axis=-1, keepdims=True))
+        norm = ops.maximum(norm, 1e-6) # clamp
+        h_norm = h_flat / norm.detach()
 
         # # Energy awareness
         # amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))

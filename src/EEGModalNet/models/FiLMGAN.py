@@ -81,13 +81,10 @@ class Critic(keras.Model):
         # h1_flat  = self.flatten(h1)         # early HF features
         # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
-        # L2 normalize features in fp32 and sanitize non-finite values.
-        h_flat_fp32 = torch.nan_to_num(h_flat.float(), nan=0.0, posinf=1e4, neginf=-1e4)
-        scale = h_flat_fp32.abs().amax(dim=-1, keepdim=True).clamp_min(1e-6)
-        h_scaled = h_flat_fp32 / scale
-        norm = torch.linalg.vector_norm(h_scaled, ord=2, dim=-1, keepdim=True).clamp_min(1e-6)
-        h_norm = (h_scaled / norm).to(h_flat.dtype)
-        h_norm = torch.nan_to_num(h_norm, nan=0.0, posinf=1.0, neginf=-1.0)
+        # L2 normalize in fp32; detached denominator tames gradient spikes near zero norm.
+        h_flat_fp32 = h_flat.float()
+        norm = torch.linalg.vector_norm(h_flat_fp32, ord=2, dim=-1, keepdim=True).clamp_min(1e-4)
+        h_norm = h_flat_fp32 / norm.detach()
         self._assert_finite("h_norm", h_norm)
 
         # # Energy awareness
@@ -99,7 +96,7 @@ class Critic(keras.Model):
         if self.output_features:
             return h_norm
 
-        out = self.final_dense(h_norm)
+        out = self.final_dense(h_norm.float())
         self._assert_finite("out", out)
         return out.float()
     

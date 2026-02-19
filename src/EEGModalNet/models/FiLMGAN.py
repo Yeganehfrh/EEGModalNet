@@ -382,13 +382,16 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            # do_gp = (self.critic_step % gp_every == 0)
-            if self.global_step % 4 == 0 :
-                gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-                self.gp_tracker.update_state(gp.detach())
-                # self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
-            else:
-                gp = torch.tensor(0.0, device=real_data.device)
+            # # do_gp = (self.critic_step % gp_every == 0)
+            # if self.global_step % 4 == 0 :
+            #     gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            #     self.gp_tracker.update_state(gp.detach())
+            #     # self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
+            # else:
+            #     gp = torch.tensor(0.0, device=real_data.device)
+            
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.gp_tracker.update_state(gp.detach())
 
             # drift penalty
             drift = (real_pred**2).mean()

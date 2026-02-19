@@ -79,16 +79,16 @@ class Critic(keras.Model):
         norm = ops.sqrt(ops.sum(h_flat * h_flat, axis=-1, keepdims=True) + 1e-8)
         h_norm = h_flat / norm
 
-        # Energy awareness
-        amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))
-        amp = ops.reshape(amp, (-1, 1))  # (B,1)
+        # # Energy awareness
+        # amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))
+        # amp = ops.reshape(amp, (-1, 1))  # (B,1)
 
-        h_final = ops.concatenate([h_norm, amp], axis=-1)
+        # h_final = ops.concatenate([h_norm, amp], axis=-1)
 
         if self.output_features:
-            return h_final
+            return h_norm
 
-        out = self.final_dense(h_final)
+        out = self.final_dense(h_norm)
         return out.float()
     
     def extract_features(self, x, sub_labels, state_ids):
@@ -382,16 +382,16 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            # # do_gp = (self.critic_step % gp_every == 0)
-            # if self.global_step % 4 == 0 :
-            #     gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            #     self.gp_tracker.update_state(gp.detach())
-            #     # self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
-            # else:
-            #     gp = torch.tensor(0.0, device=real_data.device)
+            # do_gp = (self.critic_step % gp_every == 0)
+            if self.global_step % 4 == 0 :
+                gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+                self.gp_tracker.update_state(gp.detach())
+                # self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
+            else:
+                gp = torch.tensor(0.0, device=real_data.device)
             
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            self.gp_tracker.update_state(gp.detach())
+            # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            # self.gp_tracker.update_state(gp.detach())
 
             # drift penalty
             drift = (real_pred**2).mean()

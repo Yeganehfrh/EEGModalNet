@@ -51,6 +51,11 @@ class Critic(keras.Model):
 
         self.built = True  
 
+    def _assert_finite(self, name, t):
+        if not torch.isfinite(t).all():
+            max_abs = torch.nan_to_num(t, nan=0.0, posinf=1e9, neginf=-1e9).abs().max().item()
+            raise RuntimeError(f"Non-finite in Critic.{name}; max_abs={max_abs:.4e}")
+
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
         subj_emb = self.sub_emb(sub_labels.view(-1))
@@ -72,14 +77,18 @@ class Critic(keras.Model):
         h = self.mbsdv(h)
         
         h_flat   = self.flatten(h)          # coarse features
+        self._assert_finite("h_flat", h_flat)
         # h1_flat  = self.flatten(h1)         # early HF features
         # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
-        # L2 normalize features (overflow-safe)
-        scale = h_flat.abs().amax(dim=-1, keepdim=True).clamp_min(1e-6)
-        h_scaled = h_flat / scale
-        norm = torch.sqrt((h_scaled * h_scaled).sum(dim=-1, keepdim=True)).clamp_min(1e-6)
-        h_norm = h_scaled / norm
+        # L2 normalize features in fp32 and sanitize non-finite values.
+        h_flat_fp32 = torch.nan_to_num(h_flat.float(), nan=0.0, posinf=1e4, neginf=-1e4)
+        scale = h_flat_fp32.abs().amax(dim=-1, keepdim=True).clamp_min(1e-6)
+        h_scaled = h_flat_fp32 / scale
+        norm = torch.linalg.vector_norm(h_scaled, ord=2, dim=-1, keepdim=True).clamp_min(1e-6)
+        h_norm = (h_scaled / norm).to(h_flat.dtype)
+        h_norm = torch.nan_to_num(h_norm, nan=0.0, posinf=1.0, neginf=-1.0)
+        self._assert_finite("h_norm", h_norm)
 
         # # Energy awareness
         # amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))
@@ -91,6 +100,7 @@ class Critic(keras.Model):
             return h_norm
 
         out = self.final_dense(h_norm)
+        self._assert_finite("out", out)
         return out.float()
     
     def extract_features(self, x, sub_labels, state_ids):

@@ -75,10 +75,11 @@ class Critic(keras.Model):
         # h1_flat  = self.flatten(h1)         # early HF features
         # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
-        # L2 normalize features
-        norm = ops.sqrt(ops.sum(h_flat * h_flat, axis=-1, keepdims=True))
-        norm = ops.maximum(norm, 1e-6) # clamp
-        h_norm = h_flat / norm.detach()
+        # L2 normalize features (overflow-safe)
+        scale = h_flat.abs().amax(dim=-1, keepdim=True).clamp_min(1e-6)
+        h_scaled = h_flat / scale
+        norm = torch.sqrt((h_scaled * h_scaled).sum(dim=-1, keepdim=True)).clamp_min(1e-6)
+        h_norm = h_scaled / norm
 
         # # Energy awareness
         # amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))

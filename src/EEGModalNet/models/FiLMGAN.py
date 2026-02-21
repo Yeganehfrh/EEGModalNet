@@ -76,7 +76,7 @@ class Critic(keras.Model):
 
         h = self.mbsdv(h)
         
-        h_flat   = self.flatten(h)          # coarse features
+        h_flat = self.flatten(h)
         self._assert_finite("h_flat", h_flat)
         # h1_flat  = self.flatten(h1)         # early HF features
         # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)

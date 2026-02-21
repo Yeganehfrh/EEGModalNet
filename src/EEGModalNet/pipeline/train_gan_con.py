@@ -208,7 +208,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20260219'
+    OUTPUT_PATH = 'logs/20260221'
     CONDITION = 'both'  # supported: 'both', 'EC', or 'EO'
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
@@ -255,7 +255,7 @@ if __name__ == '__main__':
     _ = torch.randn(1, device="cuda")
 
     # Apply mixed precision policy
-    keras.mixed_precision.set_global_policy('mixed_float16')
+    # keras.mixed_precision.set_global_policy('mixed_float16')
     print(f'Global policy is {keras.mixed_precision.global_policy().name}')
 
     model = run(train_loader,

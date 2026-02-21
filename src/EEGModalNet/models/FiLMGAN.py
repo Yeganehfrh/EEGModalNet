@@ -42,8 +42,6 @@ class Critic(keras.Model):
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.conv4 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv6', kernel_initializer=kernel_initializer)
-        # self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
@@ -58,6 +56,14 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
+
+        # per-sample centering (over time)
+        mean = ops.mean(x, axis=1, keepdims=True)
+        x = x - mean
+        # per-sample RMS
+        rms = ops.sqrt(ops.mean(ops.square(x), axis=(1,2), keepdims=True))
+        x = x / ops.maximum(rms, 1e-6)
+
         subj_emb = self.sub_emb(sub_labels.view(-1))
         state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
@@ -81,24 +87,17 @@ class Critic(keras.Model):
         # h1_flat  = self.flatten(h1)         # early HF features
         # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
-        # L2 normalize in fp32; detached denominator tames gradient spikes near zero norm.
-        h_flat_fp32 = h_flat.float()
-        norm = torch.linalg.vector_norm(h_flat_fp32, ord=2, dim=-1, keepdim=True).clamp_min(1e-4)
-        h_norm = h_flat_fp32 / norm.detach()
-        self._assert_finite("h_norm", h_norm)
-
         # # Energy awareness
         # amp = ops.sqrt(ops.mean(x * x, axis=(1,2), keepdims=True))
         # amp = ops.reshape(amp, (-1, 1))  # (B,1)
-
         # h_final = ops.concatenate([h_norm, amp], axis=-1)
 
         if self.output_features:
-            return h_norm
+            return h_flat
 
-        out = self.final_dense(h_norm.float())
+        out = self.final_dense(h_flat.float())
         self._assert_finite("out", out)
-        return out.float()
+        return out
     
     def extract_features(self, x, sub_labels, state_ids):
         subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))

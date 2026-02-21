@@ -19,12 +19,6 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.output_features = False
-        self.res_scale = self.add_weight(
-                              name="res_scale",
-                              shape=(),
-                              initializer=keras.initializers.Constant(0.1),
-                              trainable=True)
-
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
@@ -43,6 +37,7 @@ class Critic(keras.Model):
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv5', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
+        self.mid_dense = layers.Dense(4128, name='dis_dense6', kernel_initializer=kernel_initializer)
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
         self.mbsdv = MinibatchStdDev()
@@ -57,12 +52,12 @@ class Critic(keras.Model):
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
 
-        # per-sample centering (over time)
-        mean = ops.mean(x, axis=1, keepdims=True)
-        x = x - mean
-        # per-sample RMS
-        rms = ops.sqrt(ops.mean(ops.square(x), axis=(1,2), keepdims=True))
-        x = x / ops.maximum(rms, 1e-6)
+        # # per-sample centering (over time)
+        # mean = ops.mean(x, axis=1, keepdims=True)
+        # x = x - mean
+        # # per-sample RMS
+        # rms = ops.sqrt(ops.mean(ops.square(x), axis=(1,2), keepdims=True))
+        # x = x / ops.maximum(rms, 1e-6)
 
         subj_emb = self.sub_emb(sub_labels.view(-1))
         state_emb = self.state_emb(state_id.view(-1))
@@ -82,8 +77,8 @@ class Critic(keras.Model):
 
         h = self.mbsdv(h)
         
-        h_flat = self.flatten(h)
-        self._assert_finite("h_flat", h_flat)
+        h = self.flatten(h)
+        h = self.mid_dense(h)
         # h1_flat  = self.flatten(h1)         # early HF features
         # h_final = ops.concatenate([h_flat, self.res_scale * h1_flat], axis=-1)
 
@@ -93,10 +88,10 @@ class Critic(keras.Model):
         # h_final = ops.concatenate([h_norm, amp], axis=-1)
 
         if self.output_features:
-            return h_flat
+            return h
 
-        out = self.final_dense(h_flat.float())
-        self._assert_finite("out", out)
+        out = self.final_dense(h.float())
+
         return out
     
     def extract_features(self, x, sub_labels, state_ids):
@@ -261,6 +256,8 @@ class FiLMGAN(keras.Model):
         self.warmup_epochs = 300
         self.gp_ema = 0.0
         self.gp_beta = 0.98
+        self.gp_prev_ema = 0.0
+        self.spike = True
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -368,15 +365,16 @@ class FiLMGAN(keras.Model):
         # Critic
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
         n_critic = 3 if self.global_step < warmup_steps else 1
-        # # GP
-        # if self.gp_ema > 10.0:
-        #     gp_every = 1      # unstable → strong control
+
+        # GP
+        if self.spike:
+            gp_every = 1      # unstable → strong control
         # elif self.gp_ema > 5.0:
         #     gp_every = 2
         # elif self.gp_ema > 2.0:
         #     gp_every = 4
-        # else:
-        #     gp_every = 10      # stable → let D breathe
+        else:
+            gp_every = 15      # stable → let D breathe
 
         # train critic
         for _ in range(n_critic):
@@ -390,11 +388,14 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            # do_gp = (self.critic_step % gp_every == 0)
-            if self.global_step % 4 == 0 :
+            do_gp = (self.critic_step % gp_every == 0)
+            if do_gp :
                 gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
                 self.gp_tracker.update_state(gp.detach())
-                # self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
+                self.gp_prev_ema = self.gp_ema
+                self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
+                delta = self.gp_ema - self.gp_prev_ema
+                self.spike = (delta > 0.5) and (self.gp_ema > 10.0)
             else:
                 gp = torch.tensor(0.0, device=real_data.device)
             
@@ -413,7 +414,7 @@ class FiLMGAN(keras.Model):
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
             
-            # self.critic_step +=1
+            self.critic_step +=1
 
         # Monitor gradient norms
         gradient_norms = []

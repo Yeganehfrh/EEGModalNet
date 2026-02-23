@@ -329,6 +329,8 @@ class FiLMGAN(keras.Model):
         
 
     def train_step(self, data):
+        if isinstance(data, (tuple, list)):
+            data = data[0]
         real_data, sub, pos = data['x'], data['sub'], data['pos']
 
         device = next(self.parameters()).device

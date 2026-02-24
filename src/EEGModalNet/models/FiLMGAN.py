@@ -249,13 +249,18 @@ class FiLMGAN(keras.Model):
         self.input_shape = (time_dim, feature_dim)
         self.d_loss_tracker = keras.metrics.Mean(name='d_loss')
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
-        self.accuracy_tracker = keras.metrics.BinaryAccuracy(name='accuracy')
+        self.gp_tracker = keras.metrics.Mean(name="gp")
         self.seed_generator = keras.random.SeedGenerator(42)
 
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 100
+        self.warmup_epochs = 300
+        self.critic_step = 0
+        self.gp_ema = 0.0
+        self.gp_beta = 0.98
+        self.gp_prev_ema = 0.0
+        self.spike = True
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -275,8 +280,7 @@ class FiLMGAN(keras.Model):
 
     @property
     def metrics(self):
-        return [self.d_loss_tracker, self.g_loss_tracker,
-                self.accuracy_tracker]
+        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker]
 
     def get_config(self):
         config = super().get_config()
@@ -343,6 +347,11 @@ class FiLMGAN(keras.Model):
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
         n_critic = 3 if self.global_step < warmup_steps else 1
 
+        if self.spike:
+            gp_every = 1 
+        else:
+            gp_every = 20
+
         # train critic
         for _ in range(n_critic):
             noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
@@ -354,7 +363,21 @@ class FiLMGAN(keras.Model):
             self.chk("D_real", real_pred)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
-            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+
+
+            do_gp = (self.critic_step % gp_every == 0)
+            if do_gp :
+                print('Calculating gradient penalty at step', self.critic_step, 'GP EMA:', self.gp_ema)
+                gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+                self.gp_tracker.update_state(gp.detach())
+                self.gp_prev_ema = self.gp_ema
+                self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
+                delta = self.gp_ema - self.gp_prev_ema
+                self.spike = (delta > 0.5) and (self.gp_ema > 10.0)
+            else:
+                gp = torch.tensor(0.0, device=real_data.device)
+
+            # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
             d_loss.backward()
@@ -362,6 +385,10 @@ class FiLMGAN(keras.Model):
             grads = [v.value.grad for v in self.critic.trainable_weights]
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
+            
+            self.critic_step +=1
+
+            
 
         # Monitor gradient norms
         gradient_norms = []
@@ -397,7 +424,7 @@ class FiLMGAN(keras.Model):
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
-            '4 gp': gp.item(),
+            '4 gp': self.gp_tracker.result(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

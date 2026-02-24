@@ -367,7 +367,6 @@ class FiLMGAN(keras.Model):
 
             do_gp = (self.critic_step % gp_every == 0)
             if do_gp :
-                print('Calculating gradient penalty at step', self.critic_step, 'GP EMA:', self.gp_ema)
                 gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
                 self.gp_tracker.update_state(gp.detach())
                 self.gp_prev_ema = self.gp_ema

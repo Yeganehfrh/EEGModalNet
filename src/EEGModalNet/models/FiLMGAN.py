@@ -22,9 +22,9 @@ class Critic(keras.Model):
         disable_attention = True
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
-        self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
+        # self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
 
         ks = 5
 
@@ -33,7 +33,7 @@ class Critic(keras.Model):
             LearnablePositionalEmbedding(512, 8),
             SelfAttention1D(2, 4, disable_attention=disable_attention)])
         
-        self.film_block = DualFiLMBlock(8, 32)
+        self.film_block = FiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
         self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv3', kernel_initializer=kernel_initializer)
@@ -45,9 +45,9 @@ class Critic(keras.Model):
         self.pool3 = layers.AveragePooling1D(pool_size=2)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
         self.att2  = SelfAttention1D(8, feature_dim, disable_attention=disable_attention)
-        self.conv4 = layers.Conv1D(16 * feature_dim, ks, padding='same', name='conv6', kernel_initializer=kernel_initializer)
-        self.pool4 = layers.AveragePooling1D(pool_size=2)
-        self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
+        # self.conv4 = layers.Conv1D(16 * feature_dim, ks, padding='same', name='conv6', kernel_initializer=kernel_initializer)
+        # self.pool4 = layers.AveragePooling1D(pool_size=2)
+        # self.act4  = layers.LeakyReLU(negative_slope=negative_slope)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='dis_dense6', dtype='float32', kernel_initializer=kernel_initializer)
 
@@ -58,11 +58,11 @@ class Critic(keras.Model):
     def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
         subj_emb = self.sub_emb(sub_labels.view(-1))
-        state_emb = self.state_emb(state_id.view(-1))
+        # state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, subj_emb, state_emb)
+            x = self.sub_layer(x, subj_emb)
         x = self.post_att(x)
-        x = self.film_block(x, subj_emb, state_emb)
+        x = self.film_block(x, subj_emb)
 
         x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
@@ -71,7 +71,7 @@ class Critic(keras.Model):
         h  = self.act2(self.pool2(self.conv2(h1)))
         h  = self.act3(self.pool3(self.conv3(h)))
         h  = self.att2(h)
-        h  = self.act4(self.pool4(self.conv4(h)))
+        # h  = self.act4(self.pool4(self.conv4(h)))
 
         h = self.mbsdv(h)
         
@@ -85,11 +85,11 @@ class Critic(keras.Model):
         out = self.final_dense(h_final)
         return out.float()
     
-    def extract_features(self, x, subj_emb):
-        # subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
-        x = self.sub_layer(x, subj_emb)
-        x = self.post_att(x)
-        x = self.film_block(x, subj_emb)
+    def extract_features(self, x, sub_labels, state_ids):
+        subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
+        state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
+        x = self.sub_layer(x, subj_emb, state_emb)
+        x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)
         x_cat = ops.concatenate([x, x_hp], axis=-1)
@@ -117,7 +117,7 @@ class Critic(keras.Model):
         # pooled_h = ops.mean(h, axis=1)
         feats = ops.concatenate([feats, pooled_h], axis=-1)
 
-        return feats, subj_emb  # shape (B, D_feat)
+        return feats  # shape (B, D_feat)
 
 
     def get_config(self):
@@ -151,9 +151,9 @@ class Generator(keras.Model):
 
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
-        self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
+        # self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = SubjectLayers_FiLM(feature_dim, feature_dim, self.d_sub, init_id=True)
 
         self.post_att = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
@@ -163,7 +163,7 @@ class Generator(keras.Model):
             LearnablePositionalEmbedding(128, 32),
             SelfAttention1D(4, 8, disable_attention=disable_attention)])
         
-        self.film_block = DualFiLMBlock(32, 32)
+        self.film_block = FiLMBlock(32, 32)
 
         self.cov_block = keras.Sequential([
             keras.Input(shape=(128, 32)),
@@ -202,12 +202,12 @@ class Generator(keras.Model):
         noise, sub_labels, state_id = inputs
         x = self.post_att(noise)
         subj_emb = self.sub_emb(sub_labels.view(-1))
-        state_emb = self.state_emb(state_id.view(-1))
-        x = self.film_block(x, subj_emb, state_emb)
+        # state_emb = self.state_emb(state_id.view(-1))
+        x = self.film_block(x, subj_emb)
         x = self.cov_block(x)
         x = self.dil_block(x)
         if hasattr(self, 'sub_layer'):
-            x = self.sub_layer(x, subj_emb, state_emb)
+            x = self.sub_layer(x, subj_emb)
         if keras.mixed_precision.global_policy().name == 'mixed_float16':
             x = x.float()  # make sure the output is in float32 in mixed precision mode
         return x
@@ -256,11 +256,11 @@ class FiLMGAN(keras.Model):
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
         self.warmup_epochs = 300
-        self.critic_step = 0
-        self.gp_ema = 0.0
-        self.gp_beta = 0.98
-        self.gp_prev_ema = 0.0
-        self.spike = True
+        # self.critic_step = 0
+        # self.gp_ema = 0.0
+        # self.gp_beta = 0.98
+        # self.gp_prev_ema = 0.0
+        # self.spike = True
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -347,10 +347,10 @@ class FiLMGAN(keras.Model):
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
         n_critic = 3 if self.global_step < warmup_steps else 1
 
-        if self.spike:
-            gp_every = 1 
-        else:
-            gp_every = 20
+        # if self.spike:
+        #     gp_every = 1 
+        # else:
+        #     gp_every = 20
 
         # train critic
         for _ in range(n_critic):
@@ -364,19 +364,18 @@ class FiLMGAN(keras.Model):
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
+            # do_gp = (self.critic_step % gp_every == 0)
+            # if do_gp :
+            #     gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            #     self.gp_tracker.update_state(gp.detach())
+            #     self.gp_prev_ema = self.gp_ema
+            #     self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
+            #     delta = self.gp_ema - self.gp_prev_ema
+            #     self.spike = (delta > 0.5) and (self.gp_ema > 10.0)
+            # else:
+            #     gp = torch.tensor(0.0, device=real_data.device)
 
-            do_gp = (self.critic_step % gp_every == 0)
-            if do_gp :
-                gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-                self.gp_tracker.update_state(gp.detach())
-                self.gp_prev_ema = self.gp_ema
-                self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
-                delta = self.gp_ema - self.gp_prev_ema
-                self.spike = (delta > 0.5) and (self.gp_ema > 10.0)
-            else:
-                gp = torch.tensor(0.0, device=real_data.device)
-
-            # gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.zero_grad()
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
             d_loss.backward()
@@ -385,9 +384,7 @@ class FiLMGAN(keras.Model):
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
             
-            self.critic_step +=1
-
-            
+            # self.critic_step +=1
 
         # Monitor gradient norms
         gradient_norms = []

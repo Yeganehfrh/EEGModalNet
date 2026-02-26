@@ -652,6 +652,19 @@ class SubjectStateLayers_FiLM(nn.Module):
                 self.state_linear.weight.zero_(); self.state_linear.bias.zero_()
 
     def forward(self, x, subj_emb, state_emb):
+        if x.shape[-1] != self.channels:
+            raise ValueError(
+                f"SubjectStateLayers_FiLM expected x.shape[-1] == {self.channels}, got {x.shape[-1]}"
+            )
+        if subj_emb.shape[-1] != self.d_sub:
+            raise ValueError(
+                f"SubjectStateLayers_FiLM expected subj_emb.shape[-1] == {self.d_sub}, got {subj_emb.shape[-1]}"
+            )
+        if state_emb.shape[-1] != self.d_state:
+            raise ValueError(
+                f"SubjectStateLayers_FiLM expected state_emb.shape[-1] == {self.d_state}, got {state_emb.shape[-1]}"
+            )
+
         xdtype = x.dtype
         device = x.device
 
@@ -668,7 +681,7 @@ class SubjectStateLayers_FiLM(nn.Module):
         g_st,  b_st  = st_gb.chunk(2, dim=-1)
 
         gsub = self.g_sub.to(device=device, dtype=w_sub_dtype)
-        gst  = self.g_state.to(device=device, dtype=w_sub_dtype)
+        gst  = self.g_state.to(device=device, dtype=w_state_dtype)
         
         gamma = 1.0 + 0.1 * (gsub * g_sub + gst * g_st)
         beta  = 0.1 * (gsub * b_sub + gst * b_st)

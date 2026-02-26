@@ -19,6 +19,7 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.output_features = False
+        disable_attention = False
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
@@ -26,7 +27,11 @@ class Critic(keras.Model):
             self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
 
         ks = 5
-        
+        self.post_att = keras.Sequential([
+            keras.Input(shape=self.input_shape),
+            LearnablePositionalEmbedding(512, 8),
+            SelfAttention1D(2, 4, disable_attention=disable_attention),
+        ])
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
@@ -36,6 +41,10 @@ class Critic(keras.Model):
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
+        self.att2 = SelfAttention1D(8, feature_dim, disable_attention=disable_attention)
+        self.gap = layers.GlobalAveragePooling1D(name='dis_gap')
+        self.embed_dense = layers.Dense(256, name='dis_embed_dense', kernel_initializer=kernel_initializer)
+        self.embed_norm = layers.LayerNormalization(name='dis_embed_norm')
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer)
 
@@ -49,49 +58,39 @@ class Critic(keras.Model):
         state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb, state_emb)
+        x = self.post_att(x)
         x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
 
         h1 = self.act1(self.conv1(x_cat))    # (B, 512, C1) HF-rich
-        h  = self.act2(self.conv2(h1))
-        h  = self.act3(self.conv3(h))
+        h2 = self.act2(self.conv2(h1))
+        h3 = self.act3(self.conv3(h2))
+        h3 = self.att2(h3)
 
-        h = self.mbsdv(h)
-        
-        h_flat   = self.flatten(h)          # coarse features
-        h1_flat  = self.flatten(h1)         # early HF features
-        h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+        # Multi-scale pre-MBSD embedding for downstream tasks.
+        f1 = self.gap(h1)
+        f2 = self.gap(h2)
+        f3 = self.gap(h3)
+        h_final = ops.concatenate([f1, f2, f3], axis=-1)
+        emb = self.embed_norm(self.embed_dense(h_final))
 
         if self.output_features:
-            return h_final
+            return emb
 
-        out = self.final_dense(h_final)
+        h_score = self.mbsdv(h3)
+        score_in = ops.concatenate([self.flatten(h_score), emb], axis=-1)
+        out = self.final_dense(score_in)
         return out.float()
     
     def extract_features(self, x, sub_labels, state_ids):
-        subj_emb = self.sub_emb(ops.reshape(sub_labels, (-1,)))
-        state_emb = self.state_emb(ops.reshape(state_ids, (-1,)))
-        x = self.sub_layer(x, subj_emb, state_emb)
-        x = self.film_block(x, subj_emb, state_emb)
-
-        x_hp = self.highpass(x)
-        x_cat = ops.concatenate([x, x_hp], axis=-1)
-
-        h1 = self.act1(self.conv1(x_cat))
-        pooled_h1  = layers.MaxPool1D(pool_size=max(1, h1.shape[1]//4))(h1)
-        pooled_h1 = layers.Flatten()(pooled_h1)
-        h = self.act2(self.conv2(h1))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([pooled_h1, pooled_h], axis=-1)
-        h = self.act3(self.conv3(h))
-        pooled_h  = layers.MaxPool1D(pool_size=max(1, h.shape[1]//4))(h)
-        pooled_h = layers.Flatten()(pooled_h)
-        feats = ops.concatenate([feats, pooled_h], axis=-1)
-
-        return feats  # shape (B, D_feat)
+        prev_output_features = self.output_features
+        self.output_features = True
+        try:
+            return self({'x': x, 'sub': sub_labels, 'pos': state_ids})
+        finally:
+            self.output_features = prev_output_features
 
     def get_config(self):
         config = super().get_config()

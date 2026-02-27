@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from keras import layers
 import keras
 from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev, SubjectStateLayers_FiLM, DualFiLMBlock
@@ -19,7 +20,6 @@ class Critic(keras.Model):
         kernel_initializer = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
         self.d_sub = 32
         self.output_features = False
-        disable_attention = False
 
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
@@ -27,11 +27,7 @@ class Critic(keras.Model):
             self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
 
         ks = 5
-        self.post_att = keras.Sequential([
-            keras.Input(shape=self.input_shape),
-            LearnablePositionalEmbedding(512, 8),
-            SelfAttention1D(2, 4, disable_attention=disable_attention),
-        ])
+        
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
@@ -41,7 +37,6 @@ class Critic(keras.Model):
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.att2 = SelfAttention1D(8, feature_dim, disable_attention=disable_attention)
         self.gap = layers.GlobalAveragePooling1D(name='dis_gap')
         self.embed_dense = layers.Dense(256, name='dis_embed_dense', kernel_initializer=kernel_initializer)
         self.embed_norm = layers.LayerNormalization(name='dis_embed_norm')
@@ -52,37 +47,36 @@ class Critic(keras.Model):
 
         self.built = True 
 
-    def call(self, inputs):
+    def forward_score_and_embedding(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
         subj_emb = self.sub_emb(sub_labels.view(-1))
         state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb, state_emb)
-        x = self.post_att(x)
         x = self.film_block(x, subj_emb, state_emb)
 
         x_hp = self.highpass(x)        # (B, 512, 8), HF-emphasised
         x_cat = ops.concatenate([x, x_hp], axis=-1)  # (B, 512, 16)
 
         h1 = self.act1(self.conv1(x_cat))    # (B, 512, C1) HF-rich
-        h2 = self.act2(self.conv2(h1))
-        h3 = self.act3(self.conv3(h2))
-        h3 = self.att2(h3)
+        h  = self.act2(self.conv2(h1))
+        h  = self.act3(self.conv3(h))
 
-        # Multi-scale pre-MBSD embedding for downstream tasks.
-        f1 = self.gap(h1)
-        f2 = self.gap(h2)
-        f3 = self.gap(h3)
-        h_final = ops.concatenate([f1, f2, f3], axis=-1)
-        emb = self.embed_norm(self.embed_dense(h_final))
+        # Downstream embedding is pre-MBSD to avoid batch-stat leakage.
+        emb = self.embed_norm(self.embed_dense(ops.concatenate([self.gap(h1), self.gap(h)], axis=-1)))
 
+        h = self.mbsdv(h)
+        h_flat   = self.flatten(h)          # coarse features
+        h1_flat  = self.flatten(h1)         # early HF features
+        h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
+        out = self.final_dense(h_final)
+        return out.float(), emb
+
+    def call(self, inputs):
+        out, emb = self.forward_score_and_embedding(inputs)
         if self.output_features:
             return emb
-
-        h_score = self.mbsdv(h3)
-        score_in = ops.concatenate([self.flatten(h_score), emb], axis=-1)
-        out = self.final_dense(score_in)
-        return out.float()
+        return out
     
     def extract_features(self, x, sub_labels, state_ids):
         prev_output_features = self.output_features
@@ -216,6 +210,7 @@ class FiLMGAN(keras.Model):
         self.d_loss_tracker = keras.metrics.Mean(name='d_loss')
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.gp_tracker = keras.metrics.Mean(name="gp")
+        self.contrastive_tracker = keras.metrics.Mean(name="contrastive")
         self.seed_generator = keras.random.SeedGenerator(42)
 
         # Training step counts
@@ -246,7 +241,7 @@ class FiLMGAN(keras.Model):
 
     @property
     def metrics(self):
-        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker]
+        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker, self.contrastive_tracker]
 
     def get_config(self):
         config = super().get_config()
@@ -265,11 +260,13 @@ class FiLMGAN(keras.Model):
     def call(self, x):
         return self.critic(x)
 
-    def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight):
+    def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight, contrastive_weight=0.05, contrastive_temperature=0.2):
         super().compile(run_eagerly=True)
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
         self.gradient_penalty_weight = gradient_penalty_weight
+        self.contrastive_weight = contrastive_weight
+        self.contrastive_temperature = contrastive_temperature
 
     def gradient_penalty(self, real_data, fake_data, sub, pos):
         batch_size = real_data.size(0)
@@ -301,6 +298,26 @@ class FiLMGAN(keras.Model):
     def safe_scalar(x, default=float("nan")):
         return default if x is None else float(x.detach().cpu())
 
+    def supervised_contrastive_loss(self, emb, labels, temperature):
+        emb = F.normalize(emb, p=2, dim=1)
+        logits = emb @ emb.t()
+        logits = logits / max(temperature, 1e-6)
+
+        eye = torch.eye(logits.size(0), device=logits.device, dtype=torch.bool)
+        logits = logits.masked_fill(eye, -1e9)
+
+        labels = labels.view(-1)
+        pos_mask = labels.unsqueeze(0).eq(labels.unsqueeze(1)) & (~eye)
+        valid = pos_mask.any(dim=1)
+        if not valid.any():
+            return torch.tensor(0.0, device=emb.device, dtype=emb.dtype)
+
+        log_prob = logits - torch.logsumexp(logits, dim=1, keepdim=True)
+        pos_counts = pos_mask.sum(dim=1).clamp(min=1)
+        mean_log_prob_pos = (log_prob * pos_mask).sum(dim=1) / pos_counts
+        loss = -mean_log_prob_pos[valid].mean()
+        return loss
+
     def train_step(self, data):
         if isinstance(data, (tuple, list)):
             data = data[0]
@@ -328,7 +345,7 @@ class FiLMGAN(keras.Model):
             fake_sub = sub[perm].view(-1, 1)
             fake_pos = pos[perm].view(-1, 1)
             fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
-            real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
+            real_pred, real_emb = self.critic.forward_score_and_embedding({'x': real_data, 'sub': sub, 'pos': pos})
             self.chk("D_real", real_pred)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
@@ -346,8 +363,10 @@ class FiLMGAN(keras.Model):
 
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.gp_tracker.update_state(gp.detach())
+            contrastive = self.supervised_contrastive_loss(real_emb, pos.view(-1), self.contrastive_temperature)
+            self.contrastive_tracker.update_state(contrastive.detach())
             self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + self.contrastive_weight * contrastive
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
@@ -391,6 +410,7 @@ class FiLMGAN(keras.Model):
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
             '4 gp': self.gp_tracker.result(),
+            '4b contrastive': self.contrastive_tracker.result(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

@@ -299,12 +299,12 @@ class FiLMGAN(keras.Model):
         return default if x is None else float(x.detach().cpu())
 
     def supervised_contrastive_loss(self, emb, labels, temperature):
-        emb = F.normalize(emb, p=2, dim=1)
+        emb = F.normalize(emb.float(), p=2, dim=1)
         logits = emb @ emb.t()
         logits = logits / max(temperature, 1e-6)
 
         eye = torch.eye(logits.size(0), device=logits.device, dtype=torch.bool)
-        logits = logits.masked_fill(eye, -1e9)
+        logits = logits.masked_fill(eye, torch.finfo(logits.dtype).min)
 
         labels = labels.view(-1)
         pos_mask = labels.unsqueeze(0).eq(labels.unsqueeze(1)) & (~eye)

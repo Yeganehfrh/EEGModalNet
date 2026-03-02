@@ -5,7 +5,7 @@
 #SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --time=3:00:00
+#SBATCH --time=5:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --output=/home/users/mansarinia/EEGModalNet/logs/train_gan_pipeline_%j.log
 #SBATCH --error=/home/users/mansarinia/EEGModalNet/logs/train_gan_pipeline_%j.log

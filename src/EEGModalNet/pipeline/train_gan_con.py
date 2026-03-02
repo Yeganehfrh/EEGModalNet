@@ -163,7 +163,7 @@ def run(train_loader,
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.0, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
                   gradient_penalty_weight=1,
-                  ssl_weight=0.1)
+                  recon_weight=0.1)
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -209,7 +209,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20260302'
+    OUTPUT_PATH = 'logs/20260302_v2'
     CONDITION = 'both'  # supported: 'both', 'EC', or 'EO'
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
@@ -262,7 +262,7 @@ if __name__ == '__main__':
     model = run(train_loader,
                 n_subjects=N_SUBJECTS,
                 channels=CHANNELS[8],
-                max_epochs=1000,
+                max_epochs=160,
                 latent_dim=LATENT_DIM,
                 batch_size=BATCH_SIZE,
                 cvloger_path=f'{OUTPUT_PATH}.csv',

@@ -37,9 +37,8 @@ class Critic(keras.Model):
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        self.gap = layers.GlobalAveragePooling1D(name='dis_gap')
-        self.embed_dense = layers.Dense(256, name='dis_embed_dense', kernel_initializer=kernel_initializer)
-        self.embed_norm = layers.LayerNormalization(name='dis_embed_norm')
+        self.ssl_num_classes = 6
+        self.ssl_head = layers.Dense(self.ssl_num_classes, name="ssl_head", dtype="float32")
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer)
 
@@ -47,7 +46,7 @@ class Critic(keras.Model):
 
         self.built = True 
 
-    def forward_score_and_embedding(self, inputs):
+    def call(self, inputs):
         x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
         subj_emb = self.sub_emb(sub_labels.view(-1))
         state_emb = self.state_emb(state_id.view(-1))
@@ -62,21 +61,19 @@ class Critic(keras.Model):
         h  = self.act2(self.conv2(h1))
         h  = self.act3(self.conv3(h))
 
-        # Downstream embedding is pre-MBSD to avoid batch-stat leakage.
-        emb = self.embed_norm(self.embed_dense(ops.concatenate([self.gap(h1), self.gap(h)], axis=-1)))
-
         h = self.mbsdv(h)
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features
         h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
-        out = self.final_dense(h_final)
-        return out.float(), emb
+        score = self.final_dense(h_final)
 
-    def call(self, inputs):
-        out, emb = self.forward_score_and_embedding(inputs)
+        if getattr(self, "return_rep", False):
+            return score.float(), h_final
+
         if self.output_features:
-            return emb
-        return out
+            return h_final
+
+        return score.float()
     
     def extract_features(self, x, sub_labels, state_ids):
         prev_output_features = self.output_features
@@ -210,18 +207,14 @@ class FiLMGAN(keras.Model):
         self.d_loss_tracker = keras.metrics.Mean(name='d_loss')
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.gp_tracker = keras.metrics.Mean(name="gp")
-        self.contrastive_tracker = keras.metrics.Mean(name="contrastive")
+        self.ssl_loss_tracker = keras.metrics.Mean(name="ssl_loss")
+        self.ssl_acc_tracker = keras.metrics.Mean(name="ssl_acc")
         self.seed_generator = keras.random.SeedGenerator(42)
 
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
         self.warmup_epochs = 300
-        # self.critic_step = 0
-        # self.gp_ema = 0.0
-        # self.gp_beta = 0.98
-        # self.gp_prev_ema = 0.0
-        # self.spike = True
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -241,7 +234,7 @@ class FiLMGAN(keras.Model):
 
     @property
     def metrics(self):
-        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker, self.contrastive_tracker]
+        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker, self.ssl_loss_tracker, self.ssl_acc_tracker]
 
     def get_config(self):
         config = super().get_config()
@@ -260,13 +253,12 @@ class FiLMGAN(keras.Model):
     def call(self, x):
         return self.critic(x)
 
-    def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight, contrastive_weight=0.05, contrastive_temperature=0.2):
+    def compile(self, d_optimizer, g_optimizer, gradient_penalty_weight, ssl_weight=0.1):
         super().compile(run_eagerly=True)
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
         self.gradient_penalty_weight = gradient_penalty_weight
-        self.contrastive_weight = contrastive_weight
-        self.contrastive_temperature = contrastive_temperature
+        self.ssl_weight = ssl_weight
 
     def gradient_penalty(self, real_data, fake_data, sub, pos):
         batch_size = real_data.size(0)
@@ -295,28 +287,51 @@ class FiLMGAN(keras.Model):
             print("NaNs at:", name, "max", t.abs().max().item())
             raise RuntimeError
 
-    def safe_scalar(x, default=float("nan")):
-        return default if x is None else float(x.detach().cpu())
+    def make_temporal_order_batch(self, x):
+        B, T, C = x.shape
+        n_chunks = 4
+        chunk_len = T // n_chunks
+        usable_len = chunk_len * n_chunks
+        x_trim = x[:, :usable_len, :]
 
-    def supervised_contrastive_loss(self, emb, labels, temperature):
-        emb = F.normalize(emb.float(), p=2, dim=1)
-        logits = emb @ emb.t()
-        logits = logits / max(temperature, 1e-6)
+        chunks = [x_trim[:, i * chunk_len:(i + 1) * chunk_len, :] for i in range(n_chunks)]
+        perm_bank = torch.tensor([
+            [0, 1, 2, 3],  # identity
+            [1, 0, 2, 3],  # local swap
+            [0, 2, 1, 3],  # middle swap
+            [3, 2, 1, 0],  # reverse
+            [1, 2, 3, 0],  # rotate left
+            [2, 0, 3, 1],  # non-local reorder
+        ], device=x.device, dtype=torch.long)
 
-        eye = torch.eye(logits.size(0), device=logits.device, dtype=torch.bool)
-        logits = logits.masked_fill(eye, torch.finfo(logits.dtype).min)
+        y = torch.randint(0, perm_bank.size(0), (B,), device=x.device)
+        x_out = torch.empty_like(x_trim)
+        for b in range(B):
+            perm = perm_bank[y[b]]
+            x_out[b] = torch.cat([chunks[idx][b] for idx in perm.tolist()], dim=0)
 
-        labels = labels.view(-1)
-        pos_mask = labels.unsqueeze(0).eq(labels.unsqueeze(1)) & (~eye)
-        valid = pos_mask.any(dim=1)
-        if not valid.any():
-            return torch.tensor(0.0, device=emb.device, dtype=emb.dtype)
+        if usable_len < T:
+            x_out = torch.cat([x_out, x[:, usable_len:, :]], dim=1)
 
-        log_prob = logits - torch.logsumexp(logits, dim=1, keepdim=True)
-        pos_counts = pos_mask.sum(dim=1).clamp(min=1)
-        mean_log_prob_pos = (log_prob * pos_mask).sum(dim=1) / pos_counts
-        loss = -mean_log_prob_pos[valid].mean()
-        return loss
+        return x_out, y  # y: permutation class
+    
+    def ssl_temporal_loss(self, critic, real_x, sub, pos, alpha=None):
+        x_ssl, y_ssl = self.make_temporal_order_batch(real_x)
+        alpha = self.ssl_weight if alpha is None else alpha
+
+        critic.return_rep = True
+        try:
+            _, z = critic({'x': x_ssl, 'sub': sub, 'pos': pos})
+        finally:
+            critic.return_rep = False
+
+        logits = critic.ssl_head(z)  # (B, n_perm_classes)
+        loss = F.cross_entropy(logits, y_ssl)
+
+        with torch.no_grad():
+            pred = logits.argmax(dim=1)
+            ssl_acc = (pred == y_ssl).float().mean().item()
+        return alpha * loss, ssl_acc
 
     def train_step(self, data):
         if isinstance(data, (tuple, list)):
@@ -333,11 +348,6 @@ class FiLMGAN(keras.Model):
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
         n_critic = 3 if self.global_step < warmup_steps else 1
 
-        # if self.spike:
-        #     gp_every = 1 
-        # else:
-        #     gp_every = 20
-
         # train critic
         for _ in range(n_critic):
             noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
@@ -345,35 +355,24 @@ class FiLMGAN(keras.Model):
             fake_sub = sub[perm].view(-1, 1)
             fake_pos = pos[perm].view(-1, 1)
             fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
-            real_pred, real_emb = self.critic.forward_score_and_embedding({'x': real_data, 'sub': sub, 'pos': pos})
+            real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
+            ssl_loss, ssl_acc = self.ssl_temporal_loss(self.critic, real_data, sub, pos)
             self.chk("D_real", real_pred)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
-            # do_gp = (self.critic_step % gp_every == 0)
-            # if do_gp :
-            #     gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            #     self.gp_tracker.update_state(gp.detach())
-            #     self.gp_prev_ema = self.gp_ema
-            #     self.gp_ema = self.gp_beta * self.gp_ema + (1 - self.gp_beta) * gp.item()
-            #     delta = self.gp_ema - self.gp_prev_ema
-            #     self.spike = (delta > 0.5) and (self.gp_ema > 10.0)
-            # else:
-            #     gp = torch.tensor(0.0, device=real_data.device)
-
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.gp_tracker.update_state(gp.detach())
-            contrastive = self.supervised_contrastive_loss(real_emb, pos.view(-1), self.contrastive_temperature)
-            self.contrastive_tracker.update_state(contrastive.detach())
+            self.ssl_loss_tracker.update_state(ssl_loss.detach())
+            self.ssl_acc_tracker.update_state(ssl_acc)
             self.zero_grad()
-            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + self.contrastive_weight * contrastive
+
+            d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + ssl_loss
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
-            
-            # self.critic_step +=1
 
         # Monitor gradient norms
         gradient_norms = []
@@ -410,7 +409,8 @@ class FiLMGAN(keras.Model):
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
             '4 gp': self.gp_tracker.result(),
-            '4b contrastive': self.contrastive_tracker.result(),
+            '4b ssl_loss': self.ssl_loss_tracker.result(),
+            '4c ssl_acc': self.ssl_acc_tracker.result(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

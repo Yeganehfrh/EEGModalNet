@@ -34,6 +34,7 @@ keras.utils.set_random_seed(SEED)
 
 from keras.optimizers.schedules import ExponentialDecay
 from ...EEGModalNet import TCNWGAN, CustomModelCheckpoint, preprocess_data, WGAN_GP_V0, FiLMGAN, RandomCropEEGDataset
+from ...EEGModalNet.utils import load_training_state, get_resume_state_path
 from typing import List, Dict
 import numpy as np
 import xarray as xr
@@ -134,28 +135,31 @@ def run(train_loader,
         cvloger_path='tmp/tmp/simple_gan_v1.csv',
         model_path='tmp/tmp/wgan_v2.model.keras',
         reuse_model=False,
-        reuse_model_path=None,
+        checkpoint_path=None,
         shuffle=False,
         steps_per_epoch=500):
 
-    model = FiLMGAN(time_dim=512,
-                    feature_dim=len(channels),
-                    latent_dim=latent_dim,
-                    n_subjects=n_subjects,
-                    use_sublayer_generator=True,
-                    use_sublayer_critic=True,
-                    use_channel_merger_g=False,
-                    use_channel_merger_c=False,
-                    interpolation='bilinear',
-                    steps_per_epoch=steps_per_epoch)
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model.to(device)
-    print(f'>>>> Model is on {device}')
+    initial_epoch = 0
 
     if reuse_model:
-        print(reuse_model_path)
-        model.load_weights(reuse_model_path)
+        print(checkpoint_path)
+        model = keras.saving.load_model(checkpoint_path, custom_objects={'FiLMGAN': FiLMGAN}, compile=False)
+    else:
+        model = FiLMGAN(time_dim=512,
+                        feature_dim=len(channels),
+                        latent_dim=latent_dim,
+                        n_subjects=n_subjects,
+                        use_sublayer_generator=True,
+                        use_sublayer_critic=True,
+                        use_channel_merger_g=False,
+                        use_channel_merger_c=False,
+                        interpolation='bilinear',
+                        steps_per_epoch=steps_per_epoch)
+
+    model.to(device)
+    print(f'>>>> Model is on {device}')
+    model.steps_per_epoch = steps_per_epoch
 
     lr_schedule_g = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
     lr_schedule_d = ExponentialDecay(0.0006, decay_steps=100000, decay_rate=0.90, staircase=True)
@@ -164,6 +168,13 @@ def run(train_loader,
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
                   gradient_penalty_weight=1,
                   recon_weight=0.1)
+
+    if reuse_model:
+        initial_epoch, resumed_exactly = load_training_state(model, checkpoint_path)
+        if resumed_exactly:
+            print(f'>>>> Resuming exactly from epoch {initial_epoch} using {get_resume_state_path(checkpoint_path)}')
+        else:
+            print(f'>>>> No resume sidecar found at {get_resume_state_path(checkpoint_path)}; continuing from weights only.')
 
     torch.cuda.synchronize()  # wait for model to be loaded
 
@@ -176,13 +187,14 @@ def run(train_loader,
     _ = model.fit(infinite_loader(train_loader),
                   batch_size=batch_size,
                   epochs=max_epochs,
+                  initial_epoch=initial_epoch,
                   shuffle=shuffle,
                   steps_per_epoch=steps_per_epoch,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=20),
+                      CustomModelCheckpoint(model_path, save_freq=20, save_training_state=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True, mode='min'),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True, mode='min'),
-                      keras.callbacks.CSVLogger(cvloger_path),
+                      keras.callbacks.CSVLogger(cvloger_path, append=reuse_model),
                       keras.callbacks.TerminateOnNaN()
                       # step_loss_history
                   ])
@@ -267,6 +279,6 @@ if __name__ == '__main__':
                 batch_size=BATCH_SIZE,
                 cvloger_path=f'{OUTPUT_PATH}.csv',
                 model_path=OUTPUT_PATH,
-                reuse_model=False,
-                reuse_model_path=None,
+                reuse_model=True,
+                checkpoint_path='logs/20260302_v2_best_gloss.model.keras',
                 shuffle=False)

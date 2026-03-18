@@ -151,7 +151,7 @@ def run(train_loader,
                         latent_dim=latent_dim,
                         n_subjects=n_subjects,
                         use_sublayer_generator=True,
-                        use_sublayer_critic=True,
+                        use_sublayer_critic=False,
                         use_channel_merger_g=False,
                         use_channel_merger_c=False,
                         interpolation='bilinear',
@@ -191,7 +191,7 @@ def run(train_loader,
                   shuffle=shuffle,
                   steps_per_epoch=steps_per_epoch,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=20, save_training_state=True),
+                      CustomModelCheckpoint(model_path, save_freq=10, save_training_state=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True, mode='min'),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True, mode='min'),
                       keras.callbacks.CSVLogger(cvloger_path, append=reuse_model),
@@ -221,7 +221,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20260302_v2'
+    OUTPUT_PATH = 'logs/20260318'
     CONDITION = 'both'  # supported: 'both', 'EC', or 'EO'
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',

@@ -38,17 +38,11 @@ class Critic(keras.Model):
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
-        self.recon_proj1 = layers.Conv1D(8 * feature_dim, 1, padding='same', name='recon_proj1', kernel_initializer=kernel_initializer)
-        self.recon_dil1 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=1, name='recon_dil1', kernel_initializer=kernel_initializer)
-        self.recon_dil2 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=2, name='recon_dil2', kernel_initializer=kernel_initializer)
+        self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
-        self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
-        self.recon_proj2 = layers.Conv1D(2 * feature_dim, 1, padding='same', name='recon_proj2', kernel_initializer=kernel_initializer)
-        self.recon_dil3 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil3', kernel_initializer=kernel_initializer)
-        self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', kernel_initializer=kernel_initializer)
-        self.recon_act3 = layers.LeakyReLU(negative_slope=negative_slope)
-        self.recon_act4 = layers.LeakyReLU(negative_slope=negative_slope)
+        self.recon_conv2 = layers.Conv1D(4 * feature_dim, 3, padding='same', name='recon_conv2', kernel_initializer=kernel_initializer)
+        self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_out = layers.Conv1D(feature_dim, 3, padding='same', name='recon_out', dtype='float32', kernel_initializer=kernel_initializer)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer)
@@ -83,15 +77,9 @@ class Critic(keras.Model):
 
     def reconstruct_from_features(self, h):
         x = self.recon_upsample1(h)
-        res = self.recon_proj1(x)
-        x = self.recon_act1(self.recon_dil1(res))
-        x = self.recon_act2(self.recon_dil2(x))
-        x = x + res
+        x = self.recon_act1(self.recon_conv1(x))
         x = self.recon_upsample2(x)
-        res = self.recon_proj2(x)
-        x = self.recon_act3(self.recon_dil3(res))
-        x = self.recon_act4(self.recon_dil4(x))
-        x = x + res
+        x = self.recon_act2(self.recon_conv2(x))
         x = self.recon_out(x)
         return x.float()
 
@@ -356,6 +344,7 @@ class FiLMGAN(keras.Model):
         abs_err = (x_recon - real_x.float()).abs() * mask
         denom = mask.sum().clamp(min=1.0)
         loss = abs_err.sum() / denom
+        self.recon_loss_tracker.update_state(loss.detach())
         return alpha * loss
 
     def train_step(self, data):
@@ -388,7 +377,6 @@ class FiLMGAN(keras.Model):
 
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
             self.gp_tracker.update_state(gp.detach())
-            self.recon_loss_tracker.update_state(recon_loss.detach())
             self.zero_grad()
 
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + recon_loss

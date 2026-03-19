@@ -221,7 +221,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20260318'
+    OUTPUT_PATH = 'logs/20260319'
     CONDITION = 'both'  # supported: 'both', 'EC', or 'EO'
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
@@ -274,7 +274,7 @@ if __name__ == '__main__':
     model = run(train_loader,
                 n_subjects=N_SUBJECTS,
                 channels=CHANNELS[8],
-                max_epochs=160,
+                max_epochs=200,
                 latent_dim=LATENT_DIM,
                 batch_size=BATCH_SIZE,
                 cvloger_path=f'{OUTPUT_PATH}.csv',

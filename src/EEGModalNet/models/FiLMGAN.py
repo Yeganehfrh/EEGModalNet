@@ -37,6 +37,11 @@ class Critic(keras.Model):
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
+        self.transfer_pool_h1 = layers.GlobalAveragePooling1D(name='transfer_pool_h1')
+        self.transfer_pool_h = layers.GlobalAveragePooling1D(name='transfer_pool_h')
+        self.transfer_dense = layers.Dense(256, name='transfer_dense', dtype='float32', kernel_initializer=kernel_initializer)
+        self.transfer_norm = layers.LayerNormalization(name='transfer_norm')
+        self.transfer_score = layers.Dense(1, name='transfer_score', dtype='float32', kernel_initializer=kernel_initializer)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
         self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
@@ -67,12 +72,20 @@ class Critic(keras.Model):
         h  = self.act3(self.conv3(h))
         return h1, h
 
-    def score_from_features(self, h1, h):
+    def transfer_features(self, h1, h):
+        transfer_in = ops.concatenate([
+            self.transfer_pool_h1(h1),
+            self.transfer_pool_h(h),
+        ], axis=-1)
+        z_transfer = self.transfer_norm(self.transfer_dense(transfer_in))
+        return z_transfer.float()
+
+    def score_from_features(self, h1, h, z_transfer):
         h = self.mbsdv(h)
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features
         h_final = ops.concatenate([h_flat, h1_flat], axis=-1)
-        score = self.final_dense(h_final)
+        score = self.final_dense(h_final) + self.transfer_score(z_transfer)
         return score.float(), h_final
 
     def reconstruct_from_features(self, h):
@@ -85,13 +98,14 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         h1, h = self.encode_features(inputs)
-        score, h_final = self.score_from_features(h1, h)
+        z_transfer = self.transfer_features(h1, h)
+        score, h_final = self.score_from_features(h1, h, z_transfer)
 
         if getattr(self, "return_rep", False):
-            return score, h_final
+            return score, z_transfer
 
         if self.output_features:
-            return h_final
+            return z_transfer
 
         return score.float()
     
@@ -306,29 +320,47 @@ class FiLMGAN(keras.Model):
             print("NaNs at:", name, "max", t.abs().max().item())
             raise RuntimeError
 
-    def make_masked_batch(self, x, mask_ratio=0.15, max_spans=3):
+    def make_masked_batch(
+        self,
+        x,
+        mask_ratio=0.15,
+        max_ops=4,
+        p_channel_mask=0.5,
+        max_channel_fraction=0.5,
+    ):
         B, T, C = x.shape
         mask = torch.zeros_like(x)
         x_masked = x.clone()
-        total_masked = max(1, int(T * mask_ratio))
+        target_masked = max(1, int(T * C * mask_ratio))
         min_span = max(4, T // 32)
+        max_span = max(min_span + 1, T // 4)
 
         for b in range(B):
-            remaining = total_masked
-            n_spans = int(torch.randint(1, max_spans + 1, (1,), device=x.device).item())
-            for span_idx in range(n_spans):
-                spans_left = n_spans - span_idx
-                span_len = max(min_span, remaining // spans_left)
-                jitter = max(1, span_len // 3)
-                low = max(min_span, span_len - jitter)
-                high = min(T, span_len + jitter + 1)
-                span_len = int(torch.randint(low, high, (1,), device=x.device).item())
-                span_len = min(span_len, remaining, T)
-                start = int(torch.randint(0, T - span_len + 1, (1,), device=x.device).item())
-                mask[b, start:start + span_len, :] = 1.0
-                remaining = max(0, remaining - span_len)
-                if remaining == 0:
+            remaining = target_masked
+            n_ops = int(torch.randint(1, max_ops + 1, (1,), device=x.device).item())
+
+            for _ in range(n_ops):
+                if remaining <= 0:
                     break
+
+                span_len = int(torch.randint(min_span, max_span + 1, (1,), device=x.device).item())
+                span_len = min(span_len, T)
+                start = int(torch.randint(0, T - span_len + 1, (1,), device=x.device).item())
+
+                # Mix full temporal span masking with channel-specific masking.
+                use_channel_mask = torch.rand((), device=x.device) < p_channel_mask
+                before = mask[b].sum()
+
+                if use_channel_mask:
+                    max_ch = max(1, int(C * max_channel_fraction))
+                    n_ch = int(torch.randint(1, max_ch + 1, (1,), device=x.device).item())
+                    ch_idx = torch.randperm(C, device=x.device)[:n_ch]
+                    mask[b, start:start + span_len, ch_idx] = 1.0
+                else:
+                    mask[b, start:start + span_len, :] = 1.0
+
+                added = int((mask[b].sum() - before).item())
+                remaining -= added
 
         x_masked = x_masked * (1.0 - mask)
         return x_masked, mask

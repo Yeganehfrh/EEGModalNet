@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from keras import layers
 import keras
-from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev, SubjectStateLayers_FiLM, DualFiLMBlock
+from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev, DualFiLMBlock
 from keras import ops
 
 
@@ -24,7 +24,7 @@ class Critic(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = DualFiLMBlock(feature_dim, self.d_sub, init_id=True)
 
         ks = 5
         
@@ -148,7 +148,7 @@ class Generator(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = DualFiLMBlock(feature_dim, self.d_sub, init_id=True)
 
         self.post_att = keras.Sequential([
             keras.Input(shape=((latent_dim,))),

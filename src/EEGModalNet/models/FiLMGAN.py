@@ -157,7 +157,7 @@ class Generator(keras.Model):
             layers.Reshape((128, 32), name='gen_layer3'),
             ])
         
-        # self.film_block = DualFiLMBlock(32, 32)
+        self.film_block = DualFiLMBlock(32, 32)
 
         self.cov_block = keras.Sequential([
             keras.Input(shape=(128, 32)),
@@ -194,7 +194,7 @@ class Generator(keras.Model):
         x = self.post_att(noise)
         subj_emb = self.sub_emb(sub_labels.view(-1))
         state_emb = self.state_emb(state_id.view(-1))
-        # x = self.film_block(x, subj_emb, state_emb)
+        x = self.film_block(x, subj_emb, state_emb)
         x = self.cov_block(x)
         x = self.dil_block(x)
         if hasattr(self, 'sub_layer'):
@@ -319,51 +319,35 @@ class FiLMGAN(keras.Model):
         if not torch.isfinite(t).all():
             print("NaNs at:", name, "max", t.abs().max().item())
             raise RuntimeError
+    
 
-    def make_masked_batch(
-        self,
-        x,
-        mask_ratio=0.15,
-        max_ops=4,
-        p_channel_mask=0.5,
-        max_channel_fraction=0.5,
-    ):
+    def make_masked_batch(self, x, mask_ratio=0.15, max_spans=3):
         B, T, C = x.shape
         mask = torch.zeros_like(x)
         x_masked = x.clone()
-        target_masked = max(1, int(T * C * mask_ratio))
+        total_masked = max(1, int(T * mask_ratio))
         min_span = max(4, T // 32)
-        max_span = max(min_span + 1, T // 4)
 
         for b in range(B):
-            remaining = target_masked
-            n_ops = int(torch.randint(1, max_ops + 1, (1,), device=x.device).item())
-
-            for _ in range(n_ops):
-                if remaining <= 0:
-                    break
-
-                span_len = int(torch.randint(min_span, max_span + 1, (1,), device=x.device).item())
-                span_len = min(span_len, T)
+            remaining = total_masked
+            n_spans = int(torch.randint(1, max_spans + 1, (1,), device=x.device).item())
+            for span_idx in range(n_spans):
+                spans_left = n_spans - span_idx
+                span_len = max(min_span, remaining // spans_left)
+                jitter = max(1, span_len // 3)
+                low = max(min_span, span_len - jitter)
+                high = min(T, span_len + jitter + 1)
+                span_len = int(torch.randint(low, high, (1,), device=x.device).item())
+                span_len = min(span_len, remaining, T)
                 start = int(torch.randint(0, T - span_len + 1, (1,), device=x.device).item())
-
-                # Mix full temporal span masking with channel-specific masking.
-                use_channel_mask = torch.rand((), device=x.device) < p_channel_mask
-                before = mask[b].sum()
-
-                if use_channel_mask:
-                    max_ch = max(1, int(C * max_channel_fraction))
-                    n_ch = int(torch.randint(1, max_ch + 1, (1,), device=x.device).item())
-                    ch_idx = torch.randperm(C, device=x.device)[:n_ch]
-                    mask[b, start:start + span_len, ch_idx] = 1.0
-                else:
-                    mask[b, start:start + span_len, :] = 1.0
-
-                added = int((mask[b].sum() - before).item())
-                remaining -= added
+                mask[b, start:start + span_len, :] = 1.0
+                remaining = max(0, remaining - span_len)
+                if remaining == 0:
+                    break
 
         x_masked = x_masked * (1.0 - mask)
         return x_masked, mask
+
 
     def reconstruction_loss(self, critic, real_x, sub, pos, alpha=None):
         x_masked, mask = self.make_masked_batch(real_x)

@@ -31,7 +31,7 @@ class Critic(keras.Model):
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
-        self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
+        self.conv1 = layers.Conv1D(2 * feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv2 = layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv2', kernel_initializer=kernel_initializer)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)

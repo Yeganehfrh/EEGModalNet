@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from keras import layers
 import keras
-from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev, DualFiLMBlock
+from .common_v0 import convBlock, HighPass1D, MinibatchStdDev, DualFiLMBlock
 from keras import ops
 
 
@@ -31,23 +31,30 @@ class Critic(keras.Model):
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
-        self.conv1 = layers.Conv1D(2 * feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
+        self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv2 = layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv2', kernel_initializer=kernel_initializer)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.transfer_pool_h1 = layers.GlobalAveragePooling1D(name='transfer_pool_h1')
-        # self.transfer_pool_h = layers.GlobalAveragePooling1D(name='transfer_pool_h')
-        # self.transfer_dense = layers.Dense(256, name='transfer_dense', dtype='float32', kernel_initializer=kernel_initializer)
-        # self.transfer_norm = layers.LayerNormalization(name='transfer_norm')
-        # self.transfer_score = layers.Dense(1, name='transfer_score', dtype='float32', kernel_initializer=kernel_initializer)
+        # self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
+        # self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
+        # self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
+        # self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
+        # self.recon_conv2 = layers.Conv1D(4 * feature_dim, 3, padding='same', name='recon_conv2', kernel_initializer=kernel_initializer)
+        # self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
-        self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
+        self.recon_proj1 = layers.Conv1D(8 * feature_dim, 1, padding='same', name='recon_proj1', kernel_initializer=kernel_initializer)
+        self.recon_dil1 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=1, name='recon_dil1', kernel_initializer=kernel_initializer)
+        self.recon_dil2 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=2, name='recon_dil2', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
-        self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
-        self.recon_conv2 = layers.Conv1D(4 * feature_dim, 3, padding='same', name='recon_conv2', kernel_initializer=kernel_initializer)
         self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
+        self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
+        self.recon_proj2 = layers.Conv1D(2 * feature_dim, 1, padding='same', name='recon_proj2', kernel_initializer=kernel_initializer)
+        self.recon_dil3 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil3', kernel_initializer=kernel_initializer)
+        self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', kernel_initializer=kernel_initializer)
+        self.recon_act3 = layers.LeakyReLU(negative_slope=negative_slope)
+        self.recon_act4 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_out = layers.Conv1D(feature_dim, 3, padding='same', name='recon_out', dtype='float32', kernel_initializer=kernel_initializer)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer)
@@ -72,15 +79,7 @@ class Critic(keras.Model):
         h  = self.act3(self.conv3(h))
         return h1, h
 
-    # def transfer_features(self, h1, h):
-    #     transfer_in = ops.concatenate([
-    #         self.transfer_pool_h1(h1),
-    #         self.transfer_pool_h(h),
-    #     ], axis=-1)
-    #     z_transfer = self.transfer_norm(self.transfer_dense(transfer_in))
-    #     return z_transfer.float()
-
-    def score_from_features(self, h1, h, z_transfer):
+    def score_from_features(self, h1, h):
         h = self.mbsdv(h)
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features
@@ -89,20 +88,27 @@ class Critic(keras.Model):
         return score.float(), h_final
 
     def reconstruct_from_features(self, h):
+        # x = self.recon_upsample1(h)
+        # x = self.recon_act1(self.recon_conv1(x))
+        # x = self.recon_upsample2(x)
+        # x = self.recon_act2(self.recon_conv2(x))
+        # x = self.recon_out(x)
         x = self.recon_upsample1(h)
-        x = self.recon_act1(self.recon_conv1(x))
+        res = self.recon_proj1(x)
+        x = self.recon_act1(self.recon_dil1(res))
+        x = self.recon_act2(self.recon_dil2(x))
+        x = x + res
         x = self.recon_upsample2(x)
-        x = self.recon_act2(self.recon_conv2(x))
+        res = self.recon_proj2(x)
+        x = self.recon_act3(self.recon_dil3(res))
+        x = self.recon_act4(self.recon_dil4(x))
+        x = x + res
         x = self.recon_out(x)
         return x.float()
 
     def call(self, inputs):
         h1, h = self.encode_features(inputs)
-        # z_transfer = self.transfer_features(h1, h)
-        score, h_final = self.score_from_features(h1, h, None)
-
-        # if getattr(self, "return_rep", False):
-        #     return score, z_transfer
+        score, h_final = self.score_from_features(h1, h)
 
         if self.output_features:
             return h_final

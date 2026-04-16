@@ -44,15 +44,15 @@ class Critic(keras.Model):
         # self.recon_conv2 = layers.Conv1D(4 * feature_dim, 3, padding='same', name='recon_conv2', kernel_initializer=kernel_initializer)
         # self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
-        self.recon_proj1 = layers.Conv1D(8 * feature_dim, 1, padding='same', name='recon_proj1', kernel_initializer=kernel_initializer)
-        self.recon_dil1 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=1, name='recon_dil1', kernel_initializer=kernel_initializer)
-        self.recon_dil2 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=2, name='recon_dil2', kernel_initializer=kernel_initializer)
+        self.recon_proj1 = layers.Conv1D(8 * feature_dim, 1, padding='same', name='recon_proj1', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_dil1 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=1, name='recon_dil1', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_dil2 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=2, name='recon_dil2', dtype='float32', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
-        self.recon_proj2 = layers.Conv1D(2 * feature_dim, 1, padding='same', name='recon_proj2', kernel_initializer=kernel_initializer)
-        self.recon_dil3 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil3', kernel_initializer=kernel_initializer)
-        self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', kernel_initializer=kernel_initializer)
+        self.recon_proj2 = layers.Conv1D(2 * feature_dim, 1, padding='same', name='recon_proj2', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_dil3 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil3', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', dtype='float32', kernel_initializer=kernel_initializer)
         self.recon_act3 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_act4 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_out = layers.Conv1D(feature_dim, 3, padding='same', name='recon_out', dtype='float32', kernel_initializer=kernel_initializer)
@@ -93,7 +93,7 @@ class Critic(keras.Model):
         # x = self.recon_upsample2(x)
         # x = self.recon_act2(self.recon_conv2(x))
         # x = self.recon_out(x)
-        x = self.recon_upsample1(h)
+        x = self.recon_upsample1(h.float())
         res = self.recon_proj1(x)
         x = self.recon_act1(self.recon_dil1(res))
         x = self.recon_act2(self.recon_dil2(x))
@@ -382,9 +382,13 @@ class FiLMGAN(keras.Model):
 
         if x_recon.shape[1] != real_x.shape[1]:
             x_recon = x_recon[:, :real_x.shape[1], :]
-        abs_err = (x_recon - real_x.float()).abs() * mask
-        denom = mask.sum().clamp(min=1.0)
-        loss = abs_err.sum() / denom
+        target = real_x.float()
+        mask_bool = mask.bool()
+        # Ignore unmasked positions without letting NaNs in those entries poison the loss.
+        x_recon = torch.where(mask_bool, x_recon, target)
+        abs_err = (x_recon - target).abs()
+        denom = mask_bool.sum(dtype=torch.float32).clamp(min=1.0)
+        loss = abs_err.sum(dtype=torch.float32) / denom
         weighted_loss = alpha * loss
         self.recon_loss_tracker.update_state(loss.detach())
         self.recon_term_tracker.update_state(weighted_loss.detach())

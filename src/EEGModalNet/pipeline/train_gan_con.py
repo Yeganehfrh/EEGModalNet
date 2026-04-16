@@ -296,5 +296,5 @@ if __name__ == '__main__':
                 cvloger_path=f'{OUTPUT_PATH}.csv',
                 model_path=OUTPUT_PATH,
                 reuse_model=True,
-                checkpoint_path='logs/20260416_epoch_10.model.keras',
+                checkpoint_path='logs/20260416_epoch_20.model.keras',
                 shuffle=False)

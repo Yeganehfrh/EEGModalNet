@@ -248,12 +248,15 @@ class FiLMGAN(keras.Model):
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.gp_tracker = keras.metrics.Mean(name="gp")
         self.recon_loss_tracker = keras.metrics.Mean(name="recon_loss")
+        self.recon_term_tracker = keras.metrics.Mean(name="recon_term")
         self.seed_generator = keras.random.SeedGenerator(42)
 
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
         self.warmup_epochs = 300
+        self.recon_start_epoch = 10
+        self.recon_ramp_epochs = 20
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -273,7 +276,13 @@ class FiLMGAN(keras.Model):
 
     @property
     def metrics(self):
-        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker, self.recon_loss_tracker]
+        return [
+            self.d_loss_tracker,
+            self.g_loss_tracker,
+            self.gp_tracker,
+            self.recon_loss_tracker,
+            self.recon_term_tracker,
+        ]
 
     def get_config(self):
         config = super().get_config()
@@ -366,17 +375,20 @@ class FiLMGAN(keras.Model):
         abs_err = (x_recon - real_x.float()).abs() * mask
         denom = mask.sum().clamp(min=1.0)
         loss = abs_err.sum() / denom
+        weighted_loss = alpha * loss
         self.recon_loss_tracker.update_state(loss.detach())
-        return alpha * loss
+        self.recon_term_tracker.update_state(weighted_loss.detach())
+        return weighted_loss
 
     
     def get_lambda_recon(self, epoch):
-        if epoch < 10:
+        max_recon_weight = getattr(self, 'recon_weight', 0.1)
+        if epoch < self.recon_start_epoch:
             return 0.0
-        elif epoch < 30:
-            return 0.02 * (epoch - 10) / 20.0
-        else:
-            return 0.02
+        if epoch < self.recon_start_epoch + self.recon_ramp_epochs:
+            progress = (epoch - self.recon_start_epoch) / self.recon_ramp_epochs
+            return max_recon_weight * progress
+        return max_recon_weight
 
 
     def train_step(self, data):
@@ -457,6 +469,7 @@ class FiLMGAN(keras.Model):
             '4 gp': self.gp_tracker.result(),
             '4a recon_weight': lambda_recon,
             '4b recon_loss': self.recon_loss_tracker.result(),
+            '4c recon_term': self.recon_term_tracker.result(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),

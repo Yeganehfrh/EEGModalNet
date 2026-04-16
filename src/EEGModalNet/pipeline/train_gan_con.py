@@ -162,11 +162,11 @@ def run(train_loader,
     model.steps_per_epoch = steps_per_epoch
 
     lr_schedule_g = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0006, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0003, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.0, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
-                  gradient_penalty_weight=1,
+                  gradient_penalty_weight=1.0,
                   recon_weight=0.1)
 
     if reuse_model:
@@ -191,7 +191,7 @@ def run(train_loader,
                   shuffle=shuffle,
                   steps_per_epoch=steps_per_epoch,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=10, save_training_state=True),
+                      CustomModelCheckpoint(model_path, save_freq=5, save_training_state=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True, mode='min'),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True, mode='min'),
                       keras.callbacks.CSVLogger(cvloger_path, append=reuse_model),
@@ -279,6 +279,6 @@ if __name__ == '__main__':
                 batch_size=BATCH_SIZE,
                 cvloger_path=f'{OUTPUT_PATH}.csv',
                 model_path=OUTPUT_PATH,
-                reuse_model=False,
-                checkpoint_path=None,
+                reuse_model=True,
+                checkpoint_path='logs/20260416_epoch_10.model.keras',
                 shuffle=False)

@@ -332,7 +332,17 @@ class FiLMGAN(keras.Model):
 
     def chk(self, name, t):
         if not torch.isfinite(t).all():
-            print("NaNs at:", name, "max", t.abs().max().item())
+            epoch = self.global_step // max(1, self.steps_per_epoch)
+            print(
+                "NaNs at:",
+                name,
+                "step",
+                self.global_step,
+                "epoch",
+                epoch,
+                "max",
+                t.abs().max().item(),
+            )
             raise RuntimeError
     
 
@@ -418,14 +428,17 @@ class FiLMGAN(keras.Model):
             real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
             recon_loss = self.reconstruction_loss(self.critic, real_data, sub, pos, alpha=lambda_recon)
             self.chk("D_real", real_pred)
+            self.chk("D_recon", recon_loss)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
+            self.chk("D_gp", gp)
             self.gp_tracker.update_state(gp.detach())
             self.zero_grad()
 
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + recon_loss
+            self.chk("D_loss", d_loss)
             d_loss.backward()
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
@@ -448,7 +461,9 @@ class FiLMGAN(keras.Model):
         self.chk("G_out", x_gen)
 
         fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': fake_pos})
+        self.chk("G_fake", fake_pred)
         g_loss = -fake_pred.mean()
+        self.chk("G_loss", g_loss)
         g_loss.backward()
 
         grads = [v.value.grad for v in self.generator.trainable_weights]

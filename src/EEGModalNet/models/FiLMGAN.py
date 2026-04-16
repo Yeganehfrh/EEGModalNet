@@ -24,7 +24,7 @@ class Critic(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = DualFiLMBlock(feature_dim, self.d_sub, init_id=True)
 
         ks = 5
         
@@ -154,7 +154,7 @@ class Generator(keras.Model):
         self.sub_emb = torch.nn.Embedding(n_subjects, self.d_sub)
         self.state_emb = torch.nn.Embedding(2, 16)  # (number of states, emdding dimentions)
         if use_sublayer:
-            self.sub_layer = SubjectStateLayers_FiLM(feature_dim, self.d_sub, init_id=True)
+            self.sub_layer = DualFiLMBlock(feature_dim, self.d_sub, init_id=True)
 
         self.post_att = keras.Sequential([
             keras.Input(shape=((latent_dim,))),
@@ -369,6 +369,16 @@ class FiLMGAN(keras.Model):
         self.recon_loss_tracker.update_state(loss.detach())
         return alpha * loss
 
+    
+    def get_lambda_recon(self, epoch):
+        if epoch < 10:
+            return 0.0
+        elif epoch < 30:
+            return 0.02 * (epoch - 10) / 20.0
+        else:
+            return 0.02
+
+
     def train_step(self, data):
         if isinstance(data, (tuple, list)):
             data = data[0]
@@ -383,6 +393,8 @@ class FiLMGAN(keras.Model):
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
         n_critic = 3 if self.global_step < warmup_steps else 1
+        epoch = self.global_step // self.steps_per_epoch
+        lambda_recon = self.get_lambda_recon(epoch)
 
         # train critic
         for _ in range(n_critic):
@@ -392,7 +404,7 @@ class FiLMGAN(keras.Model):
             fake_pos = pos[perm].view(-1, 1)
             fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
             real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
-            recon_loss = self.reconstruction_loss(self.critic, real_data, sub, pos)
+            recon_loss = self.reconstruction_loss(self.critic, real_data, sub, pos, alpha=lambda_recon)
             self.chk("D_real", real_pred)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
@@ -443,6 +455,7 @@ class FiLMGAN(keras.Model):
             '2 g_loss': self.g_loss_tracker.result(),
             '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
             '4 gp': self.gp_tracker.result(),
+            '4a recon_weight': lambda_recon,
             '4b recon_loss': self.recon_loss_tracker.result(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),

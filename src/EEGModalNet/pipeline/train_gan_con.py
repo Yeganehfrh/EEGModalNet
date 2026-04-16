@@ -169,7 +169,9 @@ def run(train_loader,
     sample_sub = sample_batch['sub'].to(device)
     sample_pos = sample_batch['pos'].to(device)
     with torch.no_grad():
-        _ = model.critic({'x': sample_x, 'sub': sample_sub, 'pos': sample_pos})
+        sample_h1, sample_h = model.critic.encode_features({'x': sample_x, 'sub': sample_sub, 'pos': sample_pos})
+        _ = model.critic.score_from_features(sample_h1, sample_h)
+        _ = model.critic.reconstruct_from_features(sample_h)
         sample_noise = keras.random.normal((sample_x.size(0), latent_dim), dtype=sample_x.dtype)
         _ = model.generator((sample_noise, sample_sub, sample_pos))
 
@@ -182,9 +184,11 @@ def run(train_loader,
                   recon_weight=0.1)
 
     if reuse_model:
-        initial_epoch, resumed_exactly = load_training_state(model, checkpoint_path)
-        if resumed_exactly:
+        initial_epoch, resume_status = load_training_state(model, checkpoint_path)
+        if resume_status == 'exact':
             print(f'>>>> Resuming exactly from epoch {initial_epoch} using {get_resume_state_path(checkpoint_path)}')
+        elif resume_status == 'weights_only':
+            print(f'>>>> Resuming from checkpoint weights at epoch {initial_epoch}; optimizer state was not restored.')
         else:
             print(f'>>>> No resume sidecar found at {get_resume_state_path(checkpoint_path)}; continuing from weights only.')
 

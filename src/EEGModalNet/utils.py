@@ -38,7 +38,7 @@ def _restore_optimizer_variables(optimizer, values):
 def load_training_state(model, checkpoint_path):
     resume_state_path = get_resume_state_path(checkpoint_path)
     if not os.path.exists(resume_state_path):
-        return 0, False
+        return 0, 'missing'
 
     state = torch.load(resume_state_path, map_location='cpu')
     saved_epoch = int(state.get('epoch', 0))
@@ -58,10 +58,10 @@ def load_training_state(model, checkpoint_path):
             f'>>>> Optimizer state mismatch in {resume_state_path}: {exc}. '
             'Continuing from checkpoint weights and saved epoch/global_step only.'
         )
-        return saved_epoch, False
+        return saved_epoch, 'weights_only'
 
     model.global_step = saved_global_step
-    return saved_epoch, True
+    return saved_epoch, 'exact'
 
 
 class CustomModelCheckpoint(keras.callbacks.Callback):

@@ -161,6 +161,18 @@ def run(train_loader,
     print(f'>>>> Model is on {device}')
     model.steps_per_epoch = steps_per_epoch
 
+    # Materialize all lazy weights before building/restoring optimizer slots.
+    sample_batch = next(iter(train_loader))
+    if isinstance(sample_batch, (tuple, list)):
+        sample_batch = sample_batch[0]
+    sample_x = sample_batch['x'].to(device)
+    sample_sub = sample_batch['sub'].to(device)
+    sample_pos = sample_batch['pos'].to(device)
+    with torch.no_grad():
+        _ = model.critic({'x': sample_x, 'sub': sample_sub, 'pos': sample_pos})
+        sample_noise = keras.random.normal((sample_x.size(0), latent_dim), dtype=sample_x.dtype)
+        _ = model.generator((sample_noise, sample_sub, sample_pos))
+
     lr_schedule_g = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
     lr_schedule_d = ExponentialDecay(0.0003, decay_steps=100000, decay_rate=0.90, staircase=True)
 

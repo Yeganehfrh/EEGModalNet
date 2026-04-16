@@ -1017,3 +1017,62 @@ class TCNResidualBlock(keras.Model):
             out = layer(out)
         out = layers.add([out, residual])
         return self.final_activation(out)
+
+
+class SubjectStateLayers_FiLM(nn.Module):
+    """FiLM-style subject layer with additional EO/EC state conditioning."""
+    def __init__(self, channels: int, d_sub: int, d_state: int = 16, init_id: bool = True):
+        super().__init__()
+        self.channels = channels
+        self.d_sub = d_sub
+        self.d_state = d_state
+
+        self.sub_linear   = nn.Linear(d_sub,   2 * channels)
+        self.state_linear = nn.Linear(d_state, 2 * channels)
+
+        self.g_sub   = nn.Parameter(torch.tensor(1.0))
+        self.g_state = nn.Parameter(torch.tensor(1.0))
+
+        if init_id:
+            with torch.no_grad():
+                self.sub_linear.weight.zero_();   self.sub_linear.bias.zero_()
+                self.state_linear.weight.zero_(); self.state_linear.bias.zero_()
+
+    def forward(self, x, subj_emb, state_emb):
+        if x.shape[-1] != self.channels:
+            raise ValueError(
+                f"SubjectStateLayers_FiLM expected x.shape[-1] == {self.channels}, got {x.shape[-1]}"
+            )
+        if subj_emb.shape[-1] != self.d_sub:
+            raise ValueError(
+                f"SubjectStateLayers_FiLM expected subj_emb.shape[-1] == {self.d_sub}, got {subj_emb.shape[-1]}"
+            )
+        if state_emb.shape[-1] != self.d_state:
+            raise ValueError(
+                f"SubjectStateLayers_FiLM expected state_emb.shape[-1] == {self.d_state}, got {state_emb.shape[-1]}"
+            )
+
+        xdtype = x.dtype
+        device = x.device
+
+        w_sub_dtype = self.sub_linear.weight.dtype
+        w_state_dtype = self.state_linear.weight.dtype
+
+        subj_emb  = subj_emb.to(device=device, dtype=w_sub_dtype)
+        state_emb = state_emb.to(device=device, dtype=w_state_dtype)
+
+        sub_gb   = self.sub_linear(subj_emb)        # (B,2C)
+        st_gb    = self.state_linear(state_emb)     # (B,2C)
+
+        g_sub, b_sub = sub_gb.chunk(2, dim=-1)
+        g_st,  b_st  = st_gb.chunk(2, dim=-1)
+
+        gsub = self.g_sub.to(device=device, dtype=w_sub_dtype)
+        gst  = self.g_state.to(device=device, dtype=w_state_dtype)
+        
+        gamma = 1.0 + 0.1 * (gsub * g_sub + gst * g_st)
+        beta  = 0.1 * (gsub * b_sub + gst * b_st)
+
+        gamma = gamma.to(xdtype).unsqueeze(1)
+        beta  = beta.to(xdtype).unsqueeze(1)
+        return gamma * x + beta

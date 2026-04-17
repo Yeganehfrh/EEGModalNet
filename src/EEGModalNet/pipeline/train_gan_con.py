@@ -207,7 +207,7 @@ def run(train_loader,
                   shuffle=shuffle,
                   steps_per_epoch=steps_per_epoch,
                   callbacks=[
-                      CustomModelCheckpoint(model_path, save_freq=5, save_training_state=True),
+                      CustomModelCheckpoint(model_path, save_freq=10, save_training_state=True),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_gloss.model.keras', monitor='2 g_loss', save_best_only=True, mode='min'),
                       keras.callbacks.ModelCheckpoint(f'{model_path}_best_dloss.model.keras', monitor='1 d_loss', save_best_only=True, mode='min'),
                       keras.callbacks.CSVLogger(cvloger_path, append=reuse_model),

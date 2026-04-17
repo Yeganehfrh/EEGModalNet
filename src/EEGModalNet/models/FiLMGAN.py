@@ -273,7 +273,9 @@ class FiLMGAN(keras.Model):
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 5
+        self.warmup_epochs = 10
+        self.n_critic_warmup = 3
+        self.n_critic_main = 2
         self.recon_start_epoch = 10
         self.recon_ramp_epochs = 40
 
@@ -454,7 +456,7 @@ class FiLMGAN(keras.Model):
         self.chk("D_real_input", real_data)
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        n_critic = 3 if self.global_step < warmup_steps else 1
+        n_critic = self.n_critic_warmup if self.global_step < warmup_steps else self.n_critic_main
         epoch = self.global_step / max(1, self.steps_per_epoch)
         lambda_recon = self.get_lambda_recon(epoch)
 

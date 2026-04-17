@@ -176,7 +176,7 @@ def run(train_loader,
         _ = model.generator((sample_noise, sample_sub, sample_pos))
 
     lr_schedule_g = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
-    lr_schedule_d = ExponentialDecay(0.0001, decay_steps=100000, decay_rate=0.90, staircase=True)
+    lr_schedule_d = ExponentialDecay(0.0002, decay_steps=100000, decay_rate=0.90, staircase=True)
 
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.0, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
@@ -237,7 +237,7 @@ if __name__ == '__main__':
     N_SUBJECTS = 202
     LATENT_DIM = 128
     BATCH_SIZE = 128
-    OUTPUT_PATH = 'logs/20260416'
+    OUTPUT_PATH = 'logs/20260417'
     CONDITION = 'both'  # supported: 'both', 'EC', or 'EO'
 
     data = load_data('data/LEMON_DATA/EC_ch-8_sf-128.nc5',
@@ -295,6 +295,6 @@ if __name__ == '__main__':
                 batch_size=BATCH_SIZE,
                 cvloger_path=f'{OUTPUT_PATH}.csv',
                 model_path=OUTPUT_PATH,
-                reuse_model=True,
-                checkpoint_path='logs/20260416_epoch_20.model.keras',
+                reuse_model=False,
+                checkpoint_path=None,
                 shuffle=False)

@@ -104,7 +104,7 @@ class Critic(keras.Model):
         x = self.recon_dil2(x)
         debug_tensors["dil2"] = x
         x = self.recon_act2(x)
-        x = x + res
+        x = x + res * 0.5
         debug_tensors["res1"] = x
         x = self.recon_upsample2(x)
         debug_tensors["up2"] = x
@@ -116,7 +116,7 @@ class Critic(keras.Model):
         x = self.recon_dil4(x)
         debug_tensors["dil4"] = x
         x = self.recon_act4(x)
-        x = x + res
+        x = x + res * 0.5
         debug_tensors["res2"] = x
         x = self.recon_out(x)
         x = x.float()
@@ -273,9 +273,9 @@ class FiLMGAN(keras.Model):
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 10
+        self.warmup_epochs = 300
         self.n_critic_warmup = 3
-        self.n_critic_main = 2
+        self.n_critic_main = 1
         self.recon_start_epoch = 10
         self.recon_ramp_epochs = 40
 

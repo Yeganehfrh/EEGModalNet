@@ -181,7 +181,7 @@ def run(train_loader,
     model.compile(d_optimizer=keras.optimizers.Adam(lr_schedule_d, beta_1=0.0, beta_2=0.9),
                   g_optimizer=keras.optimizers.Adam(lr_schedule_g, beta_1=0.0, beta_2=0.9),
                   gradient_penalty_weight=1.0,
-                  recon_weight=0.1)
+                  recon_weight=0.05)
 
     if reuse_model:
         initial_epoch, resume_status = load_training_state(model, checkpoint_path)

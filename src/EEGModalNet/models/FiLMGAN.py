@@ -256,7 +256,7 @@ class FiLMGAN(keras.Model):
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
         self.warmup_epochs = 300
         self.recon_start_epoch = 10
-        self.recon_ramp_epochs = 20
+        self.recon_ramp_epochs = 40
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -378,17 +378,20 @@ class FiLMGAN(keras.Model):
         x_masked, mask = self.make_masked_batch(real_x)
         alpha = self.recon_weight if alpha is None else alpha
         _, h = critic.encode_features({'x': x_masked, 'sub': sub, 'pos': pos})
+        self.chk("D_recon_feat", h)
         x_recon = critic.reconstruct_from_features(h)
+        self.chk("D_recon_out", x_recon)
 
         if x_recon.shape[1] != real_x.shape[1]:
             x_recon = x_recon[:, :real_x.shape[1], :]
         target = real_x.float()
         mask_bool = mask.bool()
-        # Ignore unmasked positions without letting NaNs in those entries poison the loss.
-        x_recon = torch.where(mask_bool, x_recon, target)
-        abs_err = (x_recon - target).abs()
-        denom = mask_bool.sum(dtype=torch.float32).clamp(min=1.0)
-        loss = abs_err.sum(dtype=torch.float32) / denom
+        masked_target = target[mask_bool]
+        masked_recon = x_recon[mask_bool]
+        self.chk("D_recon_target", masked_target)
+        abs_err = (masked_recon - masked_target).abs()
+        self.chk("D_recon_abs_err", abs_err)
+        loss = abs_err.mean(dtype=torch.float32)
         weighted_loss = alpha * loss
         self.recon_loss_tracker.update_state(loss.detach())
         self.recon_term_tracker.update_state(weighted_loss.detach())
@@ -416,10 +419,11 @@ class FiLMGAN(keras.Model):
         pos = pos.to(device)
 
         batch_size = real_data.size(0)
+        self.chk("D_real_input", real_data)
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
         n_critic = 3 if self.global_step < warmup_steps else 1
-        epoch = self.global_step // self.steps_per_epoch
+        epoch = self.global_step / max(1, self.steps_per_epoch)
         lambda_recon = self.get_lambda_recon(epoch)
 
         # train critic

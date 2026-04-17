@@ -87,24 +87,43 @@ class Critic(keras.Model):
         score = self.final_dense(h_final)
         return score.float(), h_final
 
-    def reconstruct_from_features(self, h):
+    def reconstruct_from_features(self, h, return_debug=False):
         # x = self.recon_upsample1(h)
         # x = self.recon_act1(self.recon_conv1(x))
         # x = self.recon_upsample2(x)
         # x = self.recon_act2(self.recon_conv2(x))
         # x = self.recon_out(x)
+        debug_tensors = {}
         x = self.recon_upsample1(h.float())
+        debug_tensors["up1"] = x
         res = self.recon_proj1(x)
-        x = self.recon_act1(self.recon_dil1(res))
-        x = self.recon_act2(self.recon_dil2(x))
+        debug_tensors["proj1"] = res
+        x = self.recon_dil1(res)
+        debug_tensors["dil1"] = x
+        x = self.recon_act1(x)
+        x = self.recon_dil2(x)
+        debug_tensors["dil2"] = x
+        x = self.recon_act2(x)
         x = x + res
+        debug_tensors["res1"] = x
         x = self.recon_upsample2(x)
+        debug_tensors["up2"] = x
         res = self.recon_proj2(x)
-        x = self.recon_act3(self.recon_dil3(res))
-        x = self.recon_act4(self.recon_dil4(x))
+        debug_tensors["proj2"] = res
+        x = self.recon_dil3(res)
+        debug_tensors["dil3"] = x
+        x = self.recon_act3(x)
+        x = self.recon_dil4(x)
+        debug_tensors["dil4"] = x
+        x = self.recon_act4(x)
         x = x + res
+        debug_tensors["res2"] = x
         x = self.recon_out(x)
-        return x.float()
+        x = x.float()
+        debug_tensors["out"] = x
+        if return_debug:
+            return x, debug_tensors
+        return x
 
     def call(self, inputs):
         h1, h = self.encode_features(inputs)
@@ -254,7 +273,7 @@ class FiLMGAN(keras.Model):
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
-        self.warmup_epochs = 300
+        self.warmup_epochs = 5
         self.recon_start_epoch = 10
         self.recon_ramp_epochs = 40
 
@@ -344,6 +363,17 @@ class FiLMGAN(keras.Model):
                 t.abs().max().item(),
             )
             raise RuntimeError
+
+    def grad_norm(self, module):
+        sq_norm = None
+        for p in module.parameters():
+            if p.grad is None:
+                continue
+            grad_sq = p.grad.detach().float().pow(2).sum()
+            sq_norm = grad_sq if sq_norm is None else sq_norm + grad_sq
+        if sq_norm is None:
+            return 0.0
+        return sq_norm.sqrt().item()
     
 
     def make_masked_batch(self, x, mask_ratio=0.15, max_spans=3):
@@ -379,7 +409,9 @@ class FiLMGAN(keras.Model):
         alpha = self.recon_weight if alpha is None else alpha
         _, h = critic.encode_features({'x': x_masked, 'sub': sub, 'pos': pos})
         self.chk("D_recon_feat", h)
-        x_recon = critic.reconstruct_from_features(h)
+        x_recon, recon_debug = critic.reconstruct_from_features(h, return_debug=True)
+        for name, tensor in recon_debug.items():
+            self.chk(f"D_recon_{name}", tensor)
         self.chk("D_recon_out", x_recon)
 
         if x_recon.shape[1] != real_x.shape[1]:
@@ -448,16 +480,11 @@ class FiLMGAN(keras.Model):
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + recon_loss
             self.chk("D_loss", d_loss)
             d_loss.backward()
+            critic_total_grad_norm = self.grad_norm(self.critic)
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
-
-        # Monitor gradient norms
-        gradient_norms = []
-        for p in self.critic.parameters():
-            if p.grad is not None:
-                gradient_norms.append(p.grad.norm().item())
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
@@ -473,6 +500,7 @@ class FiLMGAN(keras.Model):
         g_loss = -fake_pred.mean()
         self.chk("G_loss", g_loss)
         g_loss.backward()
+        generator_total_grad_norm = self.grad_norm(self.generator)
 
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():
@@ -488,7 +516,7 @@ class FiLMGAN(keras.Model):
         return {
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
-            '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
+            '3 critic_grad_norm': float(critic_total_grad_norm),
             '4 gp': self.gp_tracker.result(),
             '4a recon_weight': lambda_recon,
             '4b recon_loss': self.recon_loss_tracker.result(),
@@ -497,5 +525,6 @@ class FiLMGAN(keras.Model):
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),
             '8 fake_pred_std': fake_pred.std().item(),
+            '9 gen_grad_norm': float(generator_total_grad_norm),
             'loss': total_loss,
         }

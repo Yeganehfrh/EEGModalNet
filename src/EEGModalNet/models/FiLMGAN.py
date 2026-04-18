@@ -55,6 +55,9 @@ class Critic(keras.Model):
         self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', dtype='float32', kernel_initializer=kernel_initializer)
         self.recon_act3 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_act4 = layers.LeakyReLU(negative_slope=negative_slope)
+        # Start the dilated paths as small learned corrections to the projection path.
+        self.recon_alpha1 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
+        self.recon_alpha2 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
         self.recon_out = layers.Conv1D(feature_dim, 3, padding='same', name='recon_out', dtype='float32', kernel_initializer=kernel_initializer)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer)
@@ -88,35 +91,36 @@ class Critic(keras.Model):
         return score.float(), h_final
 
     def reconstruct_from_features(self, h, return_debug=False):
-        # x = self.recon_upsample1(h)
-        # x = self.recon_act1(self.recon_conv1(x))
-        # x = self.recon_upsample2(x)
-        # x = self.recon_act2(self.recon_conv2(x))
-        # x = self.recon_out(x)
         debug_tensors = {}
         x = self.recon_upsample1(h.float())
         debug_tensors["up1"] = x
         res = self.recon_proj1(x)
         debug_tensors["proj1"] = res
-        x = self.recon_dil1(res)
-        debug_tensors["dil1"] = x
-        x = self.recon_act1(x)
-        x = self.recon_dil2(x)
-        debug_tensors["dil2"] = x
-        x = self.recon_act2(x)
-        x = x + res * 0.5
+        corr = self.recon_dil1(res)
+        debug_tensors["dil1"] = corr
+        corr = self.recon_act1(corr)
+        corr = self.recon_dil2(corr)
+        debug_tensors["dil2"] = corr
+        corr = self.recon_act2(corr)
+        debug_tensors["corr1"] = corr
+        alpha1 = torch.sigmoid(self.recon_alpha1).to(device=corr.device, dtype=corr.dtype)
+        debug_tensors["alpha1"] = alpha1
+        x = res + alpha1 * corr
         debug_tensors["res1"] = x
         x = self.recon_upsample2(x)
         debug_tensors["up2"] = x
         res = self.recon_proj2(x)
         debug_tensors["proj2"] = res
-        x = self.recon_dil3(res)
-        debug_tensors["dil3"] = x
-        x = self.recon_act3(x)
-        x = self.recon_dil4(x)
-        debug_tensors["dil4"] = x
-        x = self.recon_act4(x)
-        x = x + res * 0.5
+        corr = self.recon_dil3(res)
+        debug_tensors["dil3"] = corr
+        corr = self.recon_act3(corr)
+        corr = self.recon_dil4(corr)
+        debug_tensors["dil4"] = corr
+        corr = self.recon_act4(corr)
+        debug_tensors["corr2"] = corr
+        alpha2 = torch.sigmoid(self.recon_alpha2).to(device=corr.device, dtype=corr.dtype)
+        debug_tensors["alpha2"] = alpha2
+        x = res + alpha2 * corr
         debug_tensors["res2"] = x
         x = self.recon_out(x)
         x = x.float()
@@ -276,7 +280,7 @@ class FiLMGAN(keras.Model):
         self.warmup_epochs = 300
         self.n_critic_warmup = 3
         self.n_critic_main = 1
-        self.recon_start_epoch = 10
+        self.recon_start_epoch = 1
         self.recon_ramp_epochs = 40
 
         self.generator = Generator(time_dim=time_dim,

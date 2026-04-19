@@ -104,7 +104,7 @@ class Critic(keras.Model):
         debug_tensors["up2"] = x
         res = self.recon_proj2(x)
         debug_tensors["proj2"] = res
-        x = self.recon_act2(self.recon_dil2(x))
+        x = self.recon_act2(self.recon_dil2(res))
         debug_tensors["dil2"] = x
         x = res + x
         debug_tensors["res2"] = x

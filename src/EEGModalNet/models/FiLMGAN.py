@@ -38,26 +38,26 @@ class Critic(keras.Model):
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
         # self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
-        # self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
+        # self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same' name='recon_conv1', kernel_initializer=kernel_initializer)
         # self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
         # self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
         # self.recon_conv2 = layers.Conv1D(4 * feature_dim, 3, padding='same', name='recon_conv2', kernel_initializer=kernel_initializer)
         # self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
-        self.recon_proj1 = layers.Conv1D(8 * feature_dim, 1, padding='same', name='recon_proj1', dtype='float32', kernel_initializer=kernel_initializer)
-        self.recon_dil1 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=1, name='recon_dil1', dtype='float32', kernel_initializer=kernel_initializer)
-        self.recon_dil2 = layers.Conv1D(8 * feature_dim, 3, padding='same', dilation_rate=2, name='recon_dil2', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_proj1 = layers.Conv1D(16 * feature_dim, 1, padding='same', name='recon_proj1', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_dil1 = layers.Conv1D(16 * feature_dim, 3, padding='same', dilation_rate=2, name='recon_dil1', dtype='float32', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
-        self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
-        self.recon_proj2 = layers.Conv1D(2 * feature_dim, 1, padding='same', name='recon_proj2', dtype='float32', kernel_initializer=kernel_initializer)
-        self.recon_dil3 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil3', dtype='float32', kernel_initializer=kernel_initializer)
-        self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', dtype='float32', kernel_initializer=kernel_initializer)
-        self.recon_act3 = layers.LeakyReLU(negative_slope=negative_slope)
-        self.recon_act4 = layers.LeakyReLU(negative_slope=negative_slope)
+        self.recon_proj2 = layers.Conv1D(4 * feature_dim, 1, padding='same', name='recon_proj2', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_dil2 = layers.Conv1D(4 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil2', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
+        # self.recon_dil3 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil3', dtype='float32', kernel_initializer=kernel_initializer)
+        # self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', dtype='float32', kernel_initializer=kernel_initializer)
+        # self.recon_act3 = layers.LeakyReLU(negative_slope=negative_slope)
+        # self.recon_act4 = layers.LeakyReLU(negative_slope=negative_slope)
         # Start the dilated paths as small learned corrections to the projection path.
-        self.recon_alpha1 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
-        self.recon_alpha2 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
+        # self.recon_alpha1 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
+        # self.recon_alpha2 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
         self.recon_out = layers.Conv1D(feature_dim, 3, padding='same', name='recon_out', dtype='float32', kernel_initializer=kernel_initializer)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer)
@@ -96,35 +96,29 @@ class Critic(keras.Model):
         debug_tensors["up1"] = x
         res = self.recon_proj1(x)
         debug_tensors["proj1"] = res
-        corr = self.recon_dil1(res)
-        debug_tensors["dil1"] = corr
-        corr = self.recon_act1(corr)
-        corr = self.recon_dil2(corr)
-        debug_tensors["dil2"] = corr
-        corr = self.recon_act2(corr)
-        debug_tensors["corr1"] = corr
-        alpha1 = torch.sigmoid(self.recon_alpha1).to(device=corr.device, dtype=corr.dtype)
-        debug_tensors["alpha1"] = alpha1
-        x = res + alpha1 * corr
+        x = self.recon_act1(self.recon_dil1(res))
+        debug_tensors["dil1"] = x
+        x = res + x
         debug_tensors["res1"] = x
         x = self.recon_upsample2(x)
         debug_tensors["up2"] = x
         res = self.recon_proj2(x)
         debug_tensors["proj2"] = res
-        corr = self.recon_dil3(res)
-        debug_tensors["dil3"] = corr
-        corr = self.recon_act3(corr)
-        corr = self.recon_dil4(corr)
-        debug_tensors["dil4"] = corr
-        corr = self.recon_act4(corr)
-        debug_tensors["corr2"] = corr
-        alpha2 = torch.sigmoid(self.recon_alpha2).to(device=corr.device, dtype=corr.dtype)
-        debug_tensors["alpha2"] = alpha2
-        x = res + alpha2 * corr
+        x = self.recon_act2(self.recon_dil2(x))
+        debug_tensors["dil2"] = x
+        x = res + x
         debug_tensors["res2"] = x
         x = self.recon_out(x)
         x = x.float()
         debug_tensors["out"] = x
+        # debug_tensors["corr1"] = x
+        # corr = self.recon_dil3(res)
+        # debug_tensors["dil3"] = corr
+        # corr = self.recon_act3(corr)
+        # corr = self.recon_dil4(corr)
+        # debug_tensors["dil4"] = corr
+        # corr = self.recon_act4(corr)
+        # debug_tensors["corr2"] = corr
         if return_debug:
             return x, debug_tensors
         return x
@@ -280,8 +274,8 @@ class FiLMGAN(keras.Model):
         self.warmup_epochs = 300
         self.n_critic_warmup = 3
         self.n_critic_main = 1
-        self.recon_start_epoch = 1
-        self.recon_ramp_epochs = 40
+        self.recon_start_epoch = 0
+        self.recon_ramp_epochs = 0
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,

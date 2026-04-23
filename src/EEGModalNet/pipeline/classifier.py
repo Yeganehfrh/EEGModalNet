@@ -406,7 +406,7 @@ if __name__ == '__main__':
     if FEATURES == 'yaregan':
         print(f'>>>> Use Features Extracted from Yare-GAN')
         X_input, y, groups = load_data(TASK, channels=CHANNELS)
-        X_e = extract_features(X_input, 'logs/eo/20260330_epoch_100.model.keras')
+        X_e = extract_features(X_input, 'logs/20260330/20260330_epoch_100.model.keras')
 
     elif FEATURES == 'cbra':
         print(f'>>>> Use Features Extracted from CBraMod')

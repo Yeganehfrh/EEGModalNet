@@ -9,7 +9,7 @@ import xarray as xr
 from datetime import datetime
 import pickle
 import json 
-from ...EEGModalNet import FiLMGAN, preprocess_data, extract_features_batched_deterministic, BalancedAccuracy
+from ...EEGModalNet import GAN, preprocess_data, extract_features_batched_deterministic, BalancedAccuracy
 from scipy.signal import butter, sosfiltfilt
 import numpy as np
 import pandas as pd
@@ -139,7 +139,7 @@ def extract_features(X_input, checkpoint_path, device="cpu"):
 
     model = keras.saving.load_model(
         checkpoint_path,
-        custom_objects={"FiLMGAN": FiLMGAN},
+        custom_objects={"GAN": GAN},
         compile=False,
     )
     critic = model.critic

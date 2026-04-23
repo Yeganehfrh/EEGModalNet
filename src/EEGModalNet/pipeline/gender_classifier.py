@@ -13,10 +13,10 @@ from ...EEGModalNet import FiLMGAN, preprocess_data, extract_features_batched_de
 from scipy.signal import butter, sosfiltfilt
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupShuffleSplit, StratifiedGroupKFold, StratifiedKFold
+from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.preprocessing import StandardScaler
-from keras import regularizers, layers
+from keras import layers
 from meegkit import dss
 import argparse
 
@@ -39,11 +39,31 @@ def _balance_classes(classes):
     n_min = min(n_y0, n_y1)
     y0_sub_ids = classes[classes == 0].index[:n_min]
     y1_sub_ids = classes[classes == 1].index[:n_min]
-    sub_ids = y1_sub_ids.append(y0_sub_ids)
+    sub_ids = y0_sub_ids.append(y1_sub_ids)
     return sub_ids
 
 def _format_subject_id(subject_id):
     return f"sub-{int(subject_id):02d}"
+
+def _gender_subject_id(subject_id):
+    return f"{int(subject_id):02d}"
+
+def _as_numpy(x):
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().numpy()
+    return np.asarray(x)
+
+def _validate_samples(feats, y, groups):
+    n_samples = len(feats)
+    if len(y) != n_samples or len(groups) != n_samples:
+        raise ValueError(
+            f"Feature/label/group length mismatch: "
+            f"features={n_samples}, y={len(y)}, groups={len(groups)}"
+        )
+    if np.isnan(_as_numpy(feats)).any():
+        raise ValueError("Features contain NaNs after loading/preprocessing.")
+    if np.isnan(np.asarray(y, dtype=float)).any():
+        raise ValueError("Labels contain NaNs after loading/preprocessing.")
 
 def load_data(task: str, 
               channels: List[str],
@@ -55,7 +75,7 @@ def load_data(task: str,
         eeg_path = 'data/ds005385/ds005385.nc5'
         demog_path = 'data/ds005385/demographic.csv'
     elif task == 'gender':
-        eeg_path = 'data/OTKA/experiment_EEG_data.nc5'
+        eeg_path = 'data/OTKA/experiment_EEG_data_missing_as_nan.nc5'
         demog_path = 'data/OTKA/PLB_HYP_data_MASTER.csv'
     else:
         raise ValueError(f'Unknown task {task}')
@@ -78,47 +98,44 @@ def load_data(task: str,
     if return_sub_ids:
         return sub_ids
     
-    sub_ids_formatted = [_format_subject_id(sub_id) for sub_id in sub_ids]
-
     # X_input
     if task == 'age':
         x = EEG.sel(subject=sub_ids, channel=channels).to_numpy()
+        recording_y = classes.loc[sub_ids].to_numpy()
+        recording_groups = np.asarray(sub_ids)
     
     elif task == 'gender':
+        sub_ids_formatted = [_format_subject_id(sub_id) for sub_id in sub_ids]
         x = EEG.sel(subject=sub_ids_formatted, channel=channels).to_numpy()
-        x = x.reshape(-1, *x.shape[2:])
-        # remove those two missing recordings from the last participants if it's among the sub ids
-        if 52 in sub_ids:
-            x = np.concatenate([x[:-3], x[-1:]])
+        n_subjects, n_tasks = x.shape[:2]
+        x = x.reshape(n_subjects * n_tasks, *x.shape[2:])
+        recording_y = np.repeat(classes.loc[sub_ids].to_numpy(), n_tasks)
+        recording_groups = np.repeat([_gender_subject_id(sub_id) for sub_id in sub_ids], n_tasks)
+
+    recording_nan_mask = np.isnan(x).reshape(x.shape[0], -1)
+    missing_recordings = recording_nan_mask.all(axis=1)
+    partial_nan_recordings = recording_nan_mask.any(axis=1) & ~missing_recordings
+    if partial_nan_recordings.any():
+        raise ValueError("Found partially NaN EEG recordings; refusing to silently drop them.")
+    if missing_recordings.any():
+        valid_recordings = ~missing_recordings
+        x = x[valid_recordings]
+        recording_y = recording_y[valid_recordings]
+        recording_groups = recording_groups[valid_recordings]
 
     x = _preprocess(x)
 
-    X_input = torch.tensor(x.copy()).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
-
-    # Classes
-    n_subjects = len(sub_ids)
-    y = classes.loc[sub_ids].values
-
-    # repeat so match the batch size
-    n_repeats = X_input.shape[0] // n_subjects
-    if task == 'gender' and 52 in sub_ids:
-        n_repeats += 8  # HACK This is because we have manually removed the missing session from this participant above
-
-    y = y.repeat(n_repeats)
-
-    # Groups
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(n_repeats)[:, np.newaxis]) 
-    groups = sub.squeeze().numpy()
-
-    if task == 'gender':
-        # Remove NaNs
-        y = y[:-208]
-        groups = groups[:-208]
+    X_windows = torch.as_tensor(x.copy(), dtype=torch.float32).unfold(2, time_dim, time_dim)
+    n_windows_per_recording = X_windows.shape[2]
+    X_input = X_windows.permute(0, 2, 3, 1).flatten(0, 1)
+    y = np.repeat(recording_y, n_windows_per_recording).astype(int)
+    groups = np.repeat(recording_groups, n_windows_per_recording)
+    _validate_samples(X_input, y, groups)
 
     return X_input, y, groups
 
 
-def extract_features(checkpoint_path, device = "cpu"):
+def extract_features(X_input, checkpoint_path, device="cpu"):
 
     model = keras.saving.load_model(
         checkpoint_path,
@@ -160,36 +177,56 @@ def extract_features(checkpoint_path, device = "cpu"):
     )
     return feats
 
-def load_CBraMod_features(feature_path, idx_int):
-        path_sub_52 = feature_path.replace('gender', 'sub_52')
-        cbramod_dict = torch.load(feature_path, weights_only=False)
-        X_e_sub_52 = torch.load(path_sub_52, weights_only=False)
-        X_e = np.asarray(cbramod_dict['features'])
-        seg_per_sub = X_e.shape[0] // 51
-        X_e = X_e.reshape(51, seg_per_sub, -1)
-        X_e_sub_52 = np.concatenate([X_e_sub_52[None], np.full((1, *X_e_sub_52.shape), np.nan)], axis=1) # reshape to (1, 416, 3200) with NaNs for missing part
-        X_e = np.concatenate([X_e, X_e_sub_52])
+def load_CBraMod_features(task, feature_path, sub_ids):
+    cbramod_dict = torch.load(feature_path, weights_only=False, map_location="cpu")
+    sub_ids = np.asarray(sub_ids)
 
-        X_e = X_e[idx_int]
-        y = np.asarray(cbramod_dict['gender'])
-        y = np.concatenate([np.asarray(cbramod_dict['gender']), np.array([1])]) # last subject gender
-        y = np.where(y == 0, 1, 0)
-        y = y[idx_int]
-        y = np.repeat(y, seg_per_sub)  # X_e.shape[0]//52 = 832
-        groups = np.asarray(cbramod_dict['subject_ids'])
-        groups = np.concatenate([groups, np.array([52])])  # last subject id
-        groups = groups[idx_int]
-        groups = np.repeat(groups, seg_per_sub)
+    if task == 'gender':
+        X_e = _as_numpy(cbramod_dict['features'])
+        y = _as_numpy(cbramod_dict['gender']).astype(int)
+        groups = np.asarray(cbramod_dict['subject_ids']).astype(str)
+        selected_groups = np.array([_gender_subject_id(sub_id) for sub_id in sub_ids])
 
-        # remove NaNs
-        to_be_rm = seg_per_sub//2
-        X_e = X_e.reshape(-1, X_e.shape[-1])[:-to_be_rm]
-        y = y[:-to_be_rm]
-        groups = groups[:-to_be_rm]
+        mask = np.isin(groups, selected_groups)
+        X_e = X_e[mask]
+        y = y[mask]
+        groups = groups[mask]
+        missing = sorted(set(selected_groups) - set(groups))
+        if missing:
+            raise ValueError(f"CBraMod gender features are missing selected subjects: {missing}")
 
-        return X_e, y, groups
+    elif task == 'age':
+        X_e = _as_numpy(cbramod_dict['features'])
+        subject_ids = np.asarray(cbramod_dict['subject_ids']).astype(str)
+        subject_y = _as_numpy(cbramod_dict['age']).astype(int)
+        if X_e.shape[0] % subject_ids.shape[0] != 0:
+            raise ValueError("CBraMod age features cannot be evenly grouped by subject.")
+
+        segments_per_subject = X_e.shape[0] // subject_ids.shape[0]
+        feature_by_subject = X_e.reshape(subject_ids.shape[0], segments_per_subject, -1)
+        subject_index = {subject_id: idx for idx, subject_id in enumerate(subject_ids)}
+        selected_subjects = sub_ids.astype(str)
+        missing = sorted(set(selected_subjects) - set(subject_index))
+        if missing:
+            raise ValueError(f"CBraMod age features are missing selected subjects: {missing[:10]}")
+
+        selected_idx = np.array([subject_index[subject_id] for subject_id in selected_subjects])
+        X_e = feature_by_subject[selected_idx].reshape(-1, feature_by_subject.shape[-1])
+        y = np.repeat(subject_y[selected_idx], segments_per_subject)
+        groups = np.repeat(subject_ids[selected_idx], segments_per_subject)
+
+    else:
+        raise ValueError(f'Unknown task {task}')
+
+    _validate_samples(X_e, y, groups)
+    return X_e, y, groups
 
 def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True):
+    feats = _as_numpy(feats)
+    y = _as_numpy(y).astype(int).reshape(-1)
+    groups = _as_numpy(groups).reshape(-1)
+    _validate_samples(feats, y, groups)
+
     sgkf = StratifiedGroupKFold(n_splits=5, random_state=None).split(feats, y, groups=groups)
     fold_summaries = []  # Store fold-level summary stats
     all_fold_histories = {}  # Store complete epoch-by-epoch history per fold
@@ -204,7 +241,7 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
         print(f"Fold {folds}: Train class balance={train_class_mean:.4f}, Val class balance={val_class_mean:.4f}")
 
         if scale:
-            scaler = StandardScaler().fit(feats)
+            scaler = StandardScaler().fit(feats[train_idx])
             feats_train = scaler.transform(feats[train_idx])
             feats_val = scaler.transform(feats[val_idx])
         else:
@@ -225,7 +262,7 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
         )
 
         callback = keras.callbacks.EarlyStopping(
-            monitor='val_accuracy',
+            monitor='val_auc',
             patience=50,
             restore_best_weights=True
         )
@@ -259,7 +296,7 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
             'val_class_balance': val_class_mean,
             'train_size': train_size,
             'val_size': val_size,
-            'best_epoch': np.argmax(history.history['val_accuracy']),
+            'best_epoch': int(np.argmax(history.history['val_accuracy']) + 1),
             'best_val_accuracy': np.max(history.history['val_accuracy']),
             'best_val_auc': np.max(history.history['val_auc']),
             'best_val_loss': np.min(history.history['val_loss']),
@@ -283,7 +320,7 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
     return all_fold_histories, fold_summaries
 
 
-def create_and_save_detailed_metrics(fold_summaries):
+def create_and_save_detailed_metrics(all_fold_histories, fold_summaries, fold_summary_df, output_dir, task):
     # 3. Create detailed metrics table (one row per epoch per fold)
     detailed_metrics = []
     for fold_id, history in all_fold_histories.items():
@@ -308,7 +345,7 @@ def create_and_save_detailed_metrics(fold_summaries):
 
     # 4. Save metadata about the results
     metadata = {
-        'task': TASK,
+        'task': task,
         'n_folds': len(fold_summaries),
         'timestamp': datetime.now().isoformat(),
         'mean_val_accuracy': float(fold_summary_df['best_val_accuracy'].mean()),
@@ -326,33 +363,39 @@ if __name__ == '__main__':
     parser.add_argument('--features', type=str, default='yaregan', choices=['yaregan', 'cbra', 'raw'], help='Features to be used in the classifier')
     parser.add_argument('--task', type=str, default='gender', choices=['gender', 'age'])
     parser.add_argument('--n-epochs', type=int, default=100, help='Number of epochs')
+    parser.add_argument('--batch-size', type=int, default=128, help='Classifier batch size')
     args = parser.parse_args()
 
     CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
     FEATURES = args.features
     TASK = args.task
     EPOCHS = args.n_epochs
+    BATCH_SIZE = args.batch_size
 
     if FEATURES == 'yaregan':
         print(f'>>>> Use Features Extracted from Yare-GAN')
         X_input, y, groups = load_data(TASK, channels=CHANNELS)
-        X_e = extract_features('logs/eo/20260330_epoch_100.model.keras')
+        X_e = extract_features(X_input, 'logs/eo/20260330_epoch_100.model.keras')
 
     elif FEATURES == 'cbra':
         print(f'>>>> Use Features Extracted from CBraMod')
         sub_ids = load_data(TASK, channels=CHANNELS, return_sub_ids=True)
-        X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt', sub_ids)
+        cbra_paths = {
+            'gender': 'data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt',
+            'age': 'data/benchmarking/ds005385_extracted_CBraMod_features_seg-4s.pt',
+        }
+        X_e, y, groups = load_CBraMod_features(TASK, cbra_paths[TASK], sub_ids)
 
     elif FEATURES == 'raw':
         print(f'>>>> Use Raw Signal')
         X_input, y, groups = load_data(TASK, channels=CHANNELS)
-        X_e = X_input.flatten(1, 2)
+        X_e = X_input.flatten(1, 2).numpy()
 
     else:
         raise ValueError(f'Unknown feature type {FEATURES}')
 
     ##### Classifier
-    all_fold_histories, fold_summaries = run_classification(X_e, y, groups, epochs=EPOCHS, batch_size=128)
+    all_fold_histories, fold_summaries = run_classification(X_e, y, groups, epochs=EPOCHS, batch_size=BATCH_SIZE)
 
     ##### Save Results
     print("="*80)
@@ -370,4 +413,4 @@ if __name__ == '__main__':
         pickle.dump(all_fold_histories, f)
     print(f"✓ Saved fold histories (Pickle): {output_dir}/all_fold_histories.pkl")
 
-    create_and_save_detailed_metrics(fold_summaries)
+    create_and_save_detailed_metrics(all_fold_histories, fold_summaries, fold_summary_df, output_dir, TASK)

@@ -21,44 +21,7 @@ from meegkit import dss
 import argparse
 
 
-
-def load_OTKA_data(eeg_path: str,
-                   demo_path: str,
-                   channels: List[str],
-                   downsample_data: bool = True,
-                   time_dim: int = 512,
-                   return_sub_ids: bool = False) -> tuple:
-    
-    EEG = xr.open_dataarray(eeg_path, engine='h5netcdf')
-    behavioral = pd.read_csv(demo_path)
-    classes = behavioral[['gender', 'bids_id']].dropna().set_index('bids_id')
-    classes['gender'] = classes['gender'].apply(lambda x: 0 if x == 'Male' else 1)
-
-    def format_subject_id(subject_id):
-        return f"sub-{int(subject_id):02d}"
-
-    sub_ids = classes.index
-    if downsample_data:
-        n_y0 = (classes == 0).sum().values
-        n_y1 = (classes == 1).sum().values
-        n_min = min(n_y0, n_y1)
-        n_subjects = n_min * 2
-        y0_sub_ids = classes.query("gender == 0").index[:n_min[0]]
-        y1_sub_ids = classes.query("gender == 1").index[:n_min[0]]
-        sub_ids = y1_sub_ids.append(y0_sub_ids)
-    
-    if return_sub_ids:
-        return sub_ids
-
-    sub_ids_formatted = [format_subject_id(sub_id) for sub_id in sub_ids]
-
-    # X_input
-    x = EEG.sel(subject=sub_ids_formatted, channel=channels).to_numpy()
-    x = x.reshape(-1, *x.shape[2:])
-    # remove those two missing recordings from the last participants if it's among the sub ids
-    if 52 in sub_ids:
-        x = np.concatenate([x[:-3], x[-1:]])
-
+def _preprocess(x):
     # Process
     x = preprocess_data(x, sampling_rate=128)
 
@@ -68,22 +31,89 @@ def load_OTKA_data(eeg_path: str,
 
     # Remove the line noise
     x, _ = dss.dss_line(x.T, fline=50, sfreq=128, nremove=1)
-    x = x.T
+    return x.T
+
+def _balance_classes(classes):
+    n_y0 = (classes == 0).sum()
+    n_y1 = (classes == 1).sum()
+    n_min = min(n_y0, n_y1)
+    y0_sub_ids = classes[classes == 0].index[:n_min]
+    y1_sub_ids = classes[classes == 1].index[:n_min]
+    sub_ids = y1_sub_ids.append(y0_sub_ids)
+    return sub_ids
+
+def _format_subject_id(subject_id):
+    return f"sub-{int(subject_id):02d}"
+
+def load_data(task: str, 
+              channels: List[str],
+              balance_classes: bool = True,
+              time_dim: int = 512,
+              return_sub_ids: bool = False):
+    
+    if task == 'age':
+        eeg_path = 'data/ds005385/ds005385.nc5'
+        demog_path = 'data/ds005385/demographic.csv'
+    elif task == 'gender':
+        eeg_path = 'data/OTKA/experiment_EEG_data.nc5'
+        demog_path = 'data/OTKA/PLB_HYP_data_MASTER.csv'
+    else:
+        raise ValueError(f'Unknown task {task}')
+
+    EEG = xr.open_dataarray(eeg_path, engine='h5netcdf')
+    demog = pd.read_csv(demog_path)
+
+    if task == 'age':
+        demog = demog.set_index('participant_id')
+        classes = demog['age_group'].apply(lambda x: 0 if x == 'young' else 1)
+
+    elif task == 'gender':
+        classes = demog[['gender', 'bids_id']].dropna().set_index('bids_id')
+        classes = classes['gender'].apply(lambda x: 0 if x == 'Male' else 1)
+
+    sub_ids = classes.index
+    if balance_classes:
+        sub_ids = _balance_classes(classes)
+    
+    if return_sub_ids:
+        return sub_ids
+    
+    sub_ids_formatted = [_format_subject_id(sub_id) for sub_id in sub_ids]
+
+    # X_input
+    if task == 'age':
+        x = EEG.sel(subject=sub_ids, channel=channels).to_numpy()
+    
+    elif task == 'gender':
+        x = EEG.sel(subject=sub_ids_formatted, channel=channels).to_numpy()
+        x = x.reshape(-1, *x.shape[2:])
+        # remove those two missing recordings from the last participants if it's among the sub ids
+        if 52 in sub_ids:
+            x = np.concatenate([x[:-3], x[-1:]])
+
+    x = _preprocess(x)
 
     X_input = torch.tensor(x.copy()).unfold(2, time_dim, time_dim).permute(0, 2, 3, 1).flatten(0, 1)
 
     # Classes
     n_subjects = len(sub_ids)
     y = classes.loc[sub_ids].values
-    y = y.repeat(416)  # X_input.shape[0] // n_subjects = 416
+
+    # repeat so match the batch size
+    n_repeats = X_input.shape[0] // n_subjects
+    if task == 'gender' and 52 in sub_ids:
+        n_repeats += 8  # HACK This is because we have manually removed the missing session from this participant above
+
+    y = y.repeat(n_repeats)
 
     # Groups
-    sub = torch.tensor(np.arange(0, n_subjects).repeat(416)[:, np.newaxis])
+    sub = torch.tensor(np.arange(0, n_subjects).repeat(n_repeats)[:, np.newaxis]) 
     groups = sub.squeeze().numpy()
 
-    # Remove NaNs
-    y = y[:-208]
-    groups = groups[:-208]
+    if task == 'gender':
+        # Remove NaNs
+        y = y[:-208]
+        groups = groups[:-208]
 
     return X_input, y, groups
 
@@ -128,7 +158,6 @@ def extract_features(checkpoint_path, device = "cpu"):
         batch_size=256,
         device=device,
     )
-
     return feats
 
 def load_CBraMod_features(feature_path, idx_int):
@@ -279,7 +308,7 @@ def create_and_save_detailed_metrics(fold_summaries):
 
     # 4. Save metadata about the results
     metadata = {
-        # 'task': TASK,
+        'task': TASK,
         'n_folds': len(fold_summaries),
         'timestamp': datetime.now().isoformat(),
         'mean_val_accuracy': float(fold_summary_df['best_val_accuracy'].mean()),
@@ -295,34 +324,28 @@ def create_and_save_detailed_metrics(fold_summaries):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--features', type=str, default='yaregan', choices=['yaregan', 'cbra', 'raw'], help='Features to be used in the classifier')
-    # parser.add_argument('--model-path', type=str, default='logs/gender_cls_OTKA', help='Path for saving model and logs')
+    parser.add_argument('--task', type=str, default='gender', choices=['gender', 'age'])
     parser.add_argument('--n-epochs', type=int, default=100, help='Number of epochs')
     args = parser.parse_args()
 
     CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
     FEATURES = args.features
-    # MODEL_PATH = args.model_path
+    TASK = args.task
     EPOCHS = args.n_epochs
 
     if FEATURES == 'yaregan':
         print(f'>>>> Use Features Extracted from Yare-GAN')
-        X_input, y, groups = load_OTKA_data('data/OTKA/experiment_EEG_data.nc5',
-                                    'data/OTKA/PLB_HYP_data_MASTER.csv',
-                                     channels=CHANNELS,
-                                     time_dim=512)
+        X_input, y, groups = load_data(TASK, channels=CHANNELS)
         X_e = extract_features('logs/eo/20260330_epoch_100.model.keras')
 
     elif FEATURES == 'cbra':
         print(f'>>>> Use Features Extracted from CBraMod')
-        sub_ids = load_OTKA_data('data/OTKA/experiment_EEG_data.nc5', 'data/OTKA/PLB_HYP_data_MASTER.csv', channels=CHANNELS, return_sub_ids=True)
+        sub_ids = load_data(TASK, channels=CHANNELS, return_sub_ids=True)
         X_e, y, groups = load_CBraMod_features('data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt', sub_ids)
 
     elif FEATURES == 'raw':
         print(f'>>>> Use Raw Signal')
-        X_input, y, groups = load_OTKA_data('data/OTKA/experiment_EEG_data.nc5',
-                            'data/OTKA/PLB_HYP_data_MASTER.csv',
-                             channels=CHANNELS,
-                             time_dim=512)
+        X_input, y, groups = load_data(TASK, channels=CHANNELS)
         X_e = X_input.flatten(1, 2)
 
     else:
@@ -336,7 +359,7 @@ if __name__ == '__main__':
     print("SAVING K-FOLD CROSS-VALIDATION RESULTS")
     print("="*80)
 
-    output_dir = f'logs/{FEATURES}_classifier_kfold_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    output_dir = f'logs/{FEATURES}_{TASK}_classifier_kfold_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
     os.makedirs(output_dir, exist_ok=True)
 
     fold_summary_df = pd.DataFrame(fold_summaries)

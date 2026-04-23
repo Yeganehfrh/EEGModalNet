@@ -1,8 +1,12 @@
+import io
+import zipfile
+
+import h5py
 import torch
 import torch.nn.functional as F
 from keras import layers
 import keras
-from .common_v0 import convBlock, HighPass1D, MinibatchStdDev, DualFiLMBlock, SubjectStateLayers_FiLM
+from .common_v0 import convBlock, HighPass1D, MinibatchStdDev, DualFiLMBlock
 from keras import ops
 
 
@@ -31,44 +35,64 @@ class Critic(keras.Model):
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
-        self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
+        self.conv1 = layers.Conv1D(2 * feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv2 = layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv2', kernel_initializer=kernel_initializer)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
-        # self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same' name='recon_conv1', kernel_initializer=kernel_initializer)
-        # self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
-        # self.recon_conv2 = layers.Conv1D(4 * feature_dim, 3, padding='same', name='recon_conv2', kernel_initializer=kernel_initializer)
-        # self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
-        self.recon_proj1 = layers.Conv1D(16 * feature_dim, 1, padding='same', name='recon_proj1', dtype='float32', kernel_initializer=kernel_initializer)
-        self.recon_dil1 = layers.Conv1D(16 * feature_dim, 3, padding='same', dilation_rate=2, name='recon_dil1', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
         self.recon_upsample2 = layers.UpSampling1D(size=2, name='recon_upsample2')
-        self.recon_proj2 = layers.Conv1D(4 * feature_dim, 1, padding='same', name='recon_proj2', dtype='float32', kernel_initializer=kernel_initializer)
-        self.recon_dil2 = layers.Conv1D(4 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil2', dtype='float32', kernel_initializer=kernel_initializer)
+        self.recon_conv2 = layers.Conv1D(4 * feature_dim, 3, padding='same', name='recon_conv2', kernel_initializer=kernel_initializer)
         self.recon_act2 = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.recon_dil3 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=4, name='recon_dil3', dtype='float32', kernel_initializer=kernel_initializer)
-        # self.recon_dil4 = layers.Conv1D(2 * feature_dim, 3, padding='same', dilation_rate=8, name='recon_dil4', dtype='float32', kernel_initializer=kernel_initializer)
-        # self.recon_act3 = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.recon_act4 = layers.LeakyReLU(negative_slope=negative_slope)
-        # Start the dilated paths as small learned corrections to the projection path.
-        # self.recon_alpha1 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
-        # self.recon_alpha2 = torch.nn.Parameter(torch.tensor(-2.1972246, dtype=torch.float32))
         self.recon_out = layers.Conv1D(feature_dim, 3, padding='same', name='recon_out', dtype='float32', kernel_initializer=kernel_initializer)
         self.flatten = layers.Flatten(name='dis_flatten')
         self.final_dense = layers.Dense(1, name='final_dense', dtype='float32', kernel_initializer=kernel_initializer)
 
         self.mbsdv = MinibatchStdDev()
 
-        self.built = True 
+    def build(self, input_shape=None):
+        x_shape = (None, self.time_dim, self.feature_dim)
+        x_cat_shape = (None, self.time_dim, 2 * self.feature_dim)
+
+        self.conv1.build(x_cat_shape)
+        h1_shape = self.conv1.compute_output_shape(x_cat_shape)
+        self.act1.build(h1_shape)
+
+        self.conv2.build(h1_shape)
+        h2_shape = self.conv2.compute_output_shape(h1_shape)
+        self.act2.build(h2_shape)
+
+        self.conv3.build(h2_shape)
+        h_shape = self.conv3.compute_output_shape(h2_shape)
+        self.act3.build(h_shape)
+
+        self.recon_upsample1.build(h_shape)
+        recon_shape = self.recon_upsample1.compute_output_shape(h_shape)
+        self.recon_conv1.build(recon_shape)
+        recon_shape = self.recon_conv1.compute_output_shape(recon_shape)
+        self.recon_act1.build(recon_shape)
+
+        self.recon_upsample2.build(recon_shape)
+        recon_shape = self.recon_upsample2.compute_output_shape(recon_shape)
+        self.recon_conv2.build(recon_shape)
+        recon_shape = self.recon_conv2.compute_output_shape(recon_shape)
+        self.recon_act2.build(recon_shape)
+        self.recon_out.build(recon_shape)
+
+        h_mb_shape = (h_shape[0], h_shape[1], h_shape[2] + 1)
+        h_flat_shape = self.flatten.compute_output_shape(h_mb_shape)
+        h1_flat_shape = self.flatten.compute_output_shape(h1_shape)
+        final_features = h_flat_shape[-1] + h1_flat_shape[-1]
+        self.final_dense.build((None, final_features))
+
+        super().build(x_shape)
 
     def encode_features(self, inputs):
-        x, sub_labels, state_id = inputs['x'], inputs['sub'], inputs['pos']
-        subj_emb = self.sub_emb(sub_labels.view(-1))
+        x, subj_emb, state_id = inputs['x'], inputs['sub'], inputs['pos']
+        # subj_emb = self.sub_emb(sub_labels.view(-1))
         state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb, state_emb)
@@ -82,7 +106,7 @@ class Critic(keras.Model):
         h  = self.act3(self.conv3(h))
         return h1, h
 
-    def score_from_features(self, h1, h):
+    def score_from_features(self, h1, h, z_transfer):
         h = self.mbsdv(h)
         h_flat   = self.flatten(h)          # coarse features
         h1_flat  = self.flatten(h1)         # early HF features
@@ -90,42 +114,17 @@ class Critic(keras.Model):
         score = self.final_dense(h_final)
         return score.float(), h_final
 
-    def reconstruct_from_features(self, h, return_debug=False):
-        debug_tensors = {}
-        x = self.recon_upsample1(h.float())
-        debug_tensors["up1"] = x
-        res = self.recon_proj1(x)
-        debug_tensors["proj1"] = res
-        x = self.recon_act1(self.recon_dil1(res))
-        debug_tensors["dil1"] = x
-        x = res + x
-        debug_tensors["res1"] = x
+    def reconstruct_from_features(self, h):
+        x = self.recon_upsample1(h)
+        x = self.recon_act1(self.recon_conv1(x))
         x = self.recon_upsample2(x)
-        debug_tensors["up2"] = x
-        res = self.recon_proj2(x)
-        debug_tensors["proj2"] = res
-        x = self.recon_act2(self.recon_dil2(res))
-        debug_tensors["dil2"] = x
-        x = res + x
-        debug_tensors["res2"] = x
+        x = self.recon_act2(self.recon_conv2(x))
         x = self.recon_out(x)
-        x = x.float()
-        debug_tensors["out"] = x
-        # debug_tensors["corr1"] = x
-        # corr = self.recon_dil3(res)
-        # debug_tensors["dil3"] = corr
-        # corr = self.recon_act3(corr)
-        # corr = self.recon_dil4(corr)
-        # debug_tensors["dil4"] = corr
-        # corr = self.recon_act4(corr)
-        # debug_tensors["corr2"] = corr
-        if return_debug:
-            return x, debug_tensors
-        return x
+        return x.float()
 
     def call(self, inputs):
         h1, h = self.encode_features(inputs)
-        score, h_final = self.score_from_features(h1, h)
+        score, h_final = self.score_from_features(h1, h, None)
 
         if self.output_features:
             return h_final
@@ -210,7 +209,16 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=0.2),
         ], name="g_dilated_block")
 
-        self.built = True
+    def build(self, input_shape=None):
+        noise_shape = (None, self.latent_dim)
+        seq_shape = (None, 128, 32)
+
+        self.post_att.build(noise_shape)
+        self.cov_block.build(seq_shape)
+        cov_shape = self.cov_block.compute_output_shape(seq_shape)
+        self.dil_block.build(cov_shape)
+
+        super().build(input_shape or noise_shape)
 
     def call(self, inputs):
         noise, sub_labels, state_id = inputs
@@ -265,17 +273,12 @@ class FiLMGAN(keras.Model):
         self.g_loss_tracker = keras.metrics.Mean(name='g_loss')
         self.gp_tracker = keras.metrics.Mean(name="gp")
         self.recon_loss_tracker = keras.metrics.Mean(name="recon_loss")
-        self.recon_term_tracker = keras.metrics.Mean(name="recon_term")
         self.seed_generator = keras.random.SeedGenerator(42)
 
         # Training step counts
         self.global_step = 0        # counts train_step calls
         self.steps_per_epoch = steps_per_epoch  # Fix: our current setting!!
         self.warmup_epochs = 300
-        self.n_critic_warmup = 3
-        self.n_critic_main = 1
-        self.recon_start_epoch = 0
-        self.recon_ramp_epochs = 0
 
         self.generator = Generator(time_dim=time_dim,
                                    feature_dim=feature_dim,
@@ -293,15 +296,55 @@ class FiLMGAN(keras.Model):
 
         self.built = True
 
+    @classmethod
+    def load_stable_checkpoint(cls, checkpoint_path, compile=False, **kwargs):
+        model = keras.saving.load_model(
+            checkpoint_path,
+            custom_objects={'FiLMGAN': cls},
+            compile=compile,
+            **kwargs,
+        )
+        model.restore_stable_weights(checkpoint_path)
+        return model
+
+    @staticmethod
+    def _assign_checkpoint_tensor(variable, value):
+        target = variable.value if hasattr(variable, 'value') else variable
+        tensor = torch.as_tensor(value, device=target.device, dtype=target.dtype)
+        if tuple(target.shape) != tuple(tensor.shape):
+            raise ValueError(
+                f'Checkpoint shape mismatch: expected {tuple(target.shape)}, '
+                f'got {tuple(tensor.shape)}.'
+            )
+        with torch.no_grad():
+            target.copy_(tensor)
+
+    def restore_stable_weights(self, checkpoint_path):
+        # The generator already restores deterministically via raw load_model().
+        # The critic's Keras conv/dense layers may remain unbuilt and miss restore.
+        self.critic.build((None, self.time_dim, self.feature_dim))
+
+        with zipfile.ZipFile(checkpoint_path) as archive:
+            with h5py.File(io.BytesIO(archive.read('model.weights.h5')), 'r') as weights_file:
+                critic_weights = {
+                    'critic/conv1/vars/0': self.critic.conv1.kernel,
+                    'critic/conv1/vars/1': self.critic.conv1.bias,
+                    'critic/conv2/vars/0': self.critic.conv2.kernel,
+                    'critic/conv2/vars/1': self.critic.conv2.bias,
+                    'critic/conv3/vars/0': self.critic.conv3.kernel,
+                    'critic/conv3/vars/1': self.critic.conv3.bias,
+                    'critic/final_dense/vars/0': self.critic.final_dense.kernel,
+                    'critic/final_dense/vars/1': self.critic.final_dense.bias,
+                }
+
+                for dataset_path, variable in critic_weights.items():
+                    self._assign_checkpoint_tensor(variable, weights_file[dataset_path][()])
+
+        return self
+
     @property
     def metrics(self):
-        return [
-            self.d_loss_tracker,
-            self.g_loss_tracker,
-            self.gp_tracker,
-            self.recon_loss_tracker,
-            self.recon_term_tracker,
-        ]
+        return [self.d_loss_tracker, self.g_loss_tracker, self.gp_tracker, self.recon_loss_tracker]
 
     def get_config(self):
         config = super().get_config()
@@ -351,29 +394,8 @@ class FiLMGAN(keras.Model):
 
     def chk(self, name, t):
         if not torch.isfinite(t).all():
-            epoch = self.global_step // max(1, self.steps_per_epoch)
-            print(
-                "NaNs at:",
-                name,
-                "step",
-                self.global_step,
-                "epoch",
-                epoch,
-                "max",
-                t.abs().max().item(),
-            )
+            print("NaNs at:", name, "max", t.abs().max().item())
             raise RuntimeError
-
-    def grad_norm(self, module):
-        sq_norm = None
-        for p in module.parameters():
-            if p.grad is None:
-                continue
-            grad_sq = p.grad.detach().float().pow(2).sum()
-            sq_norm = grad_sq if sq_norm is None else sq_norm + grad_sq
-        if sq_norm is None:
-            return 0.0
-        return sq_norm.sqrt().item()
     
 
     def make_masked_batch(self, x, mask_ratio=0.15, max_spans=3):
@@ -408,37 +430,15 @@ class FiLMGAN(keras.Model):
         x_masked, mask = self.make_masked_batch(real_x)
         alpha = self.recon_weight if alpha is None else alpha
         _, h = critic.encode_features({'x': x_masked, 'sub': sub, 'pos': pos})
-        self.chk("D_recon_feat", h)
-        x_recon, recon_debug = critic.reconstruct_from_features(h, return_debug=True)
-        for name, tensor in recon_debug.items():
-            self.chk(f"D_recon_{name}", tensor)
-        self.chk("D_recon_out", x_recon)
+        x_recon = critic.reconstruct_from_features(h)
 
         if x_recon.shape[1] != real_x.shape[1]:
             x_recon = x_recon[:, :real_x.shape[1], :]
-        target = real_x.float()
-        mask_bool = mask.bool()
-        masked_target = target[mask_bool]
-        masked_recon = x_recon[mask_bool]
-        self.chk("D_recon_target", masked_target)
-        abs_err = (masked_recon - masked_target).abs()
-        self.chk("D_recon_abs_err", abs_err)
-        loss = abs_err.mean(dtype=torch.float32)
-        weighted_loss = alpha * loss
+        abs_err = (x_recon - real_x.float()).abs() * mask
+        denom = mask.sum().clamp(min=1.0)
+        loss = abs_err.sum() / denom
         self.recon_loss_tracker.update_state(loss.detach())
-        self.recon_term_tracker.update_state(weighted_loss.detach())
-        return weighted_loss
-
-    
-    def get_lambda_recon(self, epoch):
-        max_recon_weight = getattr(self, 'recon_weight', 0.1)
-        if epoch < self.recon_start_epoch:
-            return 0.0
-        if epoch < self.recon_start_epoch + self.recon_ramp_epochs:
-            progress = (epoch - self.recon_start_epoch) / self.recon_ramp_epochs
-            return max_recon_weight * progress
-        return max_recon_weight
-
+        return alpha * loss
 
     def train_step(self, data):
         if isinstance(data, (tuple, list)):
@@ -451,12 +451,9 @@ class FiLMGAN(keras.Model):
         pos = pos.to(device)
 
         batch_size = real_data.size(0)
-        self.chk("D_real_input", real_data)
 
         warmup_steps = self.warmup_epochs * self.steps_per_epoch
-        n_critic = self.n_critic_warmup if self.global_step < warmup_steps else self.n_critic_main
-        epoch = self.global_step / max(1, self.steps_per_epoch)
-        lambda_recon = self.get_lambda_recon(epoch)
+        n_critic = 3 if self.global_step < warmup_steps else 1
 
         # train critic
         for _ in range(n_critic):
@@ -466,25 +463,27 @@ class FiLMGAN(keras.Model):
             fake_pos = pos[perm].view(-1, 1)
             fake_data = self.generator((noise, fake_sub, fake_pos)).detach() 
             real_pred = self.critic({'x': real_data, 'sub': sub, 'pos': pos})
-            recon_loss = self.reconstruction_loss(self.critic, real_data, sub, pos, alpha=lambda_recon)
+            recon_loss = self.reconstruction_loss(self.critic, real_data, sub, pos)
             self.chk("D_real", real_pred)
-            self.chk("D_recon", recon_loss)
             fake_pred = self.critic({'x': fake_data, 'sub': fake_sub, 'pos': fake_pos})
             self.chk("D_fake", fake_pred)
 
             gp = self.gradient_penalty(real_data, fake_data.detach(), sub, pos)
-            self.chk("D_gp", gp)
             self.gp_tracker.update_state(gp.detach())
             self.zero_grad()
 
             d_loss = (fake_pred.mean() - real_pred.mean()) + gp * self.gradient_penalty_weight + recon_loss
-            self.chk("D_loss", d_loss)
             d_loss.backward()
-            critic_total_grad_norm = self.grad_norm(self.critic)
 
             grads = [v.value.grad for v in self.critic.trainable_weights]
             with torch.no_grad():
                 self.d_optimizer.apply(grads, self.critic.trainable_weights)
+
+        # Monitor gradient norms
+        gradient_norms = []
+        for p in self.critic.parameters():
+            if p.grad is not None:
+                gradient_norms.append(p.grad.norm().item())
 
         # train generator
         noise = keras.random.normal((batch_size, self.latent_dim), dtype=real_data.dtype)
@@ -496,11 +495,8 @@ class FiLMGAN(keras.Model):
         self.chk("G_out", x_gen)
 
         fake_pred = self.critic({'x': x_gen, 'sub': fake_sub, 'pos': fake_pos})
-        self.chk("G_fake", fake_pred)
         g_loss = -fake_pred.mean()
-        self.chk("G_loss", g_loss)
         g_loss.backward()
-        generator_total_grad_norm = self.grad_norm(self.generator)
 
         grads = [v.value.grad for v in self.generator.trainable_weights]
         with torch.no_grad():
@@ -516,15 +512,12 @@ class FiLMGAN(keras.Model):
         return {
             '1 d_loss': self.d_loss_tracker.result(),
             '2 g_loss': self.g_loss_tracker.result(),
-            '3 critic_grad_norm': float(critic_total_grad_norm),
+            '3 critic_grad_norm': sum(gradient_norms) / len(gradient_norms),
             '4 gp': self.gp_tracker.result(),
-            '4a recon_weight': lambda_recon,
             '4b recon_loss': self.recon_loss_tracker.result(),
-            '4c recon_term': self.recon_term_tracker.result(),
             '5 real_pred': real_pred.mean().item(),
             '6 fake_pred': fake_pred.mean().item(),
             '7 real_pred_std': real_pred.std().item(),
             '8 fake_pred_std': fake_pred.std().item(),
-            '9 gen_grad_norm': float(generator_total_grad_norm),
             'loss': total_loss,
         }

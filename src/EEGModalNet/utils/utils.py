@@ -127,3 +127,47 @@ class StepLossHistory(keras.callbacks.Callback):
         self.step_stats['d_loss'].append(logs.get('d_loss'))
         self.step_stats['critic_grad_norm'].append(logs.get('critic_grad_norm'))
         self.step_stats['gp'].append(logs.get('_gp'))
+
+
+@keras.saving.register_keras_serializable()
+class BalancedAccuracy(keras.metrics.Metric):
+    def __init__(self, threshold=0.5, name="balanced_accuracy", **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.threshold = threshold
+        self.true_positives = self.add_weight(name="tp", initializer="zeros")
+        self.true_negatives = self.add_weight(name="tn", initializer="zeros")
+        self.false_positives = self.add_weight(name="fp", initializer="zeros")
+        self.false_negatives = self.add_weight(name="fn", initializer="zeros")
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = keras.ops.cast(keras.ops.reshape(y_true, (-1,)), "float32")
+        y_pred = keras.ops.cast(keras.ops.reshape(y_pred, (-1,)), "float32")
+        y_pred = keras.ops.cast(y_pred >= self.threshold, "float32")
+
+        tp = keras.ops.sum(y_pred * y_true)
+        tn = keras.ops.sum((1.0 - y_pred) * (1.0 - y_true))
+        fp = keras.ops.sum(y_pred * (1.0 - y_true))
+        fn = keras.ops.sum((1.0 - y_pred) * y_true)
+
+        self.true_positives.assign_add(tp)
+        self.true_negatives.assign_add(tn)
+        self.false_positives.assign_add(fp)
+        self.false_negatives.assign_add(fn)
+
+    def result(self):
+        sensitivity = self.true_positives / (
+            self.true_positives + self.false_negatives + keras.backend.epsilon()
+        )
+        specificity = self.true_negatives / (
+            self.true_negatives + self.false_positives + keras.backend.epsilon()
+        )
+        return (sensitivity + specificity) / 2.0
+
+    def reset_state(self):
+        for variable in self.variables:
+            variable.assign(0.0)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"threshold": self.threshold})
+        return config

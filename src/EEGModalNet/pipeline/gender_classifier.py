@@ -9,7 +9,7 @@ import xarray as xr
 from datetime import datetime
 import pickle
 import json 
-from ...EEGModalNet import FiLMGAN, preprocess_data, extract_features_batched_deterministic
+from ...EEGModalNet import FiLMGAN, preprocess_data, extract_features_batched_deterministic, BalancedAccuracy
 from scipy.signal import butter, sosfiltfilt
 import numpy as np
 import pandas as pd
@@ -257,7 +257,8 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
             loss=keras.losses.BinaryCrossentropy(from_logits=False),
             metrics=[
                 keras.metrics.AUC(name="auc"),
-                keras.metrics.BinaryAccuracy(threshold=0.5, name="accuracy")
+                keras.metrics.BinaryAccuracy(threshold=0.5, name="accuracy"),
+                BalancedAccuracy(threshold=0.5, name="balanced_accuracy"),
             ]
         )
 
@@ -286,6 +287,14 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
             verbose=0
         )
 
+        eval_metrics = cls_model.evaluate(
+            feats_val,
+            y[val_idx],
+            batch_size=batch_size,
+            verbose=0,
+            return_dict=True,
+        )
+
         # Store complete epoch-by-epoch history
         all_fold_histories[folds] = history.history
         
@@ -299,9 +308,15 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
             'best_epoch': int(np.argmax(history.history['val_accuracy']) + 1),
             'best_val_accuracy': np.max(history.history['val_accuracy']),
             'best_val_auc': np.max(history.history['val_auc']),
+            'best_val_balanced_accuracy': np.max(history.history['val_balanced_accuracy']),
             'best_val_loss': np.min(history.history['val_loss']),
+            'eval_val_accuracy': eval_metrics['accuracy'],
+            'eval_val_auc': eval_metrics['auc'],
+            'eval_val_balanced_accuracy': eval_metrics['balanced_accuracy'],
+            'eval_val_loss': eval_metrics['loss'],
             'final_train_accuracy': history.history['accuracy'][-1],
             'final_train_auc': history.history['auc'][-1],
+            'final_train_balanced_accuracy': history.history['balanced_accuracy'][-1],
             'final_train_loss': history.history['loss'][-1],
             'num_epochs_trained': len(history.history['loss'])
         }
@@ -316,7 +331,13 @@ def run_classification(feats, y, groups, epochs=100, batch_size=128, scale=True)
     print("\nOverall Results:")
     print(f"  Mean Val Accuracy: {fold_summary_df['best_val_accuracy'].mean():.4f} ± {fold_summary_df['best_val_accuracy'].std():.4f}")
     print(f"  Mean Val AUC:      {fold_summary_df['best_val_auc'].mean():.4f} ± {fold_summary_df['best_val_auc'].std():.4f}")
+    print(f"  Mean Val Bal Acc:  {fold_summary_df['best_val_balanced_accuracy'].mean():.4f} ± {fold_summary_df['best_val_balanced_accuracy'].std():.4f}")
     print(f"  Mean Val Loss:     {fold_summary_df['best_val_loss'].mean():.4f} ± {fold_summary_df['best_val_loss'].std():.4f}")
+    print("\nPost-early-stopping evaluate() Results:")
+    print(f"  Mean Eval Val Accuracy: {fold_summary_df['eval_val_accuracy'].mean():.4f} ± {fold_summary_df['eval_val_accuracy'].std():.4f}")
+    print(f"  Mean Eval Val AUC:      {fold_summary_df['eval_val_auc'].mean():.4f} ± {fold_summary_df['eval_val_auc'].std():.4f}")
+    print(f"  Mean Eval Val Bal Acc:  {fold_summary_df['eval_val_balanced_accuracy'].mean():.4f} ± {fold_summary_df['eval_val_balanced_accuracy'].std():.4f}")
+    print(f"  Mean Eval Val Loss:     {fold_summary_df['eval_val_loss'].mean():.4f} ± {fold_summary_df['eval_val_loss'].std():.4f}")
     return all_fold_histories, fold_summaries
 
 
@@ -334,9 +355,11 @@ def create_and_save_detailed_metrics(all_fold_histories, fold_summaries, fold_su
                 'train_loss': history['loss'][epoch],
                 'train_accuracy': history['accuracy'][epoch],
                 'train_auc': history['auc'][epoch],
+                'train_balanced_accuracy': history['balanced_accuracy'][epoch],
                 'val_loss': history['val_loss'][epoch],
                 'val_accuracy': history['val_accuracy'][epoch],
                 'val_auc': history['val_auc'][epoch],
+                'val_balanced_accuracy': history['val_balanced_accuracy'][epoch],
             })
 
     detailed_df = pd.DataFrame(detailed_metrics)
@@ -352,6 +375,14 @@ def create_and_save_detailed_metrics(all_fold_histories, fold_summaries, fold_su
         'std_val_accuracy': float(fold_summary_df['best_val_accuracy'].std()),
         'mean_val_auc': float(fold_summary_df['best_val_auc'].mean()),
         'std_val_auc': float(fold_summary_df['best_val_auc'].std()),
+        'mean_val_balanced_accuracy': float(fold_summary_df['best_val_balanced_accuracy'].mean()),
+        'std_val_balanced_accuracy': float(fold_summary_df['best_val_balanced_accuracy'].std()),
+        'mean_eval_val_accuracy': float(fold_summary_df['eval_val_accuracy'].mean()),
+        'std_eval_val_accuracy': float(fold_summary_df['eval_val_accuracy'].std()),
+        'mean_eval_val_auc': float(fold_summary_df['eval_val_auc'].mean()),
+        'std_eval_val_auc': float(fold_summary_df['eval_val_auc'].std()),
+        'mean_eval_val_balanced_accuracy': float(fold_summary_df['eval_val_balanced_accuracy'].mean()),
+        'std_eval_val_balanced_accuracy': float(fold_summary_df['eval_val_balanced_accuracy'].std()),
     }
     with open(f'{output_dir}/metadata.json', 'w') as f:
         json.dump(metadata, f, indent=2)

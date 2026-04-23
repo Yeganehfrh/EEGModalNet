@@ -9,7 +9,7 @@ import xarray as xr
 from datetime import datetime
 import pickle
 import json 
-from ...EEGModalNet import GAN, preprocess_data, extract_features_batched_deterministic, BalancedAccuracy
+from ...EEGModalNet import FiLMGAN, preprocess_data, extract_features_batched_deterministic, BalancedAccuracy
 from scipy.signal import butter, sosfiltfilt
 import numpy as np
 import pandas as pd
@@ -139,7 +139,7 @@ def extract_features(X_input, checkpoint_path, device="cpu"):
 
     model = keras.saving.load_model(
         checkpoint_path,
-        custom_objects={"GAN": GAN},
+        custom_objects={"FiLMGAN": FiLMGAN},
         compile=False,
     )
     critic = model.critic
@@ -407,7 +407,7 @@ if __name__ == '__main__':
         print(f'>>>> Use Features Extracted from Yare-GAN')
         X_input, y, groups = load_data(TASK, channels=CHANNELS)
         X_e = extract_features(X_input, 'logs/20260330/20260330_epoch_100.model.keras')
-
+ 
     elif FEATURES == 'cbra':
         print(f'>>>> Use Features Extracted from CBraMod')
         sub_ids = load_data(TASK, channels=CHANNELS, return_sub_ids=True)

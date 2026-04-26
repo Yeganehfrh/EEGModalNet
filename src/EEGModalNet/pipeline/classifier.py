@@ -395,6 +395,7 @@ if __name__ == '__main__':
     parser.add_argument('--task', type=str, default='gender', choices=['gender', 'age'])
     parser.add_argument('--n-epochs', type=int, default=100, help='Number of epochs')
     parser.add_argument('--batch-size', type=int, default=128, help='Classifier batch size')
+    parser.add_argument('--model-ckp', type=str, default='logs/20260330/20260330_epoch_100.model.keras', help='Model checkpoint')
     args = parser.parse_args()
 
     CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
@@ -402,11 +403,12 @@ if __name__ == '__main__':
     TASK = args.task
     EPOCHS = args.n_epochs
     BATCH_SIZE = args.batch_size
+    CHECKPOINT = args.model_ckp
 
     if FEATURES == 'yaregan':
         print(f'>>>> Use Features Extracted from Yare-GAN')
         X_input, y, groups = load_data(TASK, channels=CHANNELS)
-        X_e = extract_features(X_input, 'logs/20260328/20260328_epoch_90.model.keras')
+        X_e = extract_features(X_input, CHECKPOINT)
  
     elif FEATURES == 'cbra':
         print(f'>>>> Use Features Extracted from CBraMod')

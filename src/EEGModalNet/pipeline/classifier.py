@@ -406,7 +406,7 @@ if __name__ == '__main__':
     CHECKPOINT = args.model_ckp
 
     if FEATURES == 'yaregan':
-        print(f'>>>> Use Features Extracted from Yare-GAN')
+        print(f'>>>> Use Features Extracted from Yare-GAN from checkpoint {CHECKPOINT}')
         X_input, y, groups = load_data(TASK, channels=CHANNELS)
         X_e = extract_features(X_input, CHECKPOINT)
  

@@ -43,9 +43,6 @@ meegkit = ">=0.1.9,<0.2"
 mne = ">=1.9.0,<2"
 mne-connectivity = ">=0.7.0,<0.8"
 keras = "3.11.*"
-<<<<<<< HEAD
 mne-bids = ">=0.17.0,<0.18"
 openpyxl = ">=3.1.5,<4"
-=======
 micro = ">=2.0.15,<3"
->>>>>>> dc9de57321e689d67cf6e9660d6dfa6b9a1a8eb7

@@ -9,6 +9,7 @@ import xarray as xr
 from datetime import datetime
 import pickle
 import json 
+import re
 from ...EEGModalNet import FiLMGAN, preprocess_data, extract_features_batched_deterministic, BalancedAccuracy
 from scipy.signal import butter, sosfiltfilt
 import numpy as np
@@ -19,6 +20,43 @@ from sklearn.preprocessing import StandardScaler
 from keras import layers
 from meegkit import dss
 import argparse
+
+
+def _parse_epoch_arg(value):
+    if value.lower() in {'none', 'null'}:
+        return None
+
+    epoch = int(value)
+    if epoch <= 0:
+        raise argparse.ArgumentTypeError('--epochs values must be positive integers.')
+    return epoch
+
+
+def _normalize_epochs_arg(epochs):
+    if isinstance(epochs, int):
+        return [epochs]
+    if epochs is None or len(epochs) == 0:
+        return None
+    if epochs == [None]:
+        return None
+    if any(epoch is None for epoch in epochs):
+        raise ValueError("Use '--epochs none' by itself, or pass one or more integer epochs.")
+    return epochs
+
+
+def _checkpoint_for_epoch(checkpoint_path, epoch):
+    checkpoint, n_replacements = re.subn(
+        r'(_epoch_)\d+',
+        rf'\g<1>{epoch}',
+        checkpoint_path,
+        count=1,
+    )
+    if n_replacements == 0:
+        raise ValueError(
+            f"Cannot infer checkpoint for epoch {epoch} from {checkpoint_path!r}; "
+            "expected a path containing '_epoch_<number>'."
+        )
+    return checkpoint
 
 
 def _preprocess(x):
@@ -389,53 +427,27 @@ def create_and_save_detailed_metrics(all_fold_histories, fold_summaries, fold_su
     print(f"✓ Saved metadata: {output_dir}/metadata.json")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--features', type=str, default='yaregan', choices=['yaregan', 'cbra', 'raw'], help='Features to be used in the classifier')
-    parser.add_argument('--task', type=str, default='gender', choices=['gender', 'age'])
-    parser.add_argument('--n-epochs', type=int, default=100, help='Number of epochs')
-    parser.add_argument('--batch-size', type=int, default=128, help='Classifier batch size')
-    parser.add_argument('--model-ckp', type=str, default='logs/20260330/20260330_epoch_100.model.keras', help='Model checkpoint')
-    args = parser.parse_args()
+def run_and_maybe_save_results(X_e, y, groups, features, task, n_epochs, batch_size, save, checkpoint_epoch=None):
+    all_fold_histories, fold_summaries = run_classification(
+        X_e,
+        y,
+        groups,
+        epochs=n_epochs,
+        batch_size=batch_size,
+    )
 
-    CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
-    FEATURES = args.features
-    TASK = args.task
-    EPOCHS = args.n_epochs
-    BATCH_SIZE = args.batch_size
-    CHECKPOINT = args.model_ckp
+    if not save:
+        return all_fold_histories, fold_summaries
 
-    if FEATURES == 'yaregan':
-        print(f'>>>> Use Features Extracted from Yare-GAN from checkpoint {CHECKPOINT}')
-        X_input, y, groups = load_data(TASK, channels=CHANNELS)
-        X_e = extract_features(X_input, CHECKPOINT)
- 
-    elif FEATURES == 'cbra':
-        print(f'>>>> Use Features Extracted from CBraMod')
-        sub_ids = load_data(TASK, channels=CHANNELS, return_sub_ids=True)
-        cbra_paths = {
-            'gender': 'data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt',
-            'age': 'data/benchmarking/ds005385_extracted_CBraMod_features_seg-4s.pt',
-        }
-        X_e, y, groups = load_CBraMod_features(TASK, cbra_paths[TASK], sub_ids)
-
-    elif FEATURES == 'raw':
-        print(f'>>>> Use Raw Signal')
-        X_input, y, groups = load_data(TASK, channels=CHANNELS)
-        X_e = X_input.flatten(1, 2).numpy()
-
-    else:
-        raise ValueError(f'Unknown feature type {FEATURES}')
-
-    ##### Classifier
-    all_fold_histories, fold_summaries = run_classification(X_e, y, groups, epochs=EPOCHS, batch_size=BATCH_SIZE)
-
-    ##### Save Results
     print("="*80)
     print("SAVING K-FOLD CROSS-VALIDATION RESULTS")
     print("="*80)
 
-    output_dir = f'logs/{FEATURES}_{TASK}_classifier_kfold_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    epoch_suffix = '' if checkpoint_epoch is None else f'_model_epoch_{checkpoint_epoch}'
+    output_dir = (
+        f'logs/{features}_{task}_classifier_kfold'
+        f'{epoch_suffix}_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+    )
     os.makedirs(output_dir, exist_ok=True)
 
     fold_summary_df = pd.DataFrame(fold_summaries)
@@ -446,4 +458,75 @@ if __name__ == '__main__':
         pickle.dump(all_fold_histories, f)
     print(f"✓ Saved fold histories (Pickle): {output_dir}/all_fold_histories.pkl")
 
-    create_and_save_detailed_metrics(all_fold_histories, fold_summaries, fold_summary_df, output_dir, TASK)
+    create_and_save_detailed_metrics(all_fold_histories, fold_summaries, fold_summary_df, output_dir, task)
+    return all_fold_histories, fold_summaries
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--features', type=str, default='yaregan', choices=['yaregan', 'cbra', 'raw'], help='Features to be used in the classifier')
+    parser.add_argument('--task', type=str, default='gender', choices=['gender', 'age'])
+    parser.add_argument('--n-epochs', type=int, default=100, help='Number of epochs')
+    parser.add_argument('--batch-size', type=int, default=128, help='Classifier batch size')
+    parser.add_argument('--model-ckp', type=str, default='logs/20260330/20260330_epoch_100.model.keras', help='Model checkpoint')
+    parser.add_argument(
+        '--epochs',
+        nargs='*',
+        type=_parse_epoch_arg,
+        default=None,
+        metavar='EPOCH',
+        help="Model checkpoint epochs to classify. Omit or pass 'none' to use --model-ckp once.",
+    )
+    parser.add_argument('--save', action=argparse.BooleanOptionalAction, default=True, help='whether save the final results or not')
+    args = parser.parse_args()
+
+    CHANNELS = ['O1', 'O2', 'P1', 'P2', 'C1', 'C2', 'F1', 'F2']
+    FEATURES = args.features
+    TASK = args.task
+    N_EPOCHS = args.n_epochs
+    BATCH_SIZE = args.batch_size
+    CHECKPOINT = args.model_ckp
+    EPOCHS = _normalize_epochs_arg(args.epochs)
+    SAVE = args.save
+
+    if FEATURES == 'yaregan':
+        X_input, y, groups = load_data(TASK, channels=CHANNELS)
+        checkpoint_specs = (
+            [(None, CHECKPOINT)]
+            if EPOCHS is None
+            else [(epoch, _checkpoint_for_epoch(CHECKPOINT, epoch)) for epoch in EPOCHS]
+        )
+
+        for checkpoint_epoch, checkpoint_path in checkpoint_specs:
+            print(f'>>>> Use Features Extracted from Yare-GAN from checkpoint {checkpoint_path}')
+            X_e = extract_features(X_input, checkpoint_path)
+            run_and_maybe_save_results(
+                X_e,
+                y,
+                groups,
+                FEATURES,
+                TASK,
+                N_EPOCHS,
+                BATCH_SIZE,
+                SAVE,
+                checkpoint_epoch=checkpoint_epoch,
+            )
+ 
+    elif FEATURES == 'cbra':
+        print(f'>>>> Use Features Extracted from CBraMod')
+        sub_ids = load_data(TASK, channels=CHANNELS, return_sub_ids=True)
+        cbra_paths = {
+            'gender': 'data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt',
+            'age': 'data/benchmarking/ds005385_extracted_CBraMod_features_seg-4s.pt',
+        }
+        X_e, y, groups = load_CBraMod_features(TASK, cbra_paths[TASK], sub_ids)
+        run_and_maybe_save_results(X_e, y, groups, FEATURES, TASK, N_EPOCHS, BATCH_SIZE, SAVE)
+
+    elif FEATURES == 'raw':
+        print(f'>>>> Use Raw Signal')
+        X_input, y, groups = load_data(TASK, channels=CHANNELS)
+        X_e = X_input.flatten(1, 2).numpy()
+        run_and_maybe_save_results(X_e, y, groups, FEATURES, TASK, N_EPOCHS, BATCH_SIZE, SAVE)
+
+    else:
+        raise ValueError(f'Unknown feature type {FEATURES}')

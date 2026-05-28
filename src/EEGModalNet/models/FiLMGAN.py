@@ -1,12 +1,8 @@
-import io
-import zipfile
-
-import h5py
 import torch
 import torch.nn.functional as F
 from keras import layers
 import keras
-from .common_v0 import convBlock, HighPass1D, MinibatchStdDev, DualFiLMBlock
+from .common_v0 import convBlock, ChannelMerger, SelfAttention1D, LearnablePositionalEmbedding, SubjectLayers_FiLM, FiLMBlock, HighPass1D, MinibatchStdDev, DualFiLMBlock
 from keras import ops
 
 
@@ -35,12 +31,17 @@ class Critic(keras.Model):
         self.film_block = DualFiLMBlock(8, 32)
         self.highpass = HighPass1D()
     
-        self.conv1 = layers.Conv1D(feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
+        self.conv1 = layers.Conv1D(2 * feature_dim, ks, padding='same', name='conv1', kernel_initializer=kernel_initializer)
         self.act1  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv2 = layers.Conv1D(4 * feature_dim, ks, strides=2, padding='same', name='conv2', kernel_initializer=kernel_initializer)
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
+        # self.transfer_pool_h1 = layers.GlobalAveragePooling1D(name='transfer_pool_h1')
+        # self.transfer_pool_h = layers.GlobalAveragePooling1D(name='transfer_pool_h')
+        # self.transfer_dense = layers.Dense(256, name='transfer_dense', dtype='float32', kernel_initializer=kernel_initializer)
+        # self.transfer_norm = layers.LayerNormalization(name='transfer_norm')
+        # self.transfer_score = layers.Dense(1, name='transfer_score', dtype='float32', kernel_initializer=kernel_initializer)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
         self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
@@ -53,42 +54,7 @@ class Critic(keras.Model):
 
         self.mbsdv = MinibatchStdDev()
 
-    def build(self, input_shape=None):
-        x_shape = (None, self.time_dim, self.feature_dim)
-        x_cat_shape = (None, self.time_dim, 2 * self.feature_dim)
-
-        self.conv1.build(x_cat_shape)
-        h1_shape = self.conv1.compute_output_shape(x_cat_shape)
-        self.act1.build(h1_shape)
-
-        self.conv2.build(h1_shape)
-        h2_shape = self.conv2.compute_output_shape(h1_shape)
-        self.act2.build(h2_shape)
-
-        self.conv3.build(h2_shape)
-        h_shape = self.conv3.compute_output_shape(h2_shape)
-        self.act3.build(h_shape)
-
-        self.recon_upsample1.build(h_shape)
-        recon_shape = self.recon_upsample1.compute_output_shape(h_shape)
-        self.recon_conv1.build(recon_shape)
-        recon_shape = self.recon_conv1.compute_output_shape(recon_shape)
-        self.recon_act1.build(recon_shape)
-
-        self.recon_upsample2.build(recon_shape)
-        recon_shape = self.recon_upsample2.compute_output_shape(recon_shape)
-        self.recon_conv2.build(recon_shape)
-        recon_shape = self.recon_conv2.compute_output_shape(recon_shape)
-        self.recon_act2.build(recon_shape)
-        self.recon_out.build(recon_shape)
-
-        h_mb_shape = (h_shape[0], h_shape[1], h_shape[2] + 1)
-        h_flat_shape = self.flatten.compute_output_shape(h_mb_shape)
-        h1_flat_shape = self.flatten.compute_output_shape(h1_shape)
-        final_features = h_flat_shape[-1] + h1_flat_shape[-1]
-        self.final_dense.build((None, final_features))
-
-        super().build(x_shape)
+        # self.built = True 
 
     def encode_features(self, inputs):
         x, subj_emb, state_id = inputs['x'], inputs['sub'], inputs['pos']
@@ -105,6 +71,14 @@ class Critic(keras.Model):
         h  = self.act2(self.conv2(h1))
         h  = self.act3(self.conv3(h))
         return h1, h
+
+    # def transfer_features(self, h1, h):
+    #     transfer_in = ops.concatenate([
+    #         self.transfer_pool_h1(h1),
+    #         self.transfer_pool_h(h),
+    #     ], axis=-1)
+    #     z_transfer = self.transfer_norm(self.transfer_dense(transfer_in))
+    #     return z_transfer.float()
 
     def score_from_features(self, h1, h, z_transfer):
         h = self.mbsdv(h)
@@ -124,7 +98,11 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         h1, h = self.encode_features(inputs)
+        # z_transfer = self.transfer_features(h1, h)
         score, h_final = self.score_from_features(h1, h, None)
+
+        # if getattr(self, "return_rep", False):
+        #     return score, z_transfer
 
         if self.output_features:
             return h_final
@@ -209,16 +187,7 @@ class Generator(keras.Model):
             layers.LeakyReLU(negative_slope=0.2),
         ], name="g_dilated_block")
 
-    def build(self, input_shape=None):
-        noise_shape = (None, self.latent_dim)
-        seq_shape = (None, 128, 32)
-
-        self.post_att.build(noise_shape)
-        self.cov_block.build(seq_shape)
-        cov_shape = self.cov_block.compute_output_shape(seq_shape)
-        self.dil_block.build(cov_shape)
-
-        super().build(input_shape or noise_shape)
+        # self.built = True
 
     def call(self, inputs):
         noise, sub_labels, state_id = inputs
@@ -295,52 +264,6 @@ class FiLMGAN(keras.Model):
                              use_channel_merger=use_channel_merger_c,)
 
         self.built = True
-
-    @classmethod
-    def load_stable_checkpoint(cls, checkpoint_path, compile=False, **kwargs):
-        model = keras.saving.load_model(
-            checkpoint_path,
-            custom_objects={'FiLMGAN': cls},
-            compile=compile,
-            **kwargs,
-        )
-        model.restore_stable_weights(checkpoint_path)
-        return model
-
-    @staticmethod
-    def _assign_checkpoint_tensor(variable, value):
-        target = variable.value if hasattr(variable, 'value') else variable
-        tensor = torch.as_tensor(value, device=target.device, dtype=target.dtype)
-        if tuple(target.shape) != tuple(tensor.shape):
-            raise ValueError(
-                f'Checkpoint shape mismatch: expected {tuple(target.shape)}, '
-                f'got {tuple(tensor.shape)}.'
-            )
-        with torch.no_grad():
-            target.copy_(tensor)
-
-    def restore_stable_weights(self, checkpoint_path):
-        # The generator already restores deterministically via raw load_model().
-        # The critic's Keras conv/dense layers may remain unbuilt and miss restore.
-        self.critic.build((None, self.time_dim, self.feature_dim))
-
-        with zipfile.ZipFile(checkpoint_path) as archive:
-            with h5py.File(io.BytesIO(archive.read('model.weights.h5')), 'r') as weights_file:
-                critic_weights = {
-                    'critic/conv1/vars/0': self.critic.conv1.kernel,
-                    'critic/conv1/vars/1': self.critic.conv1.bias,
-                    'critic/conv2/vars/0': self.critic.conv2.kernel,
-                    'critic/conv2/vars/1': self.critic.conv2.bias,
-                    'critic/conv3/vars/0': self.critic.conv3.kernel,
-                    'critic/conv3/vars/1': self.critic.conv3.bias,
-                    'critic/final_dense/vars/0': self.critic.final_dense.kernel,
-                    'critic/final_dense/vars/1': self.critic.final_dense.bias,
-                }
-
-                for dataset_path, variable in critic_weights.items():
-                    self._assign_checkpoint_tensor(variable, weights_file[dataset_path][()])
-
-        return self
 
     @property
     def metrics(self):

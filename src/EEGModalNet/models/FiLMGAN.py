@@ -57,8 +57,14 @@ class Critic(keras.Model):
         # self.built = True 
 
     def encode_features(self, inputs):
-        x, subj_emb, state_id = inputs['x'], inputs['sub'], inputs['pos']
-        # subj_emb = self.sub_emb(sub_labels.view(-1))
+        x, state_id = inputs['x'], inputs['pos']
+        if 'subj_emb' in inputs.keys():
+            subj_emb = inputs['subj_emb']
+            print(subj_emb)
+        elif 'sub' in inputs.keys():
+            print('just checking')
+            subj_emb = self.sub_emb(inputs['sub'].view(-1))
+        
         state_emb = self.state_emb(state_id.view(-1))
         if hasattr(self, 'sub_layer'):
             x = self.sub_layer(x, subj_emb, state_emb)

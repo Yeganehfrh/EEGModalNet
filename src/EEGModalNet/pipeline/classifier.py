@@ -217,7 +217,7 @@ def extract_features(X_input, checkpoint_path, device="cpu"):
     # Force-build the Keras conv layers on the SAME device
     dummy = {
         "x": torch.zeros((1, critic.time_dim, critic.feature_dim), dtype=torch.float32, device=device),
-        "sub": torch.zeros((1, critic.d_sub), dtype=torch.float32, device=device),
+        "subj_emb": torch.zeros((1, critic.d_sub), dtype=torch.float32, device=device),
         "pos": torch.zeros((1, 1), dtype=torch.long, device=device),
     }
     with torch.no_grad():
@@ -571,11 +571,11 @@ if __name__ == '__main__':
             if EPOCHS is None
             else [(epoch, _checkpoint_for_epoch(CHECKPOINT, epoch)) for epoch in EPOCHS]
         )
-        print(X_e.shape, y.shape, groups.shape)
 
         for checkpoint_epoch, checkpoint_path in checkpoint_specs:
             print(f'>>>> Use Features Extracted from Yare-GAN from checkpoint {checkpoint_path}')
             X_e = extract_features(X_input, checkpoint_path)
+            print('>>>X_e shape', X_e.shape)
             run_and_maybe_save_results(
                 X_e,
                 y,

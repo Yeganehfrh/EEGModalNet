@@ -545,6 +545,12 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=128, help='Classifier batch size')
     parser.add_argument('--model-ckp', type=str, default='logs/20260330/20260330_epoch_100.model.keras', help='Model checkpoint')
     parser.add_argument(
+        '--balance-classes',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='whether to downsample subjects to balanced classes before feature selection',
+    )
+    parser.add_argument(
         '--epochs',
         nargs='*',
         type=_parse_epoch_arg,
@@ -563,9 +569,10 @@ if __name__ == '__main__':
     CHECKPOINT = args.model_ckp
     EPOCHS = _normalize_epochs_arg(args.epochs)
     SAVE = args.save
+    BALANCE_CLASSES = args.balance_classes
 
     if FEATURES == 'yaregan':
-        X_input, y, groups = load_data(TASK, channels=CHANNELS)
+        X_input, y, groups = load_data(TASK, channels=CHANNELS, balance_classes=BALANCE_CLASSES)
         checkpoint_specs = (
             [(None, CHECKPOINT)]
             if EPOCHS is None
@@ -590,7 +597,7 @@ if __name__ == '__main__':
  
     elif FEATURES == 'cbra':
         print(f'>>>> Use Features Extracted from CBraMod')
-        sub_ids = load_data(TASK, channels=CHANNELS, return_sub_ids=True)
+        sub_ids = load_data(TASK, channels=CHANNELS, balance_classes=BALANCE_CLASSES, return_sub_ids=True)
         cbra_paths = {
             'gender': 'data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt',
             'age': 'data/benchmarking/ds005385_extracted_CBraMod_features_seg-4s.pt',
@@ -610,7 +617,7 @@ if __name__ == '__main__':
 
     elif FEATURES == 'raw':
         print(f'>>>> Use Raw Signal')
-        X_input, y, groups = load_data(TASK, channels=CHANNELS)
+        X_input, y, groups = load_data(TASK, channels=CHANNELS, balance_classes=BALANCE_CLASSES)
         X_e = X_input.flatten(1, 2).numpy()
         print(X_e.shape, y.shape, groups.shape)
         run_and_maybe_save_results(X_e, y, groups, FEATURES, TASK, N_EPOCHS, BATCH_SIZE, SAVE)

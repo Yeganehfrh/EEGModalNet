@@ -37,11 +37,6 @@ class Critic(keras.Model):
         self.act2  = layers.LeakyReLU(negative_slope=negative_slope)
         self.conv3 = layers.Conv1D(16 * feature_dim, ks, strides=2, padding='same', name='conv3', kernel_initializer=kernel_initializer)
         self.act3  = layers.LeakyReLU(negative_slope=negative_slope)
-        # self.transfer_pool_h1 = layers.GlobalAveragePooling1D(name='transfer_pool_h1')
-        # self.transfer_pool_h = layers.GlobalAveragePooling1D(name='transfer_pool_h')
-        # self.transfer_dense = layers.Dense(256, name='transfer_dense', dtype='float32', kernel_initializer=kernel_initializer)
-        # self.transfer_norm = layers.LayerNormalization(name='transfer_norm')
-        # self.transfer_score = layers.Dense(1, name='transfer_score', dtype='float32', kernel_initializer=kernel_initializer)
         self.recon_upsample1 = layers.UpSampling1D(size=2, name='recon_upsample1')
         self.recon_conv1 = layers.Conv1D(16 * feature_dim, 3, padding='same', name='recon_conv1', kernel_initializer=kernel_initializer)
         self.recon_act1 = layers.LeakyReLU(negative_slope=negative_slope)
@@ -60,9 +55,7 @@ class Critic(keras.Model):
         x, state_id = inputs['x'], inputs['pos']
         if 'subj_emb' in inputs.keys():
             subj_emb = inputs['subj_emb']
-            print(subj_emb)
         elif 'sub' in inputs.keys():
-            print('just checking')
             subj_emb = self.sub_emb(inputs['sub'].view(-1))
         
         state_emb = self.state_emb(state_id.view(-1))
@@ -77,14 +70,6 @@ class Critic(keras.Model):
         h  = self.act2(self.conv2(h1))
         h  = self.act3(self.conv3(h))
         return h1, h
-
-    # def transfer_features(self, h1, h):
-    #     transfer_in = ops.concatenate([
-    #         self.transfer_pool_h1(h1),
-    #         self.transfer_pool_h(h),
-    #     ], axis=-1)
-    #     z_transfer = self.transfer_norm(self.transfer_dense(transfer_in))
-    #     return z_transfer.float()
 
     def score_from_features(self, h1, h, z_transfer):
         h = self.mbsdv(h)
@@ -104,11 +89,7 @@ class Critic(keras.Model):
 
     def call(self, inputs):
         h1, h = self.encode_features(inputs)
-        # z_transfer = self.transfer_features(h1, h)
         score, h_final = self.score_from_features(h1, h, None)
-
-        # if getattr(self, "return_rep", False):
-        #     return score, z_transfer
 
         if self.output_features:
             return h_final

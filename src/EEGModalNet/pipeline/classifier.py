@@ -22,7 +22,7 @@ from meegkit import dss
 import argparse
 
 
-def _parse_epoch_arg(value):
+def _parse_epoch_arg(value): 
     if value.lower() in {'none', 'null'}:
         return None
 
@@ -91,6 +91,10 @@ def _as_numpy(x):
         return x.detach().cpu().numpy()
     return np.asarray(x)
 
+def _otka_hypno_classes(demog):
+    classes = demog[['hypnotizability_total', 'bids_id']].dropna().set_index('bids_id')
+    return classes['hypnotizability_total'].apply(lambda x: 1 if x > 5 else 0).astype(int)
+
 def _validate_samples(feats, y, groups):
     n_samples = len(feats)
     if len(y) != n_samples or len(groups) != n_samples:
@@ -115,6 +119,9 @@ def load_data(task: str,
     elif task == 'gender':
         eeg_path = 'data/OTKA/experiment_EEG_data_missing_as_nan.nc5'
         demog_path = 'data/OTKA/PLB_HYP_data_MASTER.csv'
+    elif task == 'hypno':
+        eeg_path = 'data/OTKA/experiment_EEG_data.nc5'
+        demog_path = 'data/OTKA/PLB_HYP_data_MASTER.csv'
     else:
         raise ValueError(f'Unknown task {task}')
 
@@ -128,6 +135,9 @@ def load_data(task: str,
     elif task == 'gender':
         classes = demog[['gender', 'bids_id']].dropna().set_index('bids_id')
         classes = classes['gender'].apply(lambda x: 0 if x == 'Male' else 1)
+
+    elif task == 'hypno':
+        classes = _otka_hypno_classes(demog)
 
     sub_ids = classes.index
     if balance_classes:
@@ -149,6 +159,23 @@ def load_data(task: str,
         x = x.reshape(n_subjects * n_tasks, *x.shape[2:])
         recording_y = np.repeat(classes.loc[sub_ids].to_numpy(), n_tasks)
         recording_groups = np.repeat([_gender_subject_id(sub_id) for sub_id in sub_ids], n_tasks)
+
+    elif task == 'hypno':
+        sub_ids_formatted = [_format_subject_id(sub_id) for sub_id in sub_ids]
+        x = EEG.sel(subject=sub_ids_formatted, channel=channels).to_numpy()
+        n_subjects, n_tasks = x.shape[:2]
+        recording_task_idx = np.tile(np.arange(n_tasks), n_subjects)
+        recording_subject_ids = np.repeat(np.asarray(sub_ids, dtype=int), n_tasks)
+        x = x.reshape(n_subjects * n_tasks, *x.shape[2:])
+        recording_y = np.repeat(classes.loc[sub_ids].to_numpy(), n_tasks)
+        recording_groups = recording_subject_ids
+
+        known_missing_recordings = (recording_groups == 52) & np.isin(recording_task_idx, [1, 2])
+        if known_missing_recordings.any():
+            valid_recordings = ~known_missing_recordings
+            x = x[valid_recordings]
+            recording_y = recording_y[valid_recordings]
+            recording_groups = recording_groups[valid_recordings]
 
     recording_nan_mask = np.isnan(x).reshape(x.shape[0], -1)
     missing_recordings = recording_nan_mask.all(axis=1)
@@ -215,7 +242,7 @@ def extract_features(X_input, checkpoint_path, device="cpu"):
     )
     return feats
 
-def load_CBraMod_features(task, feature_path, sub_ids):
+def load_CBraMod_features(task, feature_path, sub_ids, sub_52_feature_path=None):
     cbramod_dict = torch.load(feature_path, weights_only=False, map_location="cpu")
     sub_ids = np.asarray(sub_ids)
 
@@ -252,6 +279,54 @@ def load_CBraMod_features(task, feature_path, sub_ids):
         X_e = feature_by_subject[selected_idx].reshape(-1, feature_by_subject.shape[-1])
         y = np.repeat(subject_y[selected_idx], segments_per_subject)
         groups = np.repeat(subject_ids[selected_idx], segments_per_subject)
+
+    elif task == 'hypno':
+        X_e = _as_numpy(cbramod_dict['features'])
+        if X_e.shape[0] % 51 != 0:
+            raise ValueError("CBraMod hypno base features cannot be evenly grouped by 51 OTKA subjects.")
+
+        segments_per_subject = X_e.shape[0] // 51
+        feature_by_subject = X_e.reshape(51, segments_per_subject, -1)
+        subject_ids = np.arange(1, 52)
+
+        selected_subjects = sub_ids.astype(int)
+        if 52 in selected_subjects:
+            if sub_52_feature_path is None:
+                raise ValueError("CBraMod hypno features need sub_52_feature_path when sub-52 is selected.")
+
+            sub_52_features = _as_numpy(torch.load(sub_52_feature_path, weights_only=False, map_location="cpu"))
+            if sub_52_features.shape[0] > segments_per_subject:
+                raise ValueError(
+                    f"CBraMod sub-52 has {sub_52_features.shape[0]} segments, "
+                    f"but expected at most {segments_per_subject}."
+                )
+            if sub_52_features.shape[0] < segments_per_subject:
+                padding = np.full(
+                    (segments_per_subject - sub_52_features.shape[0], *sub_52_features.shape[1:]),
+                    np.nan,
+                    dtype=feature_by_subject.dtype,
+                )
+                sub_52_features = np.concatenate([sub_52_features, padding], axis=0)
+
+            feature_by_subject = np.concatenate([feature_by_subject, sub_52_features[None]], axis=0)
+            subject_ids = np.arange(1, 53)
+
+        missing = sorted(set(selected_subjects) - set(subject_ids))
+        if missing:
+            raise ValueError(f"CBraMod hypno features are missing selected subjects: {missing}")
+
+        demog = pd.read_csv('data/OTKA/PLB_HYP_data_MASTER.csv')
+        classes = _otka_hypno_classes(demog)
+        selected_idx = selected_subjects - 1
+        X_e = feature_by_subject[selected_idx].reshape(-1, feature_by_subject.shape[-1])
+        subject_y = classes.loc[selected_subjects].to_numpy().astype(int)
+        y = np.repeat(subject_y, segments_per_subject)
+        groups = np.repeat(selected_subjects, segments_per_subject)
+
+        valid = ~np.isnan(X_e).any(axis=1)
+        X_e = X_e[valid]
+        y = y[valid]
+        groups = groups[valid]
 
     else:
         raise ValueError(f'Unknown task {task}')
@@ -465,7 +540,7 @@ def run_and_maybe_save_results(X_e, y, groups, features, task, n_epochs, batch_s
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--features', type=str, default='yaregan', choices=['yaregan', 'cbra', 'raw'], help='Features to be used in the classifier')
-    parser.add_argument('--task', type=str, default='gender', choices=['gender', 'age'])
+    parser.add_argument('--task', type=str, default='gender', choices=['gender', 'age', 'hypno'])
     parser.add_argument('--n-epochs', type=int, default=100, help='Number of epochs')
     parser.add_argument('--batch-size', type=int, default=128, help='Classifier batch size')
     parser.add_argument('--model-ckp', type=str, default='logs/20260330/20260330_epoch_100.model.keras', help='Model checkpoint')
@@ -496,6 +571,7 @@ if __name__ == '__main__':
             if EPOCHS is None
             else [(epoch, _checkpoint_for_epoch(CHECKPOINT, epoch)) for epoch in EPOCHS]
         )
+        print(X_e.shape, y.shape, groups.shape)
 
         for checkpoint_epoch, checkpoint_path in checkpoint_specs:
             print(f'>>>> Use Features Extracted from Yare-GAN from checkpoint {checkpoint_path}')
@@ -518,14 +594,25 @@ if __name__ == '__main__':
         cbra_paths = {
             'gender': 'data/benchmarking/CBraMod_features_gender_seg-4s_balanced.pt',
             'age': 'data/benchmarking/ds005385_extracted_CBraMod_features_seg-4s.pt',
+            'hypno': 'data/benchmarking/CBraMod_features_gender_seg-4s.pt',
         }
-        X_e, y, groups = load_CBraMod_features(TASK, cbra_paths[TASK], sub_ids)
+        cbra_sub_52_paths = {
+            'hypno': 'data/benchmarking/CBraMod_features_sub_52_seg-4s.pt',
+        }
+        X_e, y, groups = load_CBraMod_features(
+            TASK,
+            cbra_paths[TASK],
+            sub_ids,
+            sub_52_feature_path=cbra_sub_52_paths.get(TASK),
+        )
+        print(X_e.shape, y.shape, groups.shape)
         run_and_maybe_save_results(X_e, y, groups, FEATURES, TASK, N_EPOCHS, BATCH_SIZE, SAVE)
 
     elif FEATURES == 'raw':
         print(f'>>>> Use Raw Signal')
         X_input, y, groups = load_data(TASK, channels=CHANNELS)
         X_e = X_input.flatten(1, 2).numpy()
+        print(X_e.shape, y.shape, groups.shape)
         run_and_maybe_save_results(X_e, y, groups, FEATURES, TASK, N_EPOCHS, BATCH_SIZE, SAVE)
 
     else:

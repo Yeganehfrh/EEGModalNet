@@ -15,9 +15,9 @@
 set -euo pipefail
 
 # SECTION Run pipeline
-pixi run python -m src.EEGModalNet.pipeline.classifier --features yaregan --task gender --n-epochs 500 --batch-size 128 --epochs 80 90 110 120 130 140 150 160 170 180 190 200 210 220 230 240 250 260 270 280 290 300 --no-save
-# pixi run python -m src.EEGModalNet.pipeline.classifier --features cbra --task gender --n-epochs 1000 --batch-size 128
-# pixi run python -m src.EEGModalNet.pipeline.classifier --features raw --task gender --n-epochs 1000 --batch-size 128
-# pixi run python -m src.EEGModalNet.pipeline.classifier --features yaregan --task age --n-epochs 1000 --batch-size 128
-# pixi run python -m src.EEGModalNet.pipeline.classifier --features cbra --task age --n-epochs 1000 --batch-size 128
-# pixi run python -m src.EEGModalNet.pipeline.classifier --features raw --task age --n-epochs 1000 --batch-size 128
+pixi run python -m src.EEGModalNet.pipeline.classifier --features yaregan --task hypno --n-epochs 1000 --batch-size 128 --epochs 100
+pixi run python -m src.EEGModalNet.pipeline.classifier --features cbra --task hypno --n-epochs 1000 --batch-size 128
+pixi run python -m src.EEGModalNet.pipeline.classifier --features raw --task hypno --n-epochs 1000 --batch-size 128
+#pixi run python -m src.EEGModalNet.pipeline.classifier --features yaregan --task age --n-epochs 1000 --batch-size 128
+#pixi run python -m src.EEGModalNet.pipeline.classifier --features cbra --task age --n-epochs 1000 --batch-size 128
+#pixi run python -m src.EEGModalNet.pipeline.classifier --features raw --task age --n-epochs 1000 --batch-size 128

@@ -117,7 +117,7 @@ def load_data(task: str,
         eeg_path = 'data/ds005385/ds005385.nc5'
         demog_path = 'data/ds005385/demographic.csv'
     elif task == 'gender':
-        eeg_path = 'data/OTKA/experiment_EEG_data_missing_as_nan.nc5'
+        eeg_path = 'data/OTKA/experiment_EEG_data.nc5'
         demog_path = 'data/OTKA/PLB_HYP_data_MASTER.csv'
     elif task == 'hypno':
         eeg_path = 'data/OTKA/experiment_EEG_data.nc5'

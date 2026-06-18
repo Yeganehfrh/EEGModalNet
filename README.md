@@ -1,7 +1,10 @@
-# Yare-GAN: Yet Another Resting-State EEG GAN
-This repository contains the official implementation of Yare-GAN — Yet Another Resting-state EEG GAN — a generative model for synthesizing multi-channel resting-state EEG data using Wasserstein GAN with Gradient Penalty (WGAN-GP).
-The method and findings are described in our preprint on [arXiv](https://arxiv.org/abs/2503.02636v3).
+# REST-GAN: Resting-State EEG Synthesis and Transfer-Learning Generative Adversarial Network
+This repository contains the implementation of REST-GAN, a WGAN-GP-based framework for resting-state EEG with two linked purposes: generating physiologically plausible multi-channel EEG signals and learning compact representations that transfer to downstream classification tasks without fine-tuning.
 
+The method and findings are described in our preprint, *A Deep Generative Model for Resting-State EEG Synthesis and Transferable Representation Learning*, available on [arXiv](https://arxiv.org/abs/2503.02636).
+
+> [!NOTE]
+> This repository was previously named `YARE-GAN` (*Yet Another Resting-State EEG GAN*). The old URL redirects here.
 
 ## 📁 Repository Structure
 
